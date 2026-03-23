@@ -6,7 +6,8 @@ using TFC.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
+var hash = BCrypt.Net.BCrypt.HashPassword("123456");
+Console.WriteLine(hash);
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

@@ -27,7 +27,7 @@ namespace TFC.Services
         {
             var user = await GetUserByUsernameAsync(username);
             if (user == null) return false;
-            return user.PasswordHash == password;
+            return BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
         }
 
         public async Task<List<User>> GetAllUsersAsync()

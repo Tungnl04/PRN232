@@ -294,7 +294,8 @@ INSERT INTO ComboItem (combo_id, product_id, quantity) VALUES (24, 29, 1);
 INSERT INTO ComboItem (combo_id, product_id, quantity) VALUES (24, 41, 5);
 
 -- ===== USER =====
-INSERT INTO [User] (name, username, password_hash, role) VALUES
-(N'Administrator', 'Admin',  '$2a$12$QKJD5hy5YIWy8MVApXvk/uHDn2Cm.SXmGvb5y.PhGH1Ra4FT86HMK', 'admin');
-INSERT INTO [User] (name, username, password_hash, role) VALUES
-(N'Staff1',        'Staff1', '$2a$12$EM8WgTDvanSvbwaJcs9uQOwwDvW8j.2kKbiBOMXBeQTE2NJ6fct26',  'staff');
+INSERT INTO [FoodStoreDB].[dbo].[user]
+([name], [username], [password_hash], [role], [active])
+VALUES
+(N'Admin User', 'admin', '$2a$11$JAy6uzNmgk53FHaTHRI3/ubi1eqSS/OB.qoobGdKlaNFZkobyaPo6', 'admin', 1),
+(N'Staff User', 'staff', '$2a$11$JAy6uzNmgk53FHaTHRI3/ubi1eqSS/OB.qoobGdKlaNFZkobyaPo6', 'staff', 1);

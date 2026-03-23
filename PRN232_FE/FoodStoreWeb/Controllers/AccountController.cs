@@ -98,7 +98,7 @@ namespace FoodStoreWeb.Controllers
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.Name),
                 new Claim("Username", user.Username),
-                new Claim(ClaimTypes.Role, user.Role ?? "user")
+                new Claim(ClaimTypes.Role, user.Role)
             };
 
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
