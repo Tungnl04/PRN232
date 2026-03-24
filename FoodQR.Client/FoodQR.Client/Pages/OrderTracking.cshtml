@@ -1,0 +1,125 @@
+@page
+@model OrderTrackingModel
+@{
+    ViewData["Title"] = "Track Order";
+}
+
+<div class="container animate-in">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+        <a href="/?tableId=@Model.TableId" style="color: var(--text); font-size: 1.2rem;"><i class="fa-solid fa-arrow-left"></i></a>
+        <h2 class="font-bold">Track Your Order</h2>
+    </div>
+
+    <!-- Overall Order Status card -->
+    <div class="card" style="margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: bold;">ORDER #@Model.OrderCode</span>
+            <span id="order-status-badge" style="background: #e8f5e9; color: #4caf50; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">@Model.OrderStatus</span>
+        </div>
+
+        <!-- Status Stepper (Simplified) -->
+        <div style="display: flex; justify-content: space-between; position: relative; margin-top: 24px;">
+            <div style="position: absolute; top: 12px; left: 0; right: 0; height: 2px; background: #eee; z-index: 1;">
+                <div id="progress-bar" style="height: 100%; background: var(--primary); width: 0%; transition: width 1s ease;"></div>
+            </div>
+            
+            <div style="z-index: 2; text-align: center;">
+                <div class="step-dot" id="step-pending" style="width: 26px; height: 26px; border-radius: 50%; background: #eee; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 0.7rem;">1</div>
+                <span style="font-size: 0.65rem; color: var(--text-muted); margin-top: 8px; display: block;">Pending</span>
+            </div>
+            <div style="z-index: 2; text-align: center;">
+                <div class="step-dot" id="step-processing" style="width: 26px; height: 26px; border-radius: 50%; background: #eee; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 0.7rem;">2</div>
+                <span style="font-size: 0.65rem; color: var(--text-muted); margin-top: 8px; display: block;">Kitchen</span>
+            </div>
+            <div style="z-index: 2; text-align: center;">
+                <div class="step-dot" id="step-completed" style="width: 26px; height: 26px; border-radius: 50%; background: #eee; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 0.7rem;">3</div>
+                <span style="font-size: 0.65rem; color: var(--text-muted); margin-top: 8px; display: block;">Enjoy!</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Items Status List -->
+    <h3 class="font-bold" style="font-size: 1rem; margin-bottom: 16px;">Dish Status</h3>
+    <div id="items-list" style="display: flex; flex-direction: column; gap: 12px;">
+        @foreach (var item in Model.Items)
+        {
+            <div class="card" style="display: flex; align-items: center; gap: 12px; padding: 12px;">
+                <div style="flex-grow: 1;">
+                    <h4 style="font-size: 0.85rem; font-weight: 700;">@item.Name</h4>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">Qty: @item.Quantity</span>
+                </div>
+                <div>
+                    <span class="item-status-pill @item.Status.ToLower()" style="padding: 4px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700;">@item.Status</span>
+                </div>
+            </div>
+        }
+    </div>
+
+    <button onclick="callStaff()" style="width: 100%; border: 1px solid var(--primary); background: transparent; color: var(--primary); padding: 12px; border-radius: var(--radius-md); font-weight: bold; margin-top: 32px; cursor: pointer;">
+        <i class="fa-solid fa-bell"></i> Call Staff
+    </button>
+</div>
+
+<style>
+    .item-status-pill.pending { background: #fff3e0; color: #ff9800; }
+    .item-status-pill.preparing { background: #e3f2fd; color: #2196f3; }
+    .item-status-pill.ready { background: #e8f5e9; color: #4caf50; }
+    .item-status-pill.served { background: #f3e5f5; color: #9c27b0; }
+    
+    .step-dot.active { background: var(--primary) !important; color: white !important; }
+</style>
+
+@section Scripts {
+    <script>
+        document.getElementById('current-table').innerText = "@Model.TableId" || "??";
+        const orderId = @Model.OrderId;
+        const apiBaseUrl = "https://localhost:7197/api";
+
+        // Update Progress Bar based on status
+        const status = "@Model.OrderStatus.ToLower()";
+        const bar = document.getElementById('progress-bar');
+        
+        if (status === 'pending') {
+            bar.style.width = '0%';
+            document.getElementById('step-pending').classList.add('active');
+        } else if (status === 'processing') {
+            bar.style.width = '50%';
+            document.getElementById('step-pending').classList.add('active');
+            document.getElementById('step-processing').classList.add('active');
+        } else if (status === 'completed') {
+            bar.style.width = '100%';
+            document.getElementById('step-pending').classList.add('active');
+            document.getElementById('step-processing').classList.add('active');
+            document.getElementById('step-completed').classList.add('active');
+        }
+
+        async function callStaff() {
+            try {
+                const response = await fetch(`${apiBaseUrl}/Notifications`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: `Khách hàng tại bàn @Model.TableId yêu cầu hỗ trợ!`,
+                        type: 'call_staff',
+                        targetRole: 'staff'
+                    })
+                });
+
+                if (response.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Requested!',
+                        text: 'Staff will be arriving soon.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }
+            } catch (e) {}
+        }
+
+        // Auto-refresh every 10 seconds
+        setTimeout(() => {
+            window.location.reload();
+        }, 10000);
+    </script>
+}

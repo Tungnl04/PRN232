@@ -1,0 +1,33 @@
+@page
+@model OrderSuccessModel
+@{
+    ViewData["Title"] = "Order Success";
+}
+
+<div class="container animate-in" style="text-align: center; padding-top: 60px;">
+    <div style="width: 100px; height: 100px; background: #e8f5e9; color: #4caf50; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 3rem;">
+        <i class="fa-solid fa-check"></i>
+    </div>
+    
+    <h1 class="font-bold" style="font-size: 1.8rem;">Thank You!</h1>
+    <p style="color: var(--text-muted); margin-bottom: 32px;">Your order has been placed successfully.</p>
+
+    <div class="card" style="background: #fff8f0; border: 1px dashed var(--primary); margin-bottom: 32px;">
+        <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Order Code</span>
+        <h2 class="font-bold" style="color: var(--primary); margin: 8px 0; font-size: 2rem;">#@Model.OrderCode</h2>
+        <p style="font-size: 0.8rem; color: var(--text-muted);">Show this code to staff if needed.</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+        <a href="/OrderTracking?orderId=@Model.OrderId" style="background: var(--primary); color: white; padding: 16px; border-radius: var(--radius-md); text-decoration: none; font-weight: 700;">Track My Order</a>
+        <a href="/?tableId=@Model.TableId" style="color: var(--text); padding: 12px; text-decoration: none; font-size: 0.9rem;">Back to Menu</a>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Clear badge
+        document.getElementById('cart-count').style.display = 'none';
+        document.getElementById('current-table').innerText = "@Model.TableId" || "??";
+    </script>
+}

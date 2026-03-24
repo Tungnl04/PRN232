@@ -1,0 +1,150 @@
+@page
+@using System.Text.Json
+@model IndexModel
+@{
+    ViewData["Title"] = "Menu";
+}
+
+<div class="container animate-in">
+    <div id="welcome-section" style="margin-bottom: 24px;">
+        <h2 class="font-bold">Welcome! 👋</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">What would you like to eat today?</p>
+    </div>
+
+    <!-- Category Slider -->
+    <div class="category-slider">
+        <div class="cat-item active" onclick="filterCategory(0, this)">All</div>
+        @foreach (var cat in Model.Categories)
+        {
+            <div class="cat-item" onclick="filterCategory(@cat.Id, this)">@cat.Name</div>
+        }
+    </div>
+
+    <!    <!-- Special Combos -->
+    @if (Model.Combos.Any())
+    {
+        <div class="mt-4">
+            <h3 class="font-bold" style="font-size: 1.1rem; margin-bottom: 12px; color: var(--primary);">🔥 Special Combos</h3>
+            <div style="display: flex; gap: 16px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none;">
+                @foreach (var combo in Model.Combos)
+                {
+                    <div class="card" style="min-width: 250px; flex-shrink: 0; background: linear-gradient(135deg, #fff, #fff5f0);">
+                        <div style="display: flex; gap: 12px;">
+                            <img src="@combo.ImageUrl" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;" alt="@combo.Name" onerror="this.onerror=null;this.src='https://placehold.co/100x100?text=Combo';" />
+                            <div style="flex-grow: 1;">
+                                <h4 style="font-size: 0.9rem; font-weight: 700;">@combo.Name</h4>
+                                <p style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">@combo.Description</p>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                                    <span style="font-weight: 800; color: var(--primary); font-size: 0.85rem;">@combo.Price.ToString("N0")đ</span>
+                                    <button onclick='addToCart(@JsonSerializer.Serialize(combo), true)' style="background: var(--primary); color: white; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-size: 0.75rem; font-weight: bold;">
+                                        Add
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Product Grid -->
+    <div id="product-list" class="mt-4">
+        <h3 class="font-bold" style="font-size: 1.1rem; margin-bottom: 12px;">Menu</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            @foreach (var prod in Model.Products)
+            {
+                <div class="card product-card" data-category="@prod.CategoryId" style="display: flex; flex-direction: column; height: 100%;">
+                    <div style="background: #eee; height: 130px; border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 12px; position: relative;">
+                        <img src="@prod.ImageUrl" style="width: 100%; height: 100%; object-fit: cover;" alt="@prod.Name" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300?text=Food';" />
+                    </div>
+                    <div style="flex-grow: 1;">
+                        <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">@prod.Name</h4>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">@prod.Description</p>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto;">
+                        <span style="font-weight: 800; color: var(--primary); font-size: 0.9rem;">@prod.Price.ToString("N0")đ</span>
+                        <button onclick='addToCart(@JsonSerializer.Serialize(prod))' style="background: var(--primary); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const tableId = @Model.TableId;
+        document.getElementById('current-table').innerText = tableId > 0 ? tableId : "??";
+
+        let cart = JSON.parse(localStorage.getItem('food_cart')) || [];
+        updateCartCount();
+
+        function filterCategory(catId, element) {
+            document.querySelectorAll('.cat-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+
+            const cards = document.querySelectorAll('.product-card');
+            cards.forEach(card => {
+                if (catId === 0 || card.getAttribute('data-category') == catId) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function addToCart(item, isCombo = false) {
+            const itemId = isCombo ? `combo_${item.Id}` : item.Id;
+            const existing = cart.find(i => i.cartId === itemId);
+            
+            if (existing) {
+                existing.quantity += 1;
+            } else {
+                cart.push({
+                    cartId: itemId,
+                    id: item.Id,
+                    isCombo: isCombo,
+                    name: item.Name,
+                    price: item.Price,
+                    imageUrl: item.ImageUrl,
+                    quantity: 1
+                });
+            }
+            saveCart();
+            updateCartCount();
+            
+            Swal.fire({
+                toast: true, position: 'top-end', icon: 'success', title: 'Added!', showConfirmButton: false, timer: 1000
+            });
+        }
+
+        function saveCart() {
+            localStorage.setItem('food_cart', JSON.stringify(cart));
+        }
+
+        function updateCartCount() {
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            const badge = document.getElementById('cart-count');
+            if (count > 0) {
+                badge.innerText = count;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function openCart() {
+            if (cart.length === 0) {
+                Swal.fire({
+                    icon: 'info',
+                    text: 'Your cart is empty!'
+                });
+                return;
+            }
+            window.location.href = '/Cart?tableId=' + tableId;
+        }
+    </script>
+}

@@ -1,0 +1,14 @@
+# .gitignore for .NET
+[Bb]in/
+[Oo]bj/
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln.docstates
+.idea/
+.DS_Store
+appsettings.Development.json
+node_modules/
+dist/
+.env
