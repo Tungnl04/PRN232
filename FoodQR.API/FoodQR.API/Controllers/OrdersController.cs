@@ -5,6 +5,7 @@ using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using FoodQR.API.Core.Enums;
 
 namespace FoodQR.API.Controllers
 {
@@ -32,7 +33,7 @@ namespace FoodQR.API.Controllers
             var activeOrder = await _context.Orders
                 .Include(o => o.OrderItems)
                 .Where(o => o.TableId == orderDto.TableId && 
-                           !new[] { "paid", "cancelled", "rejected" }.Contains(o.Status))
+                           !new[] { OrderStatus.Paid, OrderStatus.Cancelled, OrderStatus.Rejected }.Contains(o.Status))
                 .OrderByDescending(o => o.CreatedAt)
                 .FirstOrDefaultAsync();
 
@@ -201,7 +202,7 @@ namespace FoodQR.API.Controllers
                     .ThenInclude(oi => oi.Product)
                 .Include(o => o.OrderItems)
                     .ThenInclude(oi => oi.Combo)
-                .Where(o => o.TableId == tableId && !new[] { "paid", "cancelled", "rejected" }.Contains(o.Status))
+                .Where(o => o.TableId == tableId && !new[] { OrderStatus.Paid, OrderStatus.Cancelled, OrderStatus.Rejected }.Contains(o.Status))
                 .OrderByDescending(o => o.CreatedAt)
                 .FirstOrDefaultAsync();
 
@@ -233,7 +234,7 @@ namespace FoodQR.API.Controllers
         {
             var totalOrders = await _context.Orders.CountAsync();
             var totalRevenue = await _context.Orders
-                .Where(o => o.Status.ToLower() == "paid")
+                .Where(o => o.Status.ToLower() == OrderStatus.Paid)
                 .SumAsync(o => o.TotalAmount ?? 0);
             var activeTables = await _context.OrderTables
                 .CountAsync(t => t.Status.ToLower() == "taken");
