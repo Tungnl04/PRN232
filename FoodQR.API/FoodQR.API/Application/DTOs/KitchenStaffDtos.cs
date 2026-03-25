@@ -21,6 +21,8 @@ namespace FoodQR.API.Application.DTOs
         public string? Status { get; set; }
         public string? PaymentStatus { get; set; }
         public decimal TotalAmount { get; set; }
+        public string? CustomerName { get; set; }
+        public string? CustomerEmail { get; set; }
         public List<OrderItemDetailDto> Items { get; set; } = new();
     }
 }

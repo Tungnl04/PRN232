@@ -3,6 +3,7 @@ using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using FoodQR.API.Application.DTOs;
 
 namespace FoodQR.API.Controllers
 {
@@ -74,13 +75,5 @@ namespace FoodQR.API.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-    }
-
-    public class UpdateUserDto
-    {
-        public string? Name { get; set; }
-        public string? Role { get; set; }
-        public bool? Active { get; set; }
-        public string? NewPassword { get; set; }
     }
 }

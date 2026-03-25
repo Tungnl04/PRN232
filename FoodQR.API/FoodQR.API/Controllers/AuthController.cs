@@ -1,3 +1,4 @@
+using FoodQR.API.Application.DTOs;
 using FoodQR.API.Core.Entities;
 using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -7,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using FoodQR.API.Core.Enums;
 
 namespace FoodQR.API.Controllers
 {
@@ -66,6 +68,4 @@ namespace FoodQR.API.Controllers
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
-
-    public class LoginDto { public string Username { get; set; } = null!; public string Password { get; set; } = null!; }
 }
