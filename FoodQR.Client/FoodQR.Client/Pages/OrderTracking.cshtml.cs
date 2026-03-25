@@ -7,11 +7,12 @@ namespace FoodQR.Client.Pages
     public class OrderTrackingModel : PageModel
     {
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly string _apiBaseUrl = "https://localhost:7197/api";
+        private readonly string _apiBaseUrl;
 
-        public OrderTrackingModel(IHttpClientFactory httpClientFactory)
+        public OrderTrackingModel(IHttpClientFactory httpClientFactory, IConfiguration config)
         {
             _httpClientFactory = httpClientFactory;
+            _apiBaseUrl = config["ApiSettings:BaseUrl"] ?? "https://localhost:7197/api";
         }
 
         public int OrderId { get; set; }
@@ -23,54 +24,36 @@ namespace FoodQR.Client.Pages
         public async Task<IActionResult> OnGetAsync(int orderId, int tableId)
         {
             OrderId = orderId;
+            TableId = tableId;
             var client = _httpClientFactory.CreateClient();
-            var response = await client.GetAsync($"{_apiBaseUrl}/Orders/{orderId}");
+
+            // BUG-09 Fix: Use active/{tableId} endpoint which returns items with names pre-loaded
+            // This eliminates N+1 HTTP calls (previously 1 call per item to get product/combo name)
+            var response = await client.GetAsync($"{_apiBaseUrl}/Orders/active/{tableId}");
 
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
-                
-                int orderTableId = root.GetProperty("tableId").GetInt32();
-                
-                // Security check: Đơn hàng phải thuộc về bàn này
-                if (orderTableId != tableId)
+
+                // Verify this is the correct order
+                int returnedOrderId = root.GetProperty("id").GetInt32();
+                if (returnedOrderId != orderId)
                 {
                     return RedirectToPage("/Index", new { tableId = tableId });
                 }
 
                 OrderCode = root.GetProperty("orderCode").GetString() ?? "";
                 OrderStatus = root.GetProperty("status").GetString() ?? "";
-                TableId = orderTableId;
 
-                var itemsArray = root.GetProperty("orderItems");
+                // Items already contain names from the API response - no N+1!
+                var itemsArray = root.GetProperty("items");
                 foreach (var item in itemsArray.EnumerateArray())
                 {
-                    string itemName = "";
-                    if (item.TryGetProperty("productId", out var pid2) && pid2.ValueKind != JsonValueKind.Null)
+                    Items.Add(new TrackingItemDto
                     {
-                         var pResponse = await client.GetAsync($"{_apiBaseUrl}/Products/{pid2.GetInt32()}");
-                         if (pResponse.IsSuccessStatusCode) {
-                             var pJson = await pResponse.Content.ReadAsStringAsync();
-                             using var pDoc = JsonDocument.Parse(pJson);
-                             itemName = pDoc.RootElement.GetProperty("name").GetString() ?? "";
-                         }
-                    }
-                    else if (item.TryGetProperty("comboId", out var cid) && cid.ValueKind != JsonValueKind.Null)
-                    {
-                         var cResponse = await client.GetAsync($"{_apiBaseUrl}/Combos/{cid.GetInt32()}");
-                         if (cResponse.IsSuccessStatusCode) {
-                             var cJson = await cResponse.Content.ReadAsStringAsync();
-                             using var cDoc = JsonDocument.Parse(cJson);
-                             itemName = cDoc.RootElement.GetProperty("name").GetString() ?? "";
-                         }
-                    }
-
-                    if (string.IsNullOrEmpty(itemName)) itemName = "Unknown Item";
-
-                    Items.Add(new TrackingItemDto {
-                        Name = itemName,
+                        Name = item.GetProperty("name").GetString() ?? "Unknown Item",
                         Quantity = item.GetProperty("quantity").GetInt32(),
                         Status = item.GetProperty("status").GetString() ?? "Pending"
                     });

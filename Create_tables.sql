@@ -95,7 +95,7 @@ CREATE TABLE [order] (
     table_id INT,
     total_amount DECIMAL(10,2) DEFAULT 0,
     status NVARCHAR(20) DEFAULT 'pending'
-        CHECK (status IN ('pending', 'preparing', 'ready', 'served', 'paid', 'rejected', 'cancelled')),
+        CHECK (status IN ('pending', 'processing', 'preparing', 'ready', 'served', 'paid', 'rejected', 'cancelled')),
     payment_status NVARCHAR(20) DEFAULT 'pending'
         CHECK (payment_status IN ('pending', 'success', 'failed', 'expired')),
     payment_method NVARCHAR(20), -- 'cash', 'vnpay', 'momo'

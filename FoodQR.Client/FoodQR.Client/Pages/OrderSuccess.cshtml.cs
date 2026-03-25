@@ -7,11 +7,12 @@ namespace FoodQR.Client.Pages
     public class OrderSuccessModel : PageModel
     {
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly string _apiBaseUrl = "https://localhost:7197/api";
+        private readonly string _apiBaseUrl;
 
-        public OrderSuccessModel(IHttpClientFactory httpClientFactory)
+        public OrderSuccessModel(IHttpClientFactory httpClientFactory, IConfiguration config)
         {
             _httpClientFactory = httpClientFactory;
+            _apiBaseUrl = config["ApiSettings:BaseUrl"] ?? "https://localhost:7197/api";
         }
 
         public string OrderCode { get; set; } = "";
