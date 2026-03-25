@@ -197,6 +197,7 @@ namespace FoodQR.API.Controllers
         public async Task<ActionResult<OrderDetailDto>> GetActiveOrderByTable(int tableId)
         {
             var order = await _context.Orders
+                .Include(o => o.Customer)
                 .Include(o => o.Table)
                 .Include(o => o.OrderItems)
                     .ThenInclude(oi => oi.Product)
@@ -213,6 +214,8 @@ namespace FoodQR.API.Controllers
                 Id = order.Id,
                 OrderCode = order.OrderCode,
                 TableNumber = order.Table?.TableNumber,
+                CustomerName = order.Customer?.Name,
+                CustomerEmail = order.Customer?.Email,
                 Status = order.Status,
                 PaymentStatus = order.PaymentStatus,
                 TotalAmount = order.TotalAmount ?? 0,
