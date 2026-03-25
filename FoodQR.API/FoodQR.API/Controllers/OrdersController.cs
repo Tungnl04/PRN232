@@ -1,6 +1,7 @@
 using FoodQR.API.Application.DTOs;
 using FoodQR.API.Core.Entities;
 using FoodQR.API.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +18,7 @@ namespace FoodQR.API.Controllers
             _context = context;
         }
 
+        [AllowAnonymous]
         [HttpPost]
         public async Task<ActionResult<Order>> CreateOrder(OrderCreateDto orderDto)
         {
@@ -136,6 +138,7 @@ namespace FoodQR.API.Controllers
             return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
         }
 
+        [Authorize(Roles = "staff,admin")]
         [HttpGet("{id}")]
         public async Task<ActionResult<Order>> GetOrder(int id)
         {
@@ -153,6 +156,7 @@ namespace FoodQR.API.Controllers
             return order;
         }
 
+        [AllowAnonymous]
         [HttpGet("active/{tableId}")]
         public async Task<ActionResult<OrderDetailDto>> GetActiveOrderByTable(int tableId)
         {
@@ -188,6 +192,7 @@ namespace FoodQR.API.Controllers
             };
         }
 
+        [Authorize(Roles = "staff,admin")]
         [HttpGet("stats/overview")]
         public async Task<ActionResult<object>> GetDashboardStats()
         {

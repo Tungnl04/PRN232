@@ -1,5 +1,6 @@
 using FoodQR.API.Core.Entities;
 using FoodQR.API.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,12 +17,14 @@ namespace FoodQR.API.Controllers
             _context = context;
         }
 
+        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<OrderTable>>> GetTables()
         {
             return await _context.OrderTables.ToListAsync();
         }
 
+        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<ActionResult<OrderTable>> GetTable(int id)
         {
@@ -30,6 +33,7 @@ namespace FoodQR.API.Controllers
             return table;
         }
 
+        [Authorize(Roles = "staff,admin")]
         [HttpPatch("{id}/status")]
         public async Task<IActionResult> UpdateTableStatus(int id, [FromBody] string status)
         {
@@ -41,6 +45,7 @@ namespace FoodQR.API.Controllers
             return NoContent();
         }
 
+        [Authorize(Roles = "admin")]
         [HttpPost]
         public async Task<ActionResult<OrderTable>> PostTable(OrderTable table)
         {
@@ -49,6 +54,7 @@ namespace FoodQR.API.Controllers
             return CreatedAtAction(nameof(GetTable), new { id = table.Id }, table);
         }
 
+        [Authorize(Roles = "admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutTable(int id, OrderTable table)
         {
@@ -58,6 +64,7 @@ namespace FoodQR.API.Controllers
             return NoContent();
         }
 
+        [Authorize(Roles = "admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTable(int id)
         {
