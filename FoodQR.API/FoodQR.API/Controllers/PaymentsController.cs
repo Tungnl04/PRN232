@@ -3,6 +3,7 @@ using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using FoodQR.API.Core.Enums;
 
 namespace FoodQR.API.Controllers
 {
@@ -28,7 +29,7 @@ namespace FoodQR.API.Controllers
             if (order == null) return NotFound();
 
             // BUG-07 Fix: Validate order status before payment
-            var allowedStatuses = new[] { "ready", "served" };
+            var allowedStatuses = new[] { OrderStatus.Ready, OrderStatus.Served };
             if (!allowedStatuses.Contains(order.Status?.ToLower()))
             {
                 return BadRequest(new { 
@@ -38,13 +39,13 @@ namespace FoodQR.API.Controllers
             }
 
             // Prevent double payment
-            if (string.Equals(order.PaymentStatus, "success", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(order.PaymentStatus, PaymentStatus.Success, StringComparison.OrdinalIgnoreCase))
             {
                 return BadRequest(new { Error = "Đơn hàng này đã được thanh toán rồi." });
             }
 
             // Prevent paying expired orders
-            if (string.Equals(order.PaymentStatus, "expired", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(order.PaymentStatus, PaymentStatus.Expired, StringComparison.OrdinalIgnoreCase))
             {
                 return BadRequest(new { Error = "Phiên thanh toán đã hết hạn. Vui lòng tạo phiên mới." });
             }
@@ -55,20 +56,20 @@ namespace FoodQR.API.Controllers
 
             if (simulateSuccess)
             {
-                order.PaymentStatus = "success";
-                order.Status = "paid";
+                order.PaymentStatus = PaymentStatus.Success;
+                order.Status = OrderStatus.Paid;
                 order.UpdatedAt = DateTime.Now;
 
                 // Business Rule: Table becomes available
                 if (order.Table != null)
                 {
-                    order.Table.Status = "available";
+                    order.Table.Status = TableStatus.Available;
                 }
 
                 await _context.OrderStatusHistories.AddAsync(new OrderStatusHistory {
                     Order = order,
                     OldStatus = oldStatus,
-                    NewStatus = "paid",
+                    NewStatus = OrderStatus.Paid,
                     Note = $"Payment success via {method}"
                 });
 

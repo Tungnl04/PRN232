@@ -57,13 +57,33 @@
 
         // Tự động điền tên từ active order (nếu có)
         window.addEventListener('DOMContentLoaded', async () => {
+            if (tableId <= 0) return;
             try {
                 const res = await fetch(`${apiBaseUrl}/Orders/active/${tableId}`);
                 if (res.ok) {
-                    // Đã có đơn active trên bàn này → không cần nhập tên
-                    // (sẽ append vào đơn cũ)
+                    const activeOrder = await res.json();
+                    
+                    document.querySelector('.card h3').innerText = `Gộp thêm món vào đơn hiện tại`;
+                    
+                    const nameInput = document.getElementById('customer-name');
+                    const emailInput = document.getElementById('customer-email');
+                    
+                    if (activeOrder.customerName) {
+                        nameInput.value = activeOrder.customerName;
+                        emailInput.value = activeOrder.customerEmail || '';
+                    } else {
+                        nameInput.value = 'Khách cũ bàn ' + tableId;
+                    }
+                    
+                    // Khóa input, không bắt khách nhập lại
+                    nameInput.readOnly = true;
+                    emailInput.readOnly = true;
+                    nameInput.style.backgroundColor = '#f5f5f5';
+                    emailInput.style.backgroundColor = '#f5f5f5';
                 }
-            } catch (e) { /* ignore */ }
+            } catch (e) {
+                console.error("Lỗi khi fetch active order", e);
+            }
         });
 
         function renderCart() {

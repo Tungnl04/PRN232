@@ -92,10 +92,10 @@ namespace FoodQR.API.Application.Services
                     });
                 }
 
-                // → READY if all done
-                bool allDone = order.OrderItems.All(oi =>
+                // → READY if all done (but not yet served)
+                bool allDoneReady = order.OrderItems.All(oi =>
                     oi.Status == OrderItemStatus.Ready || oi.Status == OrderItemStatus.Served || oi.Status == OrderItemStatus.Cancelled);
-                if (allDone && order.Status != OrderStatus.Ready && order.Status != OrderStatus.Served)
+                if (allDoneReady && order.Status != OrderStatus.Ready && order.Status != OrderStatus.Served)
                 {
                     string statusBeforeReady = order.Status ?? oldOrderStatus;
                     order.Status = OrderStatus.Ready;
@@ -112,6 +112,21 @@ namespace FoodQR.API.Application.Services
                         Type = "order_ready",
                         TargetRole = AppRoles.Staff,
                         CreatedAt = DateTime.Now
+                    });
+                }
+
+                // → SERVED if all items are served or cancelled (and at least some were served)
+                bool allServed = order.OrderItems.All(oi => oi.Status == OrderItemStatus.Served || oi.Status == OrderItemStatus.Cancelled) 
+                                 && order.OrderItems.Any(oi => oi.Status == OrderItemStatus.Served);
+                if (allServed && order.Status != OrderStatus.Served)
+                {
+                    string statusBeforeServed = order.Status ?? oldOrderStatus;
+                    order.Status = OrderStatus.Served;
+                    order.UpdatedAt = DateTime.Now;
+                    await _context.OrderStatusHistories.AddAsync(new OrderStatusHistory
+                    {
+                        Order = order, OldStatus = statusBeforeServed, NewStatus = OrderStatus.Served,
+                        Note = "Tất cả món đã được phục vụ"
                     });
                 }
             }
