@@ -1,6 +1,7 @@
 using FoodQR.API.Application.DTOs;
 using FoodQR.API.Core.Entities;
 using FoodQR.API.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +9,7 @@ namespace FoodQR.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "kitchen,admin")]
     public class KitchenController : ControllerBase
     {
         private readonly FoodStoreDbContext _context;
@@ -59,24 +61,25 @@ namespace FoodQR.API.Controllers
                 return BadRequest("Only pending items can be cancelled.");
             }
 
-            string oldStatus = item.Status ?? "unknown";
+            string oldItemStatus = item.Status ?? "unknown";
             item.Status = status;
 
             // Log activity
             await _context.ActivityLogs.AddAsync(new ActivityLog {
                 Action = "update_item_status",
-                Description = $"Item {id} status changed from {oldStatus} to {status}"
+                Description = $"Item {id} status changed from {oldItemStatus} to {status}"
             });
 
             // Business Rule: State Machine Logic
             var order = item.Order;
             if (order != null)
             {
+                // Capture trạng thái cũ TRƯỚC khi thay đổi
                 string oldOrderStatus = order.Status ?? "pending";
 
                 // 1. Chuyển sang PROCESSING nếu có món đang nấu hoặc đã xong một phần
                 bool anyWorkStarted = order.OrderItems.Any(oi => oi.Status == "preparing" || oi.Status == "ready");
-                if (anyWorkStarted && string.Equals(order.Status, "pending", StringComparison.OrdinalIgnoreCase))
+                if (anyWorkStarted && string.Equals(oldOrderStatus, "pending", StringComparison.OrdinalIgnoreCase))
                 {
                     order.Status = "processing";
                     order.UpdatedAt = DateTime.Now;
@@ -93,11 +96,12 @@ namespace FoodQR.API.Controllers
                 if (allDone && !string.Equals(order.Status, "ready", StringComparison.OrdinalIgnoreCase) 
                             && !string.Equals(order.Status, "served", StringComparison.OrdinalIgnoreCase))
                 {
+                    string statusBeforeReady = order.Status ?? oldOrderStatus;
                     order.Status = "ready";
                     order.UpdatedAt = DateTime.Now;
                     await _context.OrderStatusHistories.AddAsync(new OrderStatusHistory {
                         Order = order,
-                        OldStatus = order.Status == "ready" ? oldOrderStatus : order.Status,
+                        OldStatus = statusBeforeReady,
                         NewStatus = "ready",
                         Note = "Hệ thống: Tất cả món đã sẵn sàng"
                     });

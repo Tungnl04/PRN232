@@ -1,5 +1,6 @@
 using FoodQR.API.Core.Entities;
 using FoodQR.API.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,6 +17,7 @@ namespace FoodQR.API.Controllers
             _context = context;
         }
 
+        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<dynamic>>> GetCombos()
         {
@@ -40,6 +42,7 @@ namespace FoodQR.API.Controllers
             return result;
         }
 
+        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<ActionResult<Combo>> GetCombo(int id)
         {

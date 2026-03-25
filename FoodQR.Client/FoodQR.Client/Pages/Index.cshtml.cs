@@ -7,17 +7,21 @@ namespace FoodQR.Client.Pages
     public class IndexModel : PageModel
     {
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly string _apiBaseUrl = "https://localhost:7197/api";
+        private readonly string _apiBaseUrl;
+        private readonly ILogger<IndexModel> _logger;
 
-        public IndexModel(IHttpClientFactory httpClientFactory)
+        public IndexModel(IHttpClientFactory httpClientFactory, IConfiguration config, ILogger<IndexModel> logger)
         {
             _httpClientFactory = httpClientFactory;
+            _apiBaseUrl = config["ApiSettings:BaseUrl"] ?? "https://localhost:7197/api";
+            _logger = logger;
         }
 
         public List<CategoryDto> Categories { get; set; } = new();
         public List<ProductDto> Products { get; set; } = new();
         public List<ComboDto> Combos { get; set; } = new();
         public int TableId { get; set; }
+        public string? ErrorMessage { get; set; }
 
         public async Task OnGetAsync(int? tableId)
         {
@@ -51,7 +55,11 @@ namespace FoodQR.Client.Pages
                     Combos = JsonSerializer.Deserialize<List<ComboDto>>(comboJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
                 }
             }
-            catch (Exception) { }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to fetch menu data from API");
+                ErrorMessage = "Không thể tải dữ liệu menu. Vui lòng thử lại sau.";
+            }
         }
     }
 

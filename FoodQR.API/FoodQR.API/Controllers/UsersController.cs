@@ -1,5 +1,6 @@
 using FoodQR.API.Core.Entities;
 using FoodQR.API.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,6 +8,7 @@ namespace FoodQR.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "admin")]
     public class UsersController : ControllerBase
     {
         private readonly FoodStoreDbContext _context;
@@ -17,13 +19,14 @@ namespace FoodQR.API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<User>>> GetUsers()
+        public async Task<ActionResult<IEnumerable<object>>> GetUsers()
         {
-            return await _context.Users.ToListAsync();
+            var users = await _context.Users.ToListAsync();
+            return users.Select(u => new { u.Id, u.Name, u.Username, u.Role, u.Active }).ToList();
         }
 
         [HttpPost]
-        public async Task<ActionResult<User>> CreateUser(User user)
+        public async Task<ActionResult<object>> CreateUser(User user)
         {
             if (_context.Users.Any(u => u.Username == user.Username))
                 return BadRequest("Username already taken.");
@@ -37,14 +40,26 @@ namespace FoodQR.API.Controllers
             user.Active = true;
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetUsers), new { id = user.Id }, user);
+            return CreatedAtAction(nameof(GetUsers), new { id = user.Id }, new { user.Id, user.Name, user.Username, user.Role, user.Active });
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateUser(int id, User user)
+        public async Task<IActionResult> UpdateUser(int id, UpdateUserDto dto)
         {
-            if (id != user.Id) return BadRequest();
-            _context.Entry(user).State = EntityState.Modified;
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound();
+
+            // Update only provided fields
+            if (!string.IsNullOrEmpty(dto.Name)) user.Name = dto.Name;
+            if (!string.IsNullOrEmpty(dto.Role)) user.Role = dto.Role;
+            if (dto.Active.HasValue) user.Active = dto.Active.Value;
+
+            // Hash password if a new one is provided
+            if (!string.IsNullOrEmpty(dto.NewPassword))
+            {
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            }
+
             await _context.SaveChangesAsync();
             return NoContent();
         }
@@ -59,5 +74,13 @@ namespace FoodQR.API.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
+    }
+
+    public class UpdateUserDto
+    {
+        public string? Name { get; set; }
+        public string? Role { get; set; }
+        public bool? Active { get; set; }
+        public string? NewPassword { get; set; }
     }
 }

@@ -1,6 +1,8 @@
 using FoodQR.API.Application.DTOs;
 using FoodQR.API.Core.Entities;
+using FoodQR.API.Core.Interfaces;
 using FoodQR.API.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,12 +13,15 @@ namespace FoodQR.API.Controllers
     public class OrdersController : ControllerBase
     {
         private readonly FoodStoreDbContext _context;
+        private readonly IOrderService _orderService;
 
-        public OrdersController(FoodStoreDbContext context)
+        public OrdersController(FoodStoreDbContext context, IOrderService orderService)
         {
             _context = context;
+            _orderService = orderService;
         }
 
+        [AllowAnonymous]
         [HttpPost]
         public async Task<ActionResult<Order>> CreateOrder(OrderCreateDto orderDto)
         {
@@ -98,12 +103,44 @@ namespace FoodQR.API.Controllers
             decimal additionalAmount = 0;
             foreach (var itemDto in orderDto.Items)
             {
+                // Normalize: 0 → null (tránh FK constraint error)
+                if (itemDto.ProductId == 0) itemDto.ProductId = null;
+                if (itemDto.ComboId == 0) itemDto.ComboId = null;
+
+                // Validate: phải có ít nhất 1 trong 2
+                if (!itemDto.ProductId.HasValue && !itemDto.ComboId.HasValue) continue;
+
                 decimal unitPrice = 0;
                 if (itemDto.ProductId.HasValue)
                 {
                     var product = await _context.Products.FindAsync(itemDto.ProductId.Value);
                     if (product == null || product.IsAvailable == false) continue; // Skip out of stock
+
+                    // Kiểm tra tồn kho
+                    if (product.Inventory.HasValue && product.Inventory.Value < itemDto.Quantity)
+                    {
+                        continue; // Không đủ hàng → skip
+                    }
+
                     unitPrice = product.Price;
+
+                    // Trừ kho
+                    if (product.Inventory.HasValue)
+                    {
+                        product.Inventory -= itemDto.Quantity;
+                        if (product.Inventory <= 0)
+                        {
+                            product.Inventory = 0;
+                            product.IsAvailable = false;
+                            await _context.Notifications.AddAsync(new Notification
+                            {
+                                Message = $"⚠️ Sản phẩm '{product.Name}' đã hết hàng! (inventory = 0)",
+                                Type = "inventory_alert",
+                                TargetRole = "admin",
+                                CreatedAt = DateTime.Now
+                            });
+                        }
+                    }
                 }
                 else if (itemDto.ComboId.HasValue)
                 {
@@ -136,6 +173,7 @@ namespace FoodQR.API.Controllers
             return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
         }
 
+        [Authorize(Roles = "staff,admin")]
         [HttpGet("{id}")]
         public async Task<ActionResult<Order>> GetOrder(int id)
         {
@@ -153,6 +191,7 @@ namespace FoodQR.API.Controllers
             return order;
         }
 
+        [AllowAnonymous]
         [HttpGet("active/{tableId}")]
         public async Task<ActionResult<OrderDetailDto>> GetActiveOrderByTable(int tableId)
         {
@@ -188,6 +227,7 @@ namespace FoodQR.API.Controllers
             };
         }
 
+        [Authorize(Roles = "staff,admin")]
         [HttpGet("stats/overview")]
         public async Task<ActionResult<object>> GetDashboardStats()
         {
@@ -203,6 +243,24 @@ namespace FoodQR.API.Controllers
                 totalRevenue, 
                 activeTables 
             };
+        }
+
+        [Authorize(Roles = "staff,admin")]
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> CancelOrder(int id, [FromQuery] string? reason)
+        {
+            var result = await _orderService.CancelOrderAsync(id, reason);
+            if (!result) return BadRequest(new { Error = "Không thể hủy đơn. Chỉ hủy được đơn pending/processing." });
+            return Ok(new { Message = "Đơn hàng đã được hủy." });
+        }
+
+        [AllowAnonymous]
+        [HttpDelete("items/{itemId}")]
+        public async Task<IActionResult> CancelOrderItem(int itemId, [FromQuery] string? reason)
+        {
+            var result = await _orderService.CancelOrderItemAsync(itemId, reason);
+            if (!result) return BadRequest(new { Error = "Không thể hủy món. Chỉ hủy được món đang pending." });
+            return Ok(new { Message = "Món đã được hủy." });
         }
     }
 }

@@ -1,5 +1,6 @@
 using FoodQR.API.Core.Entities;
 using FoodQR.API.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,6 +8,7 @@ namespace FoodQR.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "staff,admin")]
     public class PaymentsController : ControllerBase
     {
         private readonly FoodStoreDbContext _context;
@@ -24,6 +26,28 @@ namespace FoodQR.API.Controllers
                 .FirstOrDefaultAsync(o => o.Id == orderId);
 
             if (order == null) return NotFound();
+
+            // BUG-07 Fix: Validate order status before payment
+            var allowedStatuses = new[] { "ready", "served" };
+            if (!allowedStatuses.Contains(order.Status?.ToLower()))
+            {
+                return BadRequest(new { 
+                    Error = "Chỉ có thể thanh toán đơn hàng đã sẵn sàng (ready) hoặc đã phục vụ (served).",
+                    CurrentStatus = order.Status 
+                });
+            }
+
+            // Prevent double payment
+            if (string.Equals(order.PaymentStatus, "success", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { Error = "Đơn hàng này đã được thanh toán rồi." });
+            }
+
+            // Prevent paying expired orders
+            if (string.Equals(order.PaymentStatus, "expired", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { Error = "Phiên thanh toán đã hết hạn. Vui lòng tạo phiên mới." });
+            }
 
             order.PaymentMethod = method;
             string oldStatus = order.Status ?? "unknown";
@@ -79,6 +103,16 @@ namespace FoodQR.API.Controllers
         {
             var order = await _context.Orders.FindAsync(orderId);
             if (order == null) return NotFound();
+
+            // Only expire pending payments
+            if (!string.Equals(order.PaymentStatus, "pending", StringComparison.OrdinalIgnoreCase) 
+                && !string.Equals(order.PaymentStatus, "failed", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { 
+                    Error = "Chỉ có thể hết hạn thanh toán đang pending hoặc failed.",
+                    CurrentPaymentStatus = order.PaymentStatus 
+                });
+            }
 
             order.PaymentStatus = "expired";
             await _context.ActivityLogs.AddAsync(new ActivityLog {

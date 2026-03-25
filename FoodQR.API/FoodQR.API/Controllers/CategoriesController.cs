@@ -1,5 +1,6 @@
 using FoodQR.API.Core.Entities;
 using FoodQR.API.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,12 +17,14 @@ namespace FoodQR.API.Controllers
             _context = context;
         }
 
+        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
         {
             return await _context.Categories.ToListAsync();
         }
 
+        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<ActionResult<Category>> GetCategory(int id)
         {
@@ -35,6 +38,7 @@ namespace FoodQR.API.Controllers
             return category;
         }
 
+        [Authorize(Roles = "admin")]
         [HttpPost]
         public async Task<ActionResult<Category>> PostCategory(Category category)
         {
@@ -43,6 +47,7 @@ namespace FoodQR.API.Controllers
             return CreatedAtAction(nameof(GetCategory), new { id = category.Id }, category);
         }
 
+        [Authorize(Roles = "admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutCategory(int id, Category category)
         {
@@ -52,6 +57,7 @@ namespace FoodQR.API.Controllers
             return NoContent();
         }
 
+        [Authorize(Roles = "admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCategory(int id)
         {
