@@ -1,4 +1,5 @@
-using FoodQR.API.Models;
+using FoodQR.API.Core.Entities;
+using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -36,6 +37,33 @@ namespace FoodQR.API.Controllers
             if (table == null) return NotFound();
 
             table.Status = status;
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        [HttpPost]
+        public async Task<ActionResult<OrderTable>> PostTable(OrderTable table)
+        {
+            _context.OrderTables.Add(table);
+            await _context.SaveChangesAsync();
+            return CreatedAtAction(nameof(GetTable), new { id = table.Id }, table);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutTable(int id, OrderTable table)
+        {
+            if (id != table.Id) return BadRequest();
+            _context.Entry(table).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteTable(int id)
+        {
+            var table = await _context.OrderTables.FindAsync(id);
+            if (table == null) return NotFound();
+            _context.OrderTables.Remove(table);
             await _context.SaveChangesAsync();
             return NoContent();
         }

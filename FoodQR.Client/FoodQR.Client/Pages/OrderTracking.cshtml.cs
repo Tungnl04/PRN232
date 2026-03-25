@@ -20,7 +20,7 @@ namespace FoodQR.Client.Pages
         public string OrderStatus { get; set; } = "";
         public List<TrackingItemDto> Items { get; set; } = new();
 
-        public async Task OnGetAsync(int orderId)
+        public async Task<IActionResult> OnGetAsync(int orderId, int tableId)
         {
             OrderId = orderId;
             var client = _httpClientFactory.CreateClient();
@@ -32,9 +32,17 @@ namespace FoodQR.Client.Pages
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
                 
+                int orderTableId = root.GetProperty("tableId").GetInt32();
+                
+                // Security check: Đơn hàng phải thuộc về bàn này
+                if (orderTableId != tableId)
+                {
+                    return RedirectToPage("/Index", new { tableId = tableId });
+                }
+
                 OrderCode = root.GetProperty("orderCode").GetString() ?? "";
                 OrderStatus = root.GetProperty("status").GetString() ?? "";
-                TableId = root.GetProperty("tableId").GetInt32();
+                TableId = orderTableId;
 
                 var itemsArray = root.GetProperty("orderItems");
                 foreach (var item in itemsArray.EnumerateArray())
@@ -67,7 +75,9 @@ namespace FoodQR.Client.Pages
                         Status = item.GetProperty("status").GetString() ?? "Pending"
                     });
                 }
+                return Page();
             }
+            return RedirectToPage("/Index", new { tableId = tableId });
         }
     }
 

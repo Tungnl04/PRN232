@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace FoodQR.API.Models;
+namespace FoodQR.API.Core.Entities;
 
 public partial class Combo
 {

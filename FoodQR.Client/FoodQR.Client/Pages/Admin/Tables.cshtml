@@ -1,0 +1,151 @@
+@page
+@model FoodQR.Client.Pages.Admin.TablesModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Manage Tables";
+}
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h3 style="font-weight: 800; margin: 0;">Table List</h3>
+        <button onclick="openCreateModal()" class="btn btn-primary" style="background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer;">
+            <i class="fa-solid fa-plus"></i> Add Table
+        </button>
+    </div>
+
+    <table class="mgmt-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Capacity</th>
+                <th>Status</th>
+                <th>QR Link</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="table-table-body">
+            <!-- Rendered via JS -->
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        let tables = [];
+
+        async function loadTables() {
+            tables = await apiClient.getTables();
+            const body = document.getElementById('table-table-body');
+            body.innerHTML = tables.map(t => `
+                <tr>
+                    <td>#${t.id}</td>
+                    <td class="font-bold">${t.tableNumber}</td>
+                    <td>${t.capacity} Peoples</td>
+                    <td>
+                        <span class="status-badge ${t.status.toLowerCase()}" style="padding: 4px 12px; border-radius: 100px; font-size: 0.7rem;">
+                            ${t.status.toUpperCase()}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="/?tableId=${t.id}" target="_blank" style="color: var(--primary); font-size: 0.8rem; text-decoration: none;">
+                            <i class="fa-solid fa-qrcode"></i> View Page
+                        </a>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-icon" onclick="openEditModal(${t.id})" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button class="btn-icon danger" onclick="deleteTable(${t.id})" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function openCreateModal() {
+            const { value: formValues } = await Swal.fire({
+                title: 'Add New Table',
+                html: `
+                    <input id="swal-tableNumber" class="swal2-input" placeholder="Table Number (e.g. Table 10)">
+                    <input id="swal-capacity" type="number" class="swal2-input" placeholder="Capacity">
+                `,
+                focusConfirm: false,
+                preConfirm: () => {
+                    return {
+                        tableNumber: document.getElementById('swal-tableNumber').value,
+                        capacity: parseInt(document.getElementById('swal-capacity').value),
+                        status: 'available'
+                    }
+                }
+            });
+
+            if (formValues && formValues.tableNumber) {
+                const res = await apiClient.createTable(formValues);
+                if (res && res.ok) {
+                    Swal.fire('Success!', 'Table created.', 'success');
+                    loadTables();
+                }
+            }
+        }
+
+        async function openEditModal(id) {
+            const t = tables.find(x => x.id === id);
+            const { value: formValues } = await Swal.fire({
+                title: 'Edit Table',
+                html: `
+                    <input id="swal-tableNumber" class="swal2-input" value="${t.tableNumber}">
+                    <input id="swal-capacity" type="number" class="swal2-input" value="${t.capacity}">
+                    <select id="swal-status" class="swal2-input">
+                        <option value="available" ${t.status === 'available' ? 'selected' : ''}>AVAILABLE</option>
+                        <option value="taken" ${t.status === 'taken' ? 'selected' : ''}>TAKEN</option>
+                        <option value="reserved" ${t.status === 'reserved' ? 'selected' : ''}>RESERVED</option>
+                    </select>
+                `,
+                focusConfirm: false,
+                preConfirm: () => {
+                    return {
+                        id: t.id,
+                        tableNumber: document.getElementById('swal-tableNumber').value,
+                        capacity: parseInt(document.getElementById('swal-capacity').value),
+                        status: document.getElementById('swal-status').value
+                    }
+                }
+            });
+
+            if (formValues) {
+                const res = await apiClient.updateTable(id, formValues);
+                if (res && res.ok) {
+                    Swal.fire('Updated!', 'Table saved.', 'success');
+                    loadTables();
+                }
+            }
+        }
+
+        async function deleteTable(id) {
+            const result = await Swal.fire({
+                title: 'Are you sure?',
+                text: "Removing a table might cause orphan orders!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff4d4d',
+                confirmButtonText: 'Yes, delete it!'
+            });
+
+            if (result.isConfirmed) {
+                const res = await apiClient.deleteTable(id);
+                if (res && res.ok) {
+                    Swal.fire('Deleted!', 'Table removed.', 'success');
+                    loadTables();
+                }
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', loadTables);
+    </script>
+}
+
+<style>
+    .status-badge.available { background: #e8f5e9; color: #4caf50; }
+    .status-badge.taken { background: #fff3e0; color: #ff9800; }
+    .status-badge.reserved { background: #e3f2fd; color: #2196f3; }
+</style>

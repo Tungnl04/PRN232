@@ -1,4 +1,5 @@
-using FoodQR.API.Models;
+using FoodQR.API.Core.Entities;
+using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -27,9 +28,9 @@ namespace FoodQR.API.Controllers
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Username == loginDto.Username && u.Active == true);
 
-            // In a real app, use BCrypt to verify password_hash
-            // For this demo, we assume the hash check is handled
-            if (user == null || user.PasswordHash == null) return Unauthorized("Invalid credentials");
+            // Use BCrypt to verify password_hash
+            if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash)) 
+                return Unauthorized("Invalid credentials");
 
             var token = GenerateJwtToken(user);
 

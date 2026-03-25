@@ -63,7 +63,7 @@ CREATE TABLE [user] (
     name NVARCHAR(100) NOT NULL,
     username NVARCHAR(50) UNIQUE NOT NULL,
     password_hash NVARCHAR(255) NOT NULL,
-    role NVARCHAR(20) CHECK (role IN ('staff', 'admin')),
+    role NVARCHAR(20) CHECK (role IN ('staff', 'admin', 'kitchen')),
     active BIT DEFAULT 1
 );
 

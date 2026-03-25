@@ -1,0 +1,183 @@
+@page
+@model FoodQR.Client.Pages.Admin.ProductsModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Manage Products";
+}
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h3 style="font-weight: 800; margin: 0;">Product List</h3>
+        <button onclick="openCreateModal()" class="btn btn-primary" style="background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer;">
+            <i class="fa-solid fa-plus"></i> Add Product
+        </button>
+    </div>
+
+    <table class="mgmt-table">
+        <thead>
+            <tr>
+                <th>Image</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="product-table-body">
+            <!-- Rendered via JS -->
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        let products = [];
+        let categories = [];
+
+        async function init() {
+            categories = await apiClient.getCategories();
+            await loadProducts();
+        }
+
+        async function loadProducts() {
+            products = await apiClient.getProducts();
+            const body = document.getElementById('product-table-body');
+            body.innerHTML = products.map(p => {
+                const cat = categories.find(c => c.id === p.categoryId);
+                return `
+                <tr>
+                    <td><img src="${p.imageUrl || '/images/placeholder.png'}" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;"></td>
+                    <td class="font-bold">${p.name}</td>
+                    <td>${cat ? cat.name : '<span class="text-muted">None</span>'}</td>
+                    <td>${(p.price || 0).toLocaleString('vi-VN')} đ</td>
+                    <td>
+                        <span class="status-badge ${p.isAvailable ? 'active' : 'inactive'}" style="padding: 4px 10px; border-radius: 12px; font-size: 0.7rem;">
+                            ${p.isAvailable ? 'Available' : 'Out of Stock'}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-icon" onclick="openEditModal(${p.id})" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button class="btn-icon danger" onclick="deleteProduct(${p.id})" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        async function openCreateModal() {
+            const catOptions = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            
+            const { value: formValues } = await Swal.fire({
+                title: 'Add New Product',
+                html: `
+                    <div style="text-align: left;">
+                        <label style="font-size: 0.8rem; font-weight: bold;">Name</label>
+                        <input id="swal-name" class="swal2-input" placeholder="Product Name">
+                        <label style="font-size: 0.8rem; font-weight: bold;">Category</label>
+                        <select id="swal-category" class="swal2-input">${catOptions}</select>
+                        <label style="font-size: 0.8rem; font-weight: bold;">Price</label>
+                        <input id="swal-price" type="number" class="swal2-input" placeholder="Price">
+                        <label style="font-size: 0.8rem; font-weight: bold;">Description</label>
+                        <textarea id="swal-desc" class="swal2-textarea" placeholder="Description..."></textarea>
+                        <label style="font-size: 0.8rem; font-weight: bold;">Image URL</label>
+                        <input id="swal-image" class="swal2-input" placeholder="https://...">
+                    </div>
+                `,
+                focusConfirm: false,
+                preConfirm: () => {
+                    return {
+                        name: document.getElementById('swal-name').value,
+                        categoryId: parseInt(document.getElementById('swal-category').value),
+                        price: parseFloat(document.getElementById('swal-price').value),
+                        description: document.getElementById('swal-desc').value,
+                        imageUrl: document.getElementById('swal-image').value,
+                        isAvailable: true
+                    }
+                }
+            });
+
+            if (formValues && formValues.name) {
+                const res = await apiClient.createProduct(formValues);
+                if (res && res.ok) {
+                    Swal.fire('Success!', 'Product created.', 'success');
+                    loadProducts();
+                }
+            }
+        }
+
+        async function openEditModal(id) {
+            const p = products.find(x => x.id === id);
+            const catOptions = categories.map(c => `<option value="${c.id}" ${c.id === p.categoryId ? 'selected' : ''}>${c.name}</option>`).join('');
+            
+            const { value: formValues } = await Swal.fire({
+                title: 'Edit Product',
+                html: `
+                    <div style="text-align: left;">
+                        <label style="font-size: 0.8rem; font-weight: bold;">Name</label>
+                        <input id="swal-name" class="swal2-input" value="${p.name}">
+                        <label style="font-size: 0.8rem; font-weight: bold;">Category</label>
+                        <select id="swal-category" class="swal2-input">${catOptions}</select>
+                        <label style="font-size: 0.8rem; font-weight: bold;">Price</label>
+                        <input id="swal-price" type="number" class="swal2-input" value="${p.price}">
+                        <label style="font-size: 0.8rem; font-weight: bold;">Description</label>
+                        <textarea id="swal-desc" class="swal2-textarea">${p.description || ''}</textarea>
+                        <label style="font-size: 0.8rem; font-weight: bold;">Image URL</label>
+                        <input id="swal-image" class="swal2-input" value="${p.imageUrl || ''}">
+                        <div style="margin-top: 10px;">
+                            <input type="checkbox" id="swal-available" ${p.isAvailable ? 'checked' : ''}>
+                            <label for="swal-available">Is Available</label>
+                        </div>
+                    </div>
+                `,
+                focusConfirm: false,
+                preConfirm: () => {
+                    return {
+                        id: p.id,
+                        name: document.getElementById('swal-name').value,
+                        categoryId: parseInt(document.getElementById('swal-category').value),
+                        price: parseFloat(document.getElementById('swal-price').value),
+                        description: document.getElementById('swal-desc').value,
+                        imageUrl: document.getElementById('swal-image').value,
+                        isAvailable: document.getElementById('swal-available').checked
+                    }
+                }
+            });
+
+            if (formValues) {
+                const res = await apiClient.updateProduct(id, formValues);
+                if (res && res.ok) {
+                    Swal.fire('Updated!', 'Product saved.', 'success');
+                    loadProducts();
+                }
+            }
+        }
+
+        async function deleteProduct(id) {
+            const result = await Swal.fire({
+                title: 'Are you sure?',
+                text: "This will permanently delete the product!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff4d4d',
+                confirmButtonText: 'Yes, delete it!'
+            });
+
+            if (result.isConfirmed) {
+                const res = await apiClient.deleteProduct(id);
+                if (res && res.ok) {
+                    Swal.fire('Deleted!', 'Product removed.', 'success');
+                    loadProducts();
+                }
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+}
+
+<style>
+    .status-badge.active { background: #e8f5e9; color: #4caf50; }
+    .status-badge.inactive { background: #ffebee; color: #f44336; }
+</style>

@@ -1,5 +1,6 @@
-using FoodQR.API.DTOs;
-using FoodQR.API.Models;
+using FoodQR.API.Application.DTOs;
+using FoodQR.API.Core.Entities;
+using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,8 +18,11 @@ namespace FoodQR.API.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<Order>> CreateOrder(CreateOrderDto orderDto)
+        public async Task<ActionResult<Order>> CreateOrder(OrderCreateDto orderDto)
         {
+            if (orderDto.TableId <= 0) return BadRequest("Table ID is required.");
+            if (orderDto.Items == null || !orderDto.Items.Any()) return BadRequest("Order must have at least one item.");
+
             // 1. Check for active order on this table
             var activeOrder = await _context.Orders
                 .Include(o => o.OrderItems)
@@ -31,6 +35,24 @@ namespace FoodQR.API.Controllers
             if (activeOrder != null)
             {
                 order = activeOrder;
+
+                // Business Rule: Nếu đơn đang Ready/Served mà đặt gọi thêm, phải đưa về Pending
+                if (string.Equals(order.Status, "ready", StringComparison.OrdinalIgnoreCase) || 
+                    string.Equals(order.Status, "served", StringComparison.OrdinalIgnoreCase))
+                {
+                    string oldStatus = order.Status;
+                    order.Status = "pending";
+                    order.UpdatedAt = DateTime.Now;
+
+                    await _context.OrderStatusHistories.AddAsync(new OrderStatusHistory
+                    {
+                        Order = order,
+                        OldStatus = oldStatus,
+                        NewStatus = "pending",
+                        Note = "Khách đặt thêm món mới"
+                    });
+                }
+
                 await _context.ActivityLogs.AddAsync(new ActivityLog { 
                     Action = "append_items", 
                     Description = $"Guest appended items to Order {order.OrderCode} at Table {orderDto.TableId}" 
@@ -63,6 +85,13 @@ namespace FoodQR.API.Controllers
                 await _context.ActivityLogs.AddAsync(new ActivityLog { 
                     Action = "create_order", 
                     Description = $"New order {order.OrderCode} created at Table {orderDto.TableId}" 
+                });
+
+                await _context.Notifications.AddAsync(new Notification {
+                    Message = $"🔔 Bàn {orderDto.TableId} vừa đặt món mới! Đơn: {order.OrderCode}",
+                    Type = "new_order",
+                    TargetRole = "staff",
+                    CreatedAt = DateTime.Now
                 });
             }
 
@@ -124,17 +153,56 @@ namespace FoodQR.API.Controllers
             return order;
         }
 
-        [HttpGet("table/{tableId}/active")]
-        public async Task<ActionResult<Order>> GetActiveOrderByTable(int tableId)
+        [HttpGet("active/{tableId}")]
+        public async Task<ActionResult<OrderDetailDto>> GetActiveOrderByTable(int tableId)
         {
             var order = await _context.Orders
+                .Include(o => o.Table)
                 .Include(o => o.OrderItems)
-                .Where(o => o.TableId == tableId && o.Status != "completed" && o.Status != "cancelled")
+                    .ThenInclude(oi => oi.Product)
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Combo)
+                .Where(o => o.TableId == tableId && !new[] { "paid", "cancelled", "rejected" }.Contains(o.Status))
                 .OrderByDescending(o => o.CreatedAt)
                 .FirstOrDefaultAsync();
 
             if (order == null) return NotFound();
-            return order;
+
+            return new OrderDetailDto
+            {
+                Id = order.Id,
+                OrderCode = order.OrderCode,
+                TableNumber = order.Table?.TableNumber,
+                Status = order.Status,
+                PaymentStatus = order.PaymentStatus,
+                TotalAmount = order.TotalAmount ?? 0,
+                Items = order.OrderItems.Select(oi => new OrderItemDetailDto
+                {
+                    Id = oi.Id,
+                    Name = oi.Product?.Name ?? oi.Combo?.Name ?? "Unknown",
+                    Quantity = oi.Quantity ?? 1,
+                    UnitPrice = oi.UnitPrice,
+                    Status = oi.Status ?? "pending",
+                    Note = oi.Note
+                }).ToList()
+            };
+        }
+
+        [HttpGet("stats/overview")]
+        public async Task<ActionResult<object>> GetDashboardStats()
+        {
+            var totalOrders = await _context.Orders.CountAsync();
+            var totalRevenue = await _context.Orders
+                .Where(o => o.Status.ToLower() == "paid")
+                .SumAsync(o => o.TotalAmount ?? 0);
+            var activeTables = await _context.OrderTables
+                .CountAsync(t => t.Status.ToLower() == "taken");
+
+            return new { 
+                totalOrders, 
+                totalRevenue, 
+                activeTables 
+            };
         }
     }
 }

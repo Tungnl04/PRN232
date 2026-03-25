@@ -1,0 +1,44 @@
+@page
+@model FoodQR.Client.Pages.Admin.IndexModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="card" style="padding: 40px; border-radius: 24px; background: white; text-align: center;">
+    <div style="font-size: 3rem; color: var(--primary); margin-bottom: 20px;"><i class="fa-solid fa-chart-line"></i></div>
+    <h2 style="font-weight: 800;">Welcome to Admin Portal</h2>
+    <p style="color: #888;">Here you will find system statistics and master data management tools.</p>
+    
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 40px;">
+        <div style="background: #f8f9fa; padding: 24px; border-radius: 16px;">
+            <div id="stat-total-orders" style="font-size: 1.5rem; font-weight: 800;">--</div>
+            <div style="font-size: 0.8rem; color: #888;">TOTAL ORDERS</div>
+        </div>
+        <div style="background: #f8f9fa; padding: 24px; border-radius: 16px;">
+            <div id="stat-revenue" style="font-size: 1.5rem; font-weight: 800;">--</div>
+            <div style="font-size: 0.8rem; color: #888;">REVENUE</div>
+        </div>
+        <div style="background: #f8f9fa; padding: 24px; border-radius: 16px;">
+            <div id="stat-active-tables" style="font-size: 1.5rem; font-weight: 800;">--</div>
+            <div style="font-size: 0.8rem; color: #888;">ACTIVE TABLES</div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function loadStats() {
+            try {
+                const stats = await apiClient.getDashboardStats();
+                document.getElementById('stat-total-orders').innerText = stats.totalOrders || 0;
+                document.getElementById('stat-revenue').innerText = (stats.totalRevenue || 0).toLocaleString('vi-VN') + ' đ';
+                document.getElementById('stat-active-tables').innerText = stats.activeTables || 0;
+            } catch (e) {
+                console.error("Failed to load dashboard stats", e);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', loadStats);
+    </script>
+}

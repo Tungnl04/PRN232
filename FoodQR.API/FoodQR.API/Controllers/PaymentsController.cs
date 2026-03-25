@@ -1,4 +1,5 @@
-using FoodQR.API.Models;
+using FoodQR.API.Core.Entities;
+using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 

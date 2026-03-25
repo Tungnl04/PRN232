@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using FoodQR.API.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace FoodQR.API.Models;
+namespace FoodQR.API.Infrastructure.Persistence;
 
 public partial class FoodStoreDbContext : DbContext
 {
@@ -40,14 +41,14 @@ public partial class FoodStoreDbContext : DbContext
     public virtual DbSet<User> Users { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-    }
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseSqlServer("Server=.;Database=FoodStoreDB;Trusted_Connection=True;TrustServerCertificate=True");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<ActivityLog>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__activity__3213E83F2A3CD36F");
+            entity.HasKey(e => e.Id).HasName("PK__activity__3213E83F7F63924C");
 
             entity.ToTable("activity_log");
 
@@ -67,7 +68,7 @@ public partial class FoodStoreDbContext : DbContext
 
         modelBuilder.Entity<Category>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__category__3213E83F01D1AF1D");
+            entity.HasKey(e => e.Id).HasName("PK__category__3213E83FE79C93EB");
 
             entity.ToTable("category");
 
@@ -82,7 +83,7 @@ public partial class FoodStoreDbContext : DbContext
 
         modelBuilder.Entity<Combo>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__combo__3213E83F326C302D");
+            entity.HasKey(e => e.Id).HasName("PK__combo__3213E83FE93FF2CD");
 
             entity.ToTable("combo");
 
@@ -106,7 +107,7 @@ public partial class FoodStoreDbContext : DbContext
 
         modelBuilder.Entity<ComboItem>(entity =>
         {
-            entity.HasKey(e => new { e.ComboId, e.ProductId }).HasName("PK__combo_it__5C876D7C2B422AB5");
+            entity.HasKey(e => new { e.ComboId, e.ProductId }).HasName("PK__combo_it__5C876D7CA836B05C");
 
             entity.ToTable("combo_item");
 
@@ -129,7 +130,7 @@ public partial class FoodStoreDbContext : DbContext
 
         modelBuilder.Entity<Customer>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__customer__3213E83F7E9AA808");
+            entity.HasKey(e => e.Id).HasName("PK__customer__3213E83F5781B98D");
 
             entity.ToTable("customer");
 
@@ -148,7 +149,7 @@ public partial class FoodStoreDbContext : DbContext
 
         modelBuilder.Entity<Notification>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__notifica__3213E83FFCF61505");
+            entity.HasKey(e => e.Id).HasName("PK__notifica__3213E83F2198B4E9");
 
             entity.ToTable("notification");
 
@@ -173,11 +174,11 @@ public partial class FoodStoreDbContext : DbContext
 
         modelBuilder.Entity<Order>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__order__3213E83FE167A0CA");
+            entity.HasKey(e => e.Id).HasName("PK__order__3213E83F8F9982EF");
 
             entity.ToTable("order");
 
-            entity.HasIndex(e => e.OrderCode, "UQ__order__99D12D3F6FE4EABB").IsUnique();
+            entity.HasIndex(e => e.OrderCode, "UQ__order__99D12D3F01385F13").IsUnique();
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.CreatedAt)
@@ -219,7 +220,7 @@ public partial class FoodStoreDbContext : DbContext
 
         modelBuilder.Entity<OrderItem>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__order_it__3213E83F816CDF9F");
+            entity.HasKey(e => e.Id).HasName("PK__order_it__3213E83F075E6C5A");
 
             entity.ToTable("order_item");
 
@@ -260,7 +261,7 @@ public partial class FoodStoreDbContext : DbContext
 
         modelBuilder.Entity<OrderStatusHistory>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__order_st__3213E83F3FD0E510");
+            entity.HasKey(e => e.Id).HasName("PK__order_st__3213E83F8D1D0E34");
 
             entity.ToTable("order_status_history");
 
@@ -289,11 +290,11 @@ public partial class FoodStoreDbContext : DbContext
 
         modelBuilder.Entity<OrderTable>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__order_ta__3213E83F6D9369AC");
+            entity.HasKey(e => e.Id).HasName("PK__order_ta__3213E83F277DDF0B");
 
             entity.ToTable("order_table");
 
-            entity.HasIndex(e => e.TableNumber, "UQ__order_ta__21B232CEB10D5FB5").IsUnique();
+            entity.HasIndex(e => e.TableNumber, "UQ__order_ta__21B232CE8BC6301B").IsUnique();
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Capacity).HasColumnName("capacity");
@@ -318,7 +319,7 @@ public partial class FoodStoreDbContext : DbContext
 
         modelBuilder.Entity<Product>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__product__3213E83F78A179C2");
+            entity.HasKey(e => e.Id).HasName("PK__product__3213E83F99BE18FC");
 
             entity.ToTable("product");
 
@@ -350,11 +351,11 @@ public partial class FoodStoreDbContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__user__3213E83F5835817F");
+            entity.HasKey(e => e.Id).HasName("PK__user__3213E83FA890B41D");
 
             entity.ToTable("user");
 
-            entity.HasIndex(e => e.Username, "UQ__user__F3DBC5721E00CEC6").IsUnique();
+            entity.HasIndex(e => e.Username, "UQ__user__F3DBC572AD5BE68E").IsUnique();
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Active)

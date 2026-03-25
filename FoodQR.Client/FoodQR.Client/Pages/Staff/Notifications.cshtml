@@ -1,0 +1,21 @@
+@page
+@model FoodQR.Client.Pages.Staff.NotificationsModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "System Notifications";
+}
+
+<div class="card" style="padding: 24px; border-radius: 20px; background: white;">
+    <div id="notifications-list">
+        <div style="text-align: center; padding: 40px; color: #888;">
+            <i class="fa-solid fa-bell-slash" style="font-size: 2rem; margin-bottom: 12px; display: block;"></i>
+            No new notifications.
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Polling logic for alerts (e.g., Guest calling staff) could go here
+    </script>
+}

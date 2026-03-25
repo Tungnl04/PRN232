@@ -55,6 +55,14 @@
         let cart = JSON.parse(localStorage.getItem('food_cart')) || [];
         renderCart();
 
+        // Tự động điền thông tin cũ nếu có
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedName = localStorage.getItem('food_customer_name');
+            const savedEmail = localStorage.getItem('food_customer_email');
+            if (savedName) document.getElementById('customer-name').value = savedName;
+            if (savedEmail) document.getElementById('customer-email').value = savedEmail;
+        });
+
         function renderCart() {
             const list = document.getElementById('cart-items-list');
             const footer = document.getElementById('cart-footer');
@@ -144,6 +152,12 @@
 
                 if (response.ok) {
                     const result = await response.json();
+                    
+                    // Lưu thông tin để lần sau không phải nhập lại
+                    localStorage.setItem('food_customer_name', name);
+                    localStorage.setItem('food_customer_email', email);
+                    localStorage.setItem('food_active_order_id', result.id);
+
                     localStorage.removeItem('food_cart');
                     window.location.href = '/OrderSuccess?orderId=' + result.id;
                 } else {

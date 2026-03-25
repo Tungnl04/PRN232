@@ -86,7 +86,7 @@
             bar.style.width = '50%';
             document.getElementById('step-pending').classList.add('active');
             document.getElementById('step-processing').classList.add('active');
-        } else if (status === 'completed') {
+        } else if (status === 'ready' || status === 'served' || status === 'completed') {
             bar.style.width = '100%';
             document.getElementById('step-pending').classList.add('active');
             document.getElementById('step-processing').classList.add('active');

@@ -29,7 +29,113 @@
         <span id="cart-count" style="position: absolute; top: -5px; right: -5px; background: red; color: white; width: 20px; height: 20px; border-radius: 50%; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; display: none;">0</span>
     </div>
 
+    <div id="order-tracker-bar" class="order-tracker-bar" onclick="goToTracking()">
+        <div class="icon-box">
+            <i class="fa-solid fa-utensils"></i>
+        </div>
+        <div class="content">
+            <span class="status-label">Đang diễn ra</span>
+            <div style="display: flex; align-items: center;">
+                <span id="tracker-status-value" class="status-value">Đang xử lý...</span>
+                <div class="pulse-dot"></div>
+            </div>
+        </div>
+        <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.8rem;"></i>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        const apiBase = "https://localhost:7197/api";
+
+        function goToTracking() {
+            const orderId = localStorage.getItem('food_active_order_id');
+            const tableIdDisplay = document.getElementById('current-table').innerText;
+            if (orderId) {
+                window.location.href = `/OrderTracking?orderId=${orderId}&tableId=${tableIdDisplay}`;
+            }
+        }
+
+        async function checkActiveOrder() {
+            let orderId = localStorage.getItem('food_active_order_id');
+            const bar = document.getElementById('order-tracker-bar');
+            const tableIdStr = document.getElementById('current-table').innerText;
+            const tableId = parseInt(tableIdStr);
+
+            // Bỏ qua nếu chưa nhận diện được số bàn
+            if (isNaN(tableId) || tableId <= 0) return;
+
+            // Nếu không có ID trong máy, thử tìm đơn đang mở của bàn này
+            if (!orderId) {
+                try {
+                    const activeResponse = await fetch(`${apiBase}/Orders/table/${tableId}/active`);
+                    if (activeResponse.ok) {
+                        const activeOrder = await activeResponse.json();
+                        orderId = activeOrder.id;
+                        localStorage.setItem('food_active_order_id', orderId);
+                        if (activeOrder.customer) {
+                            localStorage.setItem('food_customer_name', activeOrder.customer.name || "");
+                            localStorage.setItem('food_customer_email', activeOrder.customer.email || "");
+                        }
+                    }
+                } catch (e) {}
+            }
+            
+            if (!orderId) {
+                bar.classList.remove('active');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${apiBase}/Orders/${orderId}`);
+                if (response.ok) {
+                    const order = await response.json();
+                    
+                    // Logic Kiểm Tra Bàn: Nếu order cũ trong máy không thuộc bàn hiện tại -> Ẩn nó đi!
+                    if (order.tableId != tableId) {
+                        bar.classList.remove('active');
+                        // Thử tìm lại đơn của bàn MỚI
+                        const newActiveRes = await fetch(`${apiBase}/Orders/table/${tableId}/active`);
+                        if (newActiveRes.ok) {
+                            const newActive = await newActiveRes.json();
+                            localStorage.setItem('food_active_order_id', newActive.id);
+                            // Gọi lại để refresh UI
+                            checkActiveOrder();
+                        } else {
+                            localStorage.removeItem('food_active_order_id');
+                        }
+                        return;
+                    }
+
+                    const status = (order.status || "").toLowerCase();
+                    if (['paid', 'cancelled', 'rejected', 'completed'].includes(status)) {
+                        bar.classList.remove('active');
+                        localStorage.removeItem('food_active_order_id');
+                        return;
+                    }
+
+                    const statusMap = {
+                        'pending': 'Đã nhận đơn 📝',
+                        'processing': 'Đang chế biến 🍳',
+                        'ready': 'Món đã sẵn sàng! 🔔',
+                        'served': 'Đang thưởng thức 😋'
+                    };
+
+                    document.getElementById('tracker-status-value').innerText = statusMap[status] || status.toUpperCase();
+                    bar.classList.add('active');
+                } else {
+                    bar.classList.remove('active');
+                    localStorage.removeItem('food_active_order_id');
+                }
+            } catch (e) {
+                console.warn("Tracker error:", e);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(checkActiveOrder, 500);
+            setInterval(checkActiveOrder, 15000);
+        });
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

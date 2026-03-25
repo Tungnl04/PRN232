@@ -1,0 +1,102 @@
+@page
+@model FoodQR.Client.Pages.Kitchen.BoardModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Kitchen Board";
+}
+
+<div class="kanban-container">
+    <div class="kanban-column" id="col-pending">
+        <div class="column-header"><i class="fa-solid fa-clock"></i> PENDING <span class="badge" id="count-pending">0</span></div>
+        <div class="item-list"></div>
+    </div>
+
+    <div class="kanban-column" id="col-preparing">
+        <div class="column-header" style="border-bottom-color: #2196f3;"><i class="fa-solid fa-fire-burner"></i> PREPARING <span class="badge" id="count-preparing">0</span></div>
+        <div class="item-list"></div>
+    </div>
+
+    <div class="kanban-column" id="col-ready">
+        <div class="column-header" style="border-bottom-color: #4caf50;"><i class="fa-solid fa-check-double"></i> READY <span class="badge" id="count-ready">0</span></div>
+        <div class="item-list"></div>
+    </div>
+</div>
+
+<style>
+    .column-header { font-weight: 800; font-size: 0.9rem; padding-bottom: 12px; border-bottom: 3px solid #ccc; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .badge { background: #fff; padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .item-list { display: flex; flex-direction: column; gap: 12px; }
+    .kitchen-card.pending { border-left-color: #ff9800; }
+    .kitchen-card.preparing { border-left-color: #2196f3; }
+    .kitchen-card.ready { border-left-color: #4caf50; }
+    .card-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .table-label { font-size: 0.7rem; font-weight: 700; color: #888; text-transform: uppercase; }
+    .time-label { font-size: 0.7rem; color: #bbb; }
+    .dish-name { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+    .dish-note { font-size: 0.8rem; color: #ff5252; font-style: italic; margin-bottom: 8px; }
+    .dish-qty { font-weight: 800; color: var(--primary); font-size: 1.1rem; }
+    .card-footer { margin-top: 16px; display: flex; justify-content: flex-end; }
+    .action-btn { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; cursor: pointer; }
+</style>
+
+@section Scripts {
+    <script>
+        async function loadKitchenItems() {
+            try {
+                const items = await apiClient.getKitchenItems();
+                renderItems(items);
+            } catch (err) { console.error(err); }
+        }
+
+        function renderItems(items) {
+            const cols = {
+                'pending': document.querySelector('#col-pending .item-list'),
+                'preparing': document.querySelector('#col-preparing .item-list'),
+                'ready': document.querySelector('#col-ready .item-list')
+            };
+
+            Object.values(cols).forEach(c => c.innerHTML = '');
+            let counts = { pending: 0, preparing: 0, ready: 0 };
+
+            items.forEach(item => {
+                const status = item.status.toLowerCase();
+                if (!cols[status]) return;
+                counts[status]++;
+                
+                const card = document.createElement('div');
+                card.className = `kitchen-card ${status}`;
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="table-label">Table ${item.tableNumber || '?'}</span>
+                        <span class="time-label">Order ${item.orderCode}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <div class="dish-name">${item.dishName}</div>
+                            ${item.note ? `<div class="dish-note">"${item.note}"</div>` : ''}
+                        </div>
+                        <div class="dish-qty">x${item.quantity}</div>
+                    </div>
+                    <div class="card-footer">
+                        ${status === 'pending' ? `<button class="action-btn" onclick="updateItem(${item.id}, 'preparing')">ACCEPT</button>` : ''}
+                        ${status === 'preparing' ? `<button class="action-btn" style="background:#4caf50" onclick="updateItem(${item.id}, 'ready')">READY</button>` : ''}
+                        ${status === 'ready' ? `<button class="action-btn" style="background:#2196f3" onclick="updateItem(${item.id}, 'served')">SERVED</button>` : ''}
+                    </div>
+                `;
+                cols[status].appendChild(card);
+            });
+
+            document.getElementById('count-pending').innerText = counts.pending;
+            document.getElementById('count-preparing').innerText = counts.preparing;
+            document.getElementById('count-ready').innerText = counts.ready;
+        }
+
+        async function updateItem(itemId, newStatus) {
+            const res = await apiClient.updateItemStatus(itemId, newStatus);
+            if (res && res.ok) loadKitchenItems();
+        }
+
+        loadKitchenItems();
+        setInterval(loadKitchenItems, 10000);
+    </script>
+}

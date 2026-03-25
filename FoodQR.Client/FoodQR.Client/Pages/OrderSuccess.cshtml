@@ -27,7 +27,17 @@
 @section Scripts {
     <script>
         // Clear badge
-        document.getElementById('cart-count').style.display = 'none';
+        const badge = document.getElementById('cart-count');
+        if (badge) badge.style.display = 'none';
+
         document.getElementById('current-table').innerText = "@Model.TableId" || "??";
+
+        // Đảm bảo lưu Order ID vào localStorage để theo dõi
+        localStorage.setItem('food_active_order_id', "@Model.OrderId");
+        
+        // Cập nhật thanh trạng thái ngay lập tức
+        if (typeof checkActiveOrder === 'function') {
+            checkActiveOrder();
+        }
     </script>
 }

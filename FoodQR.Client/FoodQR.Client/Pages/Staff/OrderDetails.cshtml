@@ -1,0 +1,84 @@
+@page
+@model FoodQR.Client.Pages.Staff.OrderDetailsModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Order Details";
+}
+
+<div style="margin-bottom: 24px;">
+    <a href="/Staff/Dashboard" style="color: var(--text); font-weight: bold; text-decoration: none;"><i class="fa-solid fa-arrow-left"></i> Back to Tables</a>
+</div>
+
+<div class="card-mgmt">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+        <div>
+            <h3 style="margin: 0; font-weight: 800;">Table Order #<span id="order-id">--</span></h3>
+            <div style="color: #666; font-size: 0.9rem;">Status: <span id="order-status" style="font-weight: bold;">--</span></div>
+        </div>
+        <div id="payment-status"></div>
+    </div>
+
+    <div id="items-list" style="display: flex; flex-direction: column; gap: 12px;">
+        <!-- Items will be loaded here -->
+    </div>
+
+    <div id="order-total" style="margin-top: 32px; text-align: right; font-size: 1.2rem; font-weight: 800; border-top: 2px solid #eee; padding-top: 24px;">
+        Total: <span style="color: var(--primary);">0đ</span>
+    </div>
+</div>
+
+<style>
+    .order-item-card { display: flex; align-items: center; gap: 16px; padding: 16px; border-radius: 12px; background: #f8f9fa; }
+    .item-qty { font-weight: 800; font-size: 1.1rem; color: var(--primary); min-width: 40px; }
+    .item-name { flex-grow: 1; font-weight: 700; }
+    .item-status { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; padding: 4px 10px; border-radius: 50px; background: white; }
+    .status-ready { color: #4caf50; background: #e8f5e9; }
+</style>
+
+@section Scripts {
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const tableId = urlParams.get('tableId');
+
+        async function loadOrder() {
+            try {
+                const order = await apiClient.getActiveOrder(tableId);
+                if (!order) {
+                    document.getElementById('items-list').innerHTML = '<div style="text-align:center; padding: 40px; color: #888;">No active order for this table.</div>';
+                    return;
+                }
+                renderOrder(order);
+            } catch (err) { console.error(err); }
+        }
+
+        function renderOrder(order) {
+            document.getElementById('order-id').innerText = order.orderCode || order.id;
+            document.getElementById('order-status').innerText = order.status;
+            
+            const list = document.getElementById('items-list');
+            list.innerHTML = order.items.map(i => `
+                <div class="order-item-card">
+                    <div class="item-qty">x${i.quantity}</div>
+                    <div class="item-name">
+                        ${i.name}
+                        ${i.note ? `<div style="font-size: 0.75rem; color: #ff5252; font-style: italic;">"${i.note}"</div>` : ''}
+                    </div>
+                    <div class="item-status status-${i.status.toLowerCase()}">${i.status}</div>
+                    ${i.status.toLowerCase() === 'ready' ? `
+                        <button onclick="serveItem(${i.id})" style="background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; cursor: pointer;">SERVE</button>
+                    ` : ''}
+                </div>
+            `).join('');
+
+            document.querySelector('#order-total span').innerText = (order.totalAmount || 0).toLocaleString('vi-VN') + 'đ';
+        }
+
+        async function serveItem(itemId) {
+            const res = await apiClient.updateItemStatus(itemId, 'served');
+            if (res && res.ok) loadOrder();
+        }
+
+        loadOrder();
+        setInterval(loadOrder, 10000);
+    </script>
+}

@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-using FoodQR.API.Models;
+using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);

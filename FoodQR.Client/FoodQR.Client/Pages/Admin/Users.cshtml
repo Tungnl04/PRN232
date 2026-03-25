@@ -1,0 +1,212 @@
+@page
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "User Management";
+}
+
+<div class="mgmt-header">
+    <h2 class="font-bold">Staff & Users</h2>
+    <button class="btn-add" onclick="openAddModal()"><i class="fa-solid fa-user-plus"></i> Add New Employee</button>
+</div>
+
+<div class="card-mgmt">
+    <table class="mgmt-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Full Name</th>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="user-table-body">
+            <!-- Data will be loaded via JS -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Add/Edit Modal -->
+<div id="userModal" class="modal">
+    <div class="modal-content">
+        <h3 id="modalTitle">Add New User</h3>
+        <input type="hidden" id="userId" />
+        <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="userName" placeholder="Nguyen Van A" oninput="autoGenUsername()" required />
+        </div>
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="userUsername" placeholder="staff_john" required />
+        </div>
+        <div class="form-group" id="passwordGroup">
+            <label>Password (Default: 123456)</label>
+            <input type="password" id="userPassword" placeholder="******" value="123456" />
+        </div>
+        <div class="form-group">
+            <label>Role</label>
+            <select id="userRole" onchange="autoGenUsername()">
+                <option value="staff">Staff (Waiter)</option>
+                <option value="kitchen">Kitchen Chef</option>
+                <option value="admin">Administrator</option>
+            </select>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+            <button class="btn-save" onclick="saveUser()">Save User</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let allUsers = [];
+
+        async function loadUsers() {
+            try {
+                allUsers = await apiClient.getUsers();
+                renderUsers(allUsers);
+            } catch (err) { console.error(err); }
+        }
+
+        function renderUsers(users) {
+            const tbody = document.getElementById('user-table-body');
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td>#${u.id}</td>
+                    <td class="font-bold">${u.name}</td>
+                    <td><code>${u.username}</code></td>
+                    <td><span class="status-badge" style="background:#eee; color:#333">${u.role.toUpperCase()}</span></td>
+                    <td>
+                        <span class="status-badge ${u.active ? 'available' : 'taken'}">
+                            ${u.active ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn-icon" onclick="editUser(${u.id})"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn-icon btn-delete" onclick="toggleUser(${u.id}, ${u.active})">
+                            <i class="fa-solid ${u.active ? 'fa-user-slash' : 'fa-user-check'}"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openAddModal() {
+            document.getElementById('modalTitle').innerText = "Add New User";
+            document.getElementById('userId').value = "";
+            document.getElementById('userName').value = "";
+            document.getElementById('userUsername').value = "";
+            document.getElementById('userPassword').value = "123456";
+            document.getElementById('passwordGroup').style.display = "block";
+            document.getElementById('userModal').style.display = "flex";
+        }
+
+        function autoGenUsername() {
+            const id = document.getElementById('userId').value;
+            if (id) return; // Don't auto-gen if editing
+
+            const fullName = document.getElementById('userName').value;
+            const role = document.getElementById('userRole').value;
+            
+            if (!fullName) {
+                document.getElementById('userUsername').value = "";
+                return;
+            }
+
+            // Get initials: Bui Xuan Bac -> bxb
+            const initials = fullName
+                .trim()
+                .split(/\s+/)
+                .map(word => word[0])
+                .join('')
+                .toLowerCase();
+
+            // Strip Vietnamese accents if possible (optional but good)
+            const sanitizedInitials = initials.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d");
+
+            document.getElementById('userUsername').value = `${role}_${sanitizedInitials}`;
+        }
+
+        function editUser(id) {
+            const u = allUsers.find(x => x.id === id);
+            if (!u) return;
+
+            document.getElementById('modalTitle').innerText = "Edit User";
+            document.getElementById('userId').value = u.id;
+            document.getElementById('userName').value = u.name;
+            document.getElementById('userUsername').value = u.username;
+            document.getElementById('userRole').value = u.role.toLowerCase();
+            document.getElementById('passwordGroup').style.display = "none"; // Hide password on edit for simplicity
+            document.getElementById('userModal').style.display = "flex";
+        }
+
+        async function saveUser() {
+            const id = document.getElementById('userId').value;
+            const data = {
+                name: document.getElementById('userName').value,
+                username: document.getElementById('userUsername').value,
+                role: document.getElementById('userRole').value,
+                active: true
+            };
+
+            if (!id) {
+                data.passwordHash = document.getElementById('userPassword').value;
+                if (!data.passwordHash) {
+                    Swal.fire('Error', 'Password is required for new users.', 'error');
+                    return;
+                }
+            } else {
+                data.id = parseInt(id);
+                // Keep password as is (in a real app you'd have a change password flow)
+                const existing = allUsers.find(x => x.id === data.id);
+                data.passwordHash = existing.passwordHash;
+            }
+
+            try {
+                let res;
+                if (id) {
+                    res = await apiClient.updateUser(id, data);
+                } else {
+                    res = await apiClient.createUser(data);
+                }
+
+                if (res.ok) {
+                    Swal.fire('Success', 'User saved successfully!', 'success');
+                    closeModal();
+                    loadUsers();
+                } else {
+                    const err = await res.text();
+                    Swal.fire('Error', err || 'Failed to save user.', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Error', 'Connection error.', 'error');
+            }
+        }
+
+        async function toggleUser(id, currentStatus) {
+            const action = currentStatus ? 'Deactivate' : 'Activate';
+            const { isConfirmed } = await Swal.fire({
+                title: `${action} User?`,
+                text: `Are you sure you want to ${action.toLowerCase()} this account?`,
+                icon: 'warning',
+                showCancelButton: true
+            });
+
+            if (isConfirmed) {
+                const u = allUsers.find(x => x.id === id);
+                u.active = !currentStatus;
+                const res = await apiClient.updateUser(id, u);
+                if (res.ok) {
+                    Swal.fire('Updated!', `User has been ${action.toLowerCase()}d.`, 'success');
+                    loadUsers();
+                }
+            }
+        }
+
+        function closeModal() { document.getElementById('userModal').style.display = "none"; }
+        loadUsers();
+    </script>
+}

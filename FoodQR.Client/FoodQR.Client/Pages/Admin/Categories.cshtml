@@ -1,0 +1,112 @@
+@page
+@model FoodQR.Client.Pages.Admin.CategoriesModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Manage Categories";
+}
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h3 style="font-weight: 800; margin: 0;">Category List</h3>
+        <button onclick="openCreateModal()" class="btn btn-primary" style="background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer;">
+            <i class="fa-solid fa-plus"></i> Add Category
+        </button>
+    </div>
+
+    <table class="mgmt-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Category Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="category-table-body">
+            <!-- Rendered via JS -->
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        let categories = [];
+
+        async function loadCategories() {
+            categories = await apiClient.getCategories();
+            const body = document.getElementById('category-table-body');
+            body.innerHTML = categories.map(c => `
+                <tr>
+                    <td>#${c.id}</td>
+                    <td class="font-bold">${c.name}</td>
+                    <td>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-icon" onclick="openEditModal(${c.id})" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button class="btn-icon danger" onclick="deleteCategory(${c.id})" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function openCreateModal() {
+            const { value: name } = await Swal.fire({
+                title: 'Add New Category',
+                input: 'text',
+                inputLabel: 'Category Name',
+                inputPlaceholder: 'Enter name...',
+                showCancelButton: true
+            });
+
+            if (name) {
+                const res = await apiClient.createCategory({ name: name });
+                if (res && res.ok) {
+                    Swal.fire('Success!', 'Category created.', 'success');
+                    loadCategories();
+                }
+            }
+        }
+
+        async function openEditModal(id) {
+            const category = categories.find(c => c.id === id);
+            const { value: name } = await Swal.fire({
+                title: 'Edit Category',
+                input: 'text',
+                inputLabel: 'Category Name',
+                inputValue: category.name,
+                showCancelButton: true
+            });
+
+            if (name && name !== category.name) {
+                const res = await apiClient.updateCategory(id, { id: id, name: name });
+                if (res && res.ok) {
+                    Swal.fire('Updated!', 'Category saved.', 'success');
+                    loadCategories();
+                }
+            }
+        }
+
+        async function deleteCategory(id) {
+            const result = await Swal.fire({
+                title: 'Are you sure?',
+                text: "Deleting a category might affect products!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff4d4d',
+                confirmButtonText: 'Yes, delete it!'
+            });
+
+            if (result.isConfirmed) {
+                const res = await apiClient.deleteCategory(id);
+                if (res && res.ok) {
+                    Swal.fire('Deleted!', 'Category removed.', 'success');
+                    loadCategories();
+                } else if (res && res.status === 400) {
+                     const error = await res.json();
+                     Swal.fire('Error', error.title || 'Cannot delete category.', 'error');
+                }
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', loadCategories);
+    </script>
+}
