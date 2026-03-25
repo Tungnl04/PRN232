@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>FoodQR - Báo Cáo Phân Tích Toàn Diện</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f5f5f5;color:#1a1a2e;line-height:1.7;padding:20px}
+.container{max-width:1100px;margin:auto;background:#fff;padding:40px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+h1{text-align:center;color:#0f3460;font-size:28px;margin-bottom:5px}
+h2{color:#16213e;border-bottom:3px solid #e94560;padding-bottom:8px;margin:35px 0 15px;font-size:22px}
+h3{color:#0f3460;margin:20px 0 10px;font-size:18px}
+h4{color:#533483;margin:15px 0 8px;font-size:16px}
+.subtitle{text-align:center;color:#666;margin-bottom:30px;font-size:14px}
+table{width:100%;border-collapse:collapse;margin:15px 0;font-size:14px}
+th{background:#16213e;color:#fff;padding:10px 12px;text-align:left}
+td{padding:8px 12px;border-bottom:1px solid #eee}
+tr:hover td{background:#f0f4ff}
+.tag-red{background:#fee;color:#c00;padding:2px 8px;border-radius:4px;font-weight:600;font-size:12px}
+.tag-yellow{background:#fff8e1;color:#e65100;padding:2px 8px;border-radius:4px;font-weight:600;font-size:12px}
+.tag-green{background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:4px;font-weight:600;font-size:12px}
+.alert{padding:14px 18px;border-radius:8px;margin:12px 0;font-size:14px}
+.alert-danger{background:#ffeef0;border-left:4px solid #e94560}
+.alert-warning{background:#fff8e1;border-left:4px solid #ff9800}
+.alert-info{background:#e3f2fd;border-left:4px solid #2196f3}
+.alert-success{background:#e8f5e9;border-left:4px solid #4caf50}
+code{background:#f0f0f0;padding:2px 6px;border-radius:4px;font-size:13px;color:#c7254e}
+pre{background:#1a1a2e;color:#e0e0e0;padding:16px;border-radius:8px;overflow-x:auto;font-size:13px;margin:10px 0}
+pre code{background:none;color:#e0e0e0}
+.diff-add{color:#4caf50}.diff-del{color:#e94560}
+.mermaid{margin:20px 0;text-align:center}
+.dev-card{border:2px solid #e0e0e0;border-radius:12px;padding:20px;margin:15px 0}
+.dev-card h4{margin-top:0}
+.dev1{border-color:#2196f3;background:#f5f9ff}
+.dev2{border-color:#ff9800;background:#fffbf5}
+.dev3{border-color:#4caf50;background:#f5fff5}
+.legend{display:flex;gap:20px;margin:10px 0;flex-wrap:wrap}
+.legend span{padding:4px 12px;border-radius:4px;font-size:13px}
+.parallel{background:#e3f2fd;border:1px solid #2196f3}
+.sequential{background:#fff3e0;border:1px solid #ff9800}
+.blocked{background:#fce4ec;border:1px solid #e91e63}
+.page-break{page-break-before:always}
+@media print{body{padding:0;background:#fff}.container{box-shadow:none;padding:20px}h2{page-break-after:avoid}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>🔍 Báo Cáo Phân Tích Toàn Diện Dự Án FoodQR</h1>
+<p class="subtitle">Senior Software Architect & PM chuyên F&B | Ngày: 25/03/2026 | Phạm vi: ~55 file .cs, 23 file .cshtml</p>
+
+<!-- ==================== PHẦN 1 ==================== -->
+<h2>📋 Phần 1: Khảo Sát Codebase (Project Discovery)</h2>
+
+<h3>1.1 Tech Stack</h3>
+<table>
+<tr><th>Layer</th><th>Technology</th><th>Version</th></tr>
+<tr><td><b>Backend Runtime</b></td><td>ASP.NET Core Web API</td><td>.NET 8.0</td></tr>
+<tr><td><b>ORM</b></td><td>Entity Framework Core (DB-First)</td><td>8.0.x</td></tr>
+<tr><td><b>Database</b></td><td>SQL Server</td><td>—</td></tr>
+<tr><td><b>Auth</b></td><td>JWT Bearer + BCrypt.Net-Next</td><td>8.0.x / 4.1.0</td></tr>
+<tr><td><b>API Docs</b></td><td>Swashbuckle (Swagger UI)</td><td>6.6.2</td></tr>
+<tr><td><b>Frontend</b></td><td>ASP.NET Razor Pages (SSR)</td><td>.NET 8.0</td></tr>
+<tr><td><b>Realtime</b></td><td>❌ <b>Chưa có</b></td><td>—</td></tr>
+<tr><td><b>Payment Gateway</b></td><td>❌ <b>Simulate only</b></td><td>—</td></tr>
+</table>
+
+<h3>1.2 Sơ Đồ Kiến Trúc</h3>
+<div class="mermaid">
+graph TB
+    subgraph "Client Layer - Razor Pages"
+        C1["👤 Guest: Index, Cart, OrderTracking"]
+        C2["👨‍🍳 Kitchen: Board"]
+        C3["💼 Staff: Dashboard, Notifications"]
+        C4["🔑 Admin: Products, Categories, Tables, Users"]
+    end
+    subgraph "API Layer - 10 Controllers"
+        A1[AuthController]
+        A2[OrdersController]
+        A3[KitchenController]
+        A4[PaymentsController]
+        A5["TablesController + ProductsController + etc."]
+    end
+    subgraph "Service Layer"
+        S1[OrderService]
+        S2[KitchenService]
+        S3[PaymentService]
+    end
+    subgraph "Data Layer"
+        DB[(SQL Server - FoodStoreDB - 10 tables)]
+    end
+    C1 & C2 & C3 & C4 --> A1 & A2 & A3 & A4 & A5
+    A2 --> S1
+    A3 --> S2
+    A4 --> S3
+    S1 & S2 & S3 --> DB
+    A5 --> DB
+</div>
+
+<h3>1.3 Database Schema (ER Diagram)</h3>
+<div class="mermaid">
+erDiagram
+    category ||--o{ product : has
+    product ||--o{ combo_item : in
+    combo ||--o{ combo_item : contains
+    product ||--o{ order_item : ordered
+    combo ||--o{ order_item : ordered
+    customer ||--o{ order : places
+    order_table ||--o{ order : hosts
+    order ||--o{ order_item : contains
+    order ||--o{ order_status_history : tracks
+</div>
+
+<h3>1.4 Trạng Thái Module</h3>
+<table>
+<tr><th>Module</th><th>Endpoints</th><th>Status</th></tr>
+<tr><td>Auth</td><td>POST /api/auth/login</td><td><span class="tag-green">✅ OK</span></td></tr>
+<tr><td>Orders</td><td>POST, GET, GET /active, GET /stats, DELETE</td><td><span class="tag-yellow">⚠️ Logic trùng lặp</span></td></tr>
+<tr><td>Kitchen</td><td>GET /items, PATCH /items/{id}/status</td><td><span class="tag-green">✅ OK</span></td></tr>
+<tr><td>Payments</td><td>POST /process, PATCH /expire</td><td><span class="tag-yellow">⚠️ Simulate only</span></td></tr>
+<tr><td>Tables</td><td>CRUD + PATCH status</td><td><span class="tag-green">✅ OK</span></td></tr>
+<tr><td>Products</td><td>CRUD + filter</td><td><span class="tag-green">✅ OK</span></td></tr>
+<tr><td>Categories</td><td>CRUD (có check FK)</td><td><span class="tag-green">✅ OK</span></td></tr>
+<tr><td>Combos</td><td>GET only</td><td><span class="tag-yellow">⚠️ Thiếu CRUD Admin</span></td></tr>
+<tr><td>Notifications</td><td>GET + PATCH read</td><td><span class="tag-yellow">⚠️ Polling, no push</span></td></tr>
+</table>
+
+<!-- ==================== PHẦN 2 ==================== -->
+<h2 class="page-break">🐛 Phần 2: Code Review & Phân Tích Lỗ Hổng</h2>
+
+<h3>2.1 Bugs & Code Smells</h3>
+
+<div class="alert alert-danger"><b>🔴 BUG-CRITICAL: Logic trùng lặp Controller ↔ Service</b><br>
+<code>OrdersController.CreateOrder()</code> chứa 170 dòng business logic inline mà KHÔNG gọi <code>IOrderService</code>. Cùng logic tồn tại song song → sửa 1 chỗ gây inconsistency.<br>
+Tương tự: <code>KitchenController</code> và <code>PaymentsController</code> đều bypass Service layer.</div>
+
+<div class="alert alert-danger"><b>🔴 BUG: Hardcoded status strings trong Controller</b><br>
+<code>OrdersController</code> dùng <code>"paid", "cancelled"</code> (hardcode), trong khi <code>OrderService</code> dùng <code>OrderStatus.Paid</code> constants → Dễ typo, khó maintain.</div>
+
+<div class="alert alert-warning"><b>🟡 BUG: CancelOrderAsync so sánh case-sensitive</b><br>
+<code>cancellableStatuses.Contains(order.Status?.ToLower())</code> — nên dùng <code>StringComparer.OrdinalIgnoreCase</code> cho an toàn.</div>
+
+<div class="alert alert-warning"><b>🟡 Code Smell:</b> Entity trả thẳng ra API (risk circular ref + data leak) • LoginDto/UpdateUserDto inline trong Controller • Không có Global Exception Handler • GetDashboardStats trả <code>object</code> thay vì typed DTO</div>
+
+<h3>2.2 Lỗ Hổng Bảo Mật</h3>
+<table>
+<tr><th>ID</th><th>Mô tả</th><th>Mức độ</th></tr>
+<tr><td>SEC-01</td><td><b>QR Token không validate</b> — <code>qr_code_token</code> tồn tại nhưng không dùng. Ai biết tableId đều đặt được</td><td><span class="tag-red">🔴 Critical</span></td></tr>
+<tr><td>SEC-02</td><td><b>CORS AllowAll</b> — <code>AllowAnyOrigin()</code> cho phép mọi website gọi API</td><td><span class="tag-red">🔴 Critical</span></td></tr>
+<tr><td>SEC-03</td><td><b>AllowAnonymous trên DELETE items</b> — Khách hủy được bất kỳ item nào</td><td><span class="tag-red">🔴 Critical</span></td></tr>
+<tr><td>SEC-04</td><td>Không có Rate Limiting → spam attack</td><td><span class="tag-yellow">🟡 Medium</span></td></tr>
+<tr><td>SEC-05</td><td>JWT Key có thể hardcoded yếu</td><td><span class="tag-yellow">🟡 Medium</span></td></tr>
+<tr><td>SEC-06</td><td>Không kiểm tra ownership khi khách xem đơn</td><td><span class="tag-yellow">🟡 Medium</span></td></tr>
+</table>
+
+<h3>2.3 Lỗ Hổng Logic F&B</h3>
+<table>
+<tr><th>ID</th><th>Mô tả</th><th>Mức độ</th></tr>
+<tr><td>LOGIC-01</td><td>Khách quét QR từ xa (chụp ảnh QR → đặt từ ngoài quán)</td><td><span class="tag-red">🔴</span></td></tr>
+<tr><td>LOGIC-02</td><td>Race condition khi 2 khách cùng bàn đặt đồng thời → overselling</td><td><span class="tag-red">🔴</span></td></tr>
+<tr><td>LOGIC-03</td><td>Combo không trừ inventory món con</td><td><span class="tag-yellow">🟡</span></td></tr>
+<tr><td>LOGIC-04</td><td>Bàn → available ngay sau thanh toán (thiếu trạng thái cleaning)</td><td><span class="tag-yellow">🟡</span></td></tr>
+<tr><td>LOGIC-05</td><td>Không kiểm tra giờ hoạt động nhà hàng</td><td><span class="tag-yellow">🟡</span></td></tr>
+</table>
+
+<!-- ==================== PHẦN 3 ==================== -->
+<h2 class="page-break">💡 Phần 3: Đề Xuất Business Logic Cần Bổ Sung</h2>
+
+<h3>3.1 So Sánh F&B Tiêu Chuẩn</h3>
+<table>
+<tr><th>Nghiệp vụ</th><th>Hiện tại</th><th>Cần có</th></tr>
+<tr><td>QR Token Security</td><td>❌</td><td>✅ Token-based, time-limited</td></tr>
+<tr><td>Realtime Updates</td><td>❌ Polling</td><td>✅ SignalR Hub</td></tr>
+<tr><td>Gộp bàn</td><td>❌</td><td>✅ table_group schema</td></tr>
+<tr><td>Chuyển bàn</td><td>❌</td><td>✅ API swap tableId</td></tr>
+<tr><td>Payment Gateway</td><td>❌ Simulate</td><td>✅ VNPay/MoMo webhook</td></tr>
+<tr><td>In hóa đơn/Phiếu bếp</td><td>❌</td><td>✅ PDF generation</td></tr>
+<tr><td>Giảm giá / Voucher</td><td>❌</td><td>⚡ discount table</td></tr>
+<tr><td>Báo cáo doanh thu</td><td>⚠️ Sơ sài</td><td>✅ Theo ngày/tuần/tháng</td></tr>
+<tr><td>Staff confirm Served</td><td>⚠️ Có status, không API</td><td>✅ Confirm flow</td></tr>
+<tr><td>Exception Handling</td><td>❌</td><td>✅ Global middleware</td></tr>
+<tr><td>Input Validation</td><td>❌</td><td>✅ FluentValidation</td></tr>
+</table>
+
+<h3>3.2 SignalR Realtime Flow</h3>
+<div class="mermaid">
+sequenceDiagram
+    participant Guest as 📱 Khách
+    participant API as 🖥️ API
+    participant Hub as 📡 SignalR
+    participant Kitchen as 👨‍🍳 Bếp
+    participant Staff as 💁 Thu Ngân
+    Guest->>API: POST /api/orders
+    API->>Hub: SendAsync NewOrder
+    Hub-->>Kitchen: 🔔 Đơn mới!
+    Hub-->>Staff: 🔔 Bàn X đặt món
+    Kitchen->>API: PATCH status→ready
+    API->>Hub: SendAsync OrderReady
+    Hub-->>Guest: 🎉 Món sẵn sàng!
+    Hub-->>Staff: 📢 Cần bưng món
+    Staff->>API: POST payment
+    API->>Hub: SendAsync PaymentSuccess
+    Hub-->>Guest: ✅ Thanh toán OK!
+</div>
+
+<h3>3.3 VNPay Webhook Flow</h3>
+<div class="mermaid">
+sequenceDiagram
+    participant Staff as 💁 Thu Ngân
+    participant API as 🖥️ API Server
+    participant VNPay as 💳 VNPay
+    participant Guest as 📱 Khách
+    Staff->>API: POST /payments/create-qr
+    API->>VNPay: Create Payment URL
+    VNPay-->>API: paymentUrl
+    API-->>Staff: QR Code
+    Staff-->>Guest: Hiển thị QR
+    Guest->>VNPay: Quét & thanh toán
+    VNPay->>API: POST /webhooks/vnpay (IPN)
+    Note right of API: Verify HMAC-SHA512 + Idempotency
+    API->>API: Update payment_status
+</div>
+
+<!-- ==================== PHẦN 4 ==================== -->
+<h2 class="page-break">👥 Phần 4: Tổng Hợp Đầu Việc</h2>
+
+<h3>4.1 Fix Bugs (12 tasks)</h3>
+<table>
+<tr><th>ID</th><th>Mô tả</th><th>Mức độ</th></tr>
+<tr><td>FIX-01</td><td>Refactor Controllers → delegate logic vào Service</td><td><span class="tag-red">🔴 Critical</span></td></tr>
+<tr><td>FIX-02</td><td>Replace hardcoded strings bằng StatusConstants</td><td><span class="tag-yellow">🟡</span></td></tr>
+<tr><td>FIX-03</td><td>Global Exception Handling Middleware</td><td><span class="tag-yellow">🟡</span></td></tr>
+<tr><td>FIX-04</td><td>Tạo output DTOs cho tất cả endpoints</td><td><span class="tag-yellow">🟡</span></td></tr>
+<tr><td>FIX-05</td><td>Di chuyển DTOs inline vào folder DTOs</td><td><span class="tag-green">🟢</span></td></tr>
+<tr><td>FIX-06</td><td>Fix CORS → whitelist domain</td><td><span class="tag-red">🔴 Critical</span></td></tr>
+<tr><td>FIX-07</td><td>QR Token validation cho CreateOrder</td><td><span class="tag-red">🔴 Critical</span></td></tr>
+<tr><td>FIX-08</td><td>Fix AllowAnonymous trên CancelOrderItem</td><td><span class="tag-red">🔴 Critical</span></td></tr>
+<tr><td>FIX-09</td><td>Rate Limiting middleware</td><td><span class="tag-yellow">🟡</span></td></tr>
+<tr><td>FIX-10</td><td>Wrap CreateOrder trong Transaction (race condition)</td><td><span class="tag-red">🔴 Critical</span></td></tr>
+<tr><td>FIX-11</td><td>Trừ inventory món con khi đặt Combo</td><td><span class="tag-yellow">🟡</span></td></tr>
+<tr><td>FIX-12</td><td>Bàn → cleaning sau thanh toán (thay vì available)</td><td><span class="tag-green">🟢</span></td></tr>
+</table>
+
+<h3>4.2 Tính Năng Mới (12 tasks)</h3>
+<table>
+<tr><th>ID</th><th>Mô tả</th><th>Mức độ</th></tr>
+<tr><td>FEAT-01</td><td>SignalR Hub + realtime Khách↔Bếp↔Staff</td><td><span class="tag-red">🔴 Critical</span></td></tr>
+<tr><td>FEAT-02</td><td>QR Code Generator API</td><td><span class="tag-red">🔴</span></td></tr>
+<tr><td>FEAT-03</td><td>Tích hợp VNPay/MoMo gateway</td><td><span class="tag-red">🔴</span></td></tr>
+<tr><td>FEAT-04</td><td>Webhook endpoint (verify HMAC, idempotency)</td><td><span class="tag-red">🔴</span></td></tr>
+<tr><td>FEAT-05</td><td>API chuyển bàn</td><td><span class="tag-yellow">🟡</span></td></tr>
+<tr><td>FEAT-06</td><td>API gộp bàn + schema table_group</td><td><span class="tag-yellow">🟡</span></td></tr>
+<tr><td>FEAT-07</td><td>Staff confirm "served" flow</td><td><span class="tag-yellow">🟡</span></td></tr>
+<tr><td>FEAT-08</td><td>Báo cáo doanh thu (ngày/tuần/tháng)</td><td><span class="tag-yellow">🟡</span></td></tr>
+<tr><td>FEAT-09</td><td>CRUD Combo cho Admin</td><td><span class="tag-green">🟢</span></td></tr>
+<tr><td>FEAT-10</td><td>FluentValidation</td><td><span class="tag-yellow">🟡</span></td></tr>
+<tr><td>FEAT-11</td><td>CRUD Combo UI</td><td><span class="tag-green">🟢</span></td></tr>
+<tr><td>FEAT-12</td><td>UI Razor Pages cho tính năng mới</td><td><span class="tag-yellow">🟡</span></td></tr>
+</table>
+
+<!-- ==================== PHẦN 5: SPRINT 3 NGÀY ==================== -->
+<h2 class="page-break">📅 Phần 5: Kế Hoạch Sprint 3 Ngày — Phân Công 3 Người</h2>
+
+<div class="alert alert-info"><b>📌 Chú thích:</b></div>
+<div class="legend">
+<span class="parallel">🟦 Song song (không phụ thuộc)</span>
+<span class="sequential">🟧 Tuần tự (phải đợi task khác)</span>
+<span class="blocked">🟥 Blocked (đợi Dev khác)</span>
+</div>
+
+<h3>5.1 Sơ Đồ Gantt — 3 Ngày</h3>
+<div class="mermaid">
+gantt
+    title Sprint 3 Ngày - FoodQR Team
+    dateFormat YYYY-MM-DD
+    axisFormat %d/%m
+
+    section Dev 1 - Backend Core
+    FIX-01 Refactor Controllers        :d1a, 2026-03-26, 1d
+    FIX-02+05 Constants + DTOs move    :d1a2, 2026-03-26, 1d
+    FIX-03 Exception Handler           :d1b, 2026-03-27, 1d
+    FIX-04+10 Output DTOs + Transaction:d1b2, 2026-03-27, 1d
+    FIX-11+12 Combo inv + Cleaning     :d1c, 2026-03-28, 1d
+    FEAT-07+08 Served + Reports API    :d1c2, 2026-03-28, 1d
+
+    section Dev 2 - Realtime + Payment
+    FIX-07 QR Token validation         :d2a, 2026-03-26, 1d
+    FIX-06+08+09 CORS + Auth + Rate    :d2a2, 2026-03-26, 1d
+    FEAT-01 SignalR Hub setup          :d2b, 2026-03-27, 1d
+    FEAT-02 QR Code Generator          :d2b2, 2026-03-27, 1d
+    FEAT-03+04 VNPay + Webhook         :d2c, 2026-03-28, 1d
+
+    section Dev 3 - UI Client
+    FEAT-12 Guest Menu redesign        :d3a, 2026-03-26, 1d
+    FEAT-09+11 Combo CRUD Admin UI     :d3a2, 2026-03-26, 1d
+    Kitchen Board + SignalR UI         :d3b, 2026-03-27, 1d
+    Staff Dashboard realtime           :d3b2, 2026-03-27, 1d
+    Payment QR UI + Reports UI + Polish:d3c, 2026-03-28, 1d
+</div>
+
+<h3>5.2 Dependency Map — Song Song vs Tuần Tự</h3>
+<div class="mermaid">
+flowchart LR
+    subgraph "NGÀY 1 — Foundation (Song Song ✅)"
+        D1A["🔵 Dev1: FIX-01 Refactor<br/>FIX-02+05 Constants"]
+        D2A["🟠 Dev2: FIX-07 QR Token<br/>FIX-06+08+09 Security"]
+        D3A["🟢 Dev3: Guest Menu UI<br/>Combo Admin UI"]
+    end
+
+    subgraph "NGÀY 2 — Core Features"
+        D1B["🔵 Dev1: FIX-03 Exception<br/>FIX-04+10 DTOs+Transaction"]
+        D2B["🟠 Dev2: FEAT-01 SignalR<br/>FEAT-02 QR Generator"]
+        D3B["🟢 Dev3: Kitchen Board<br/>Staff Dashboard"]
+    end
+
+    subgraph "NGÀY 3 — Integration"
+        D1C["🔵 Dev1: FIX-11+12<br/>FEAT-07+08 Served+Reports"]
+        D2C["🟠 Dev2: FEAT-03+04<br/>VNPay + Webhook"]
+        D3C["🟢 Dev3: Payment UI<br/>Reports UI + Polish"]
+    end
+
+    D1A -->|"Dev3 cần Service ổn định"| D3B
+    D2A -->|"Dev3 cần QR token"| D3A
+    D2B -->|"Dev3 cần SignalR Hub"| D3B
+    D1B -->|"Dev2 cần DTOs"| D2C
+    D2B -->|"Dev3 UI cần Hub ready"| D3C
+</div>
+
+<h3>5.3 Chi Tiết Từng Ngày</h3>
+
+<!-- NGÀY 1 -->
+<div class="dev-card dev1">
+<h4>🔵 NGÀY 1 — Dev 1 (Backend Core) — ~7h</h4>
+<table>
+<tr><th>Task</th><th>Mô tả</th><th>Est.</th><th>Dep.</th></tr>
+<tr><td>FIX-01</td><td>Refactor 3 Controllers (Orders, Kitchen, Payments) → gọi Service thay vì inline logic</td><td>4h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+<tr><td>FIX-02</td><td>Replace hardcoded strings → StatusConstants trong Controllers</td><td>1.5h</td><td><span class="sequential">🟧 Sau FIX-01</span></td></tr>
+<tr><td>FIX-05</td><td>Di chuyển LoginDto, UpdateUserDto vào DTOs folder</td><td>0.5h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+<tr><td>FEAT-10</td><td>Integrate FluentValidation cho OrderCreateDto</td><td>1h</td><td><span class="sequential">🟧 Sau FIX-05</span></td></tr>
+</table>
+</div>
+
+<div class="dev-card dev2">
+<h4>🟠 NGÀY 1 — Dev 2 (Realtime & Payment) — ~7h</h4>
+<table>
+<tr><th>Task</th><th>Mô tả</th><th>Est.</th><th>Dep.</th></tr>
+<tr><td>FIX-07</td><td>Thiết kế & implement QR Token validation (thêm logic check token trong CreateOrder)</td><td>3.5h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+<tr><td>FIX-06</td><td>Fix CORS → whitelist domain cụ thể</td><td>0.5h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+<tr><td>FIX-08</td><td>Fix AllowAnonymous trên CancelOrderItem → yêu cầu QR token</td><td>1.5h</td><td><span class="sequential">🟧 Sau FIX-07</span></td></tr>
+<tr><td>FIX-09</td><td>Thêm Rate Limiting middleware (AspNetCoreRateLimit)</td><td>1.5h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+</table>
+</div>
+
+<div class="dev-card dev3">
+<h4>🟢 NGÀY 1 — Dev 3 (UI/Client) — ~7h</h4>
+<table>
+<tr><th>Task</th><th>Mô tả</th><th>Est.</th><th>Dep.</th></tr>
+<tr><td>FEAT-12a</td><td>Redesign Guest Menu page (responsive, mobile-first cho QR scan)</td><td>3h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+<tr><td>FEAT-12b</td><td>Update Cart page → gửi QR token kèm request</td><td>1.5h</td><td><span class="blocked">🟥 Đợi Dev2 FIX-07</span></td></tr>
+<tr><td>FEAT-09</td><td>Admin Combo CRUD UI (tạo/sửa/xóa combo)</td><td>2.5h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+</table>
+</div>
+
+<!-- NGÀY 2 -->
+<div class="dev-card dev1">
+<h4>🔵 NGÀY 2 — Dev 1 (Backend Core) — ~7h</h4>
+<table>
+<tr><th>Task</th><th>Mô tả</th><th>Est.</th><th>Dep.</th></tr>
+<tr><td>FIX-03</td><td>Global Exception Handling Middleware</td><td>2h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+<tr><td>FIX-04</td><td>Tạo output DTOs cho Products, Tables, Users, etc.</td><td>2.5h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+<tr><td>FIX-10</td><td>Wrap CreateOrder trong IDbContextTransaction</td><td>2h</td><td><span class="sequential">🟧 Sau FIX-01 (Day1)</span></td></tr>
+<tr><td>FEAT-05</td><td>API chuyển bàn (swap tableId)</td><td>1h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+</table>
+</div>
+
+<div class="dev-card dev2">
+<h4>🟠 NGÀY 2 — Dev 2 (Realtime & Payment) — ~7h</h4>
+<table>
+<tr><th>Task</th><th>Mô tả</th><th>Est.</th><th>Dep.</th></tr>
+<tr><td>FEAT-01a</td><td>Setup SignalR Hub (FoodQRHub), configure DI, CORS</td><td>3h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+<tr><td>FEAT-01b</td><td>Inject IHubContext vào OrderService, KitchenService → emit events</td><td>2h</td><td><span class="sequential">🟧 Sau FEAT-01a</span></td></tr>
+<tr><td>FEAT-02</td><td>QR Code Generator API (tạo QR URL + refresh token)</td><td>2h</td><td><span class="sequential">🟧 Sau FIX-07 (Day1)</span></td></tr>
+</table>
+</div>
+
+<div class="dev-card dev3">
+<h4>🟢 NGÀY 2 — Dev 3 (UI/Client) — ~7h</h4>
+<table>
+<tr><th>Task</th><th>Mô tả</th><th>Est.</th><th>Dep.</th></tr>
+<tr><td>FEAT-12c</td><td>Kitchen Board: tích hợp SignalR JS client (realtime, no polling)</td><td>3h</td><td><span class="blocked">🟥 Đợi Dev2 FEAT-01a</span></td></tr>
+<tr><td>FEAT-12d</td><td>Staff Dashboard: realtime notifications via SignalR</td><td>2h</td><td><span class="blocked">🟥 Đợi Dev2 FEAT-01a</span></td></tr>
+<tr><td>FEAT-12e</td><td>Admin Table Management: UI chuyển bàn</td><td>2h</td><td><span class="blocked">🟥 Đợi Dev1 FEAT-05</span></td></tr>
+</table>
+</div>
+
+<!-- NGÀY 3 -->
+<div class="dev-card dev1">
+<h4>🔵 NGÀY 3 — Dev 1 (Backend Core) — ~7h</h4>
+<table>
+<tr><th>Task</th><th>Mô tả</th><th>Est.</th><th>Dep.</th></tr>
+<tr><td>FIX-11</td><td>Fix Combo: trừ inventory món con khi đặt</td><td>2h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+<tr><td>FIX-12</td><td>Bàn → cleaning sau thanh toán</td><td>1h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+<tr><td>FEAT-07</td><td>Staff confirm "served" API + state machine</td><td>2h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+<tr><td>FEAT-08</td><td>API báo cáo doanh thu (filter ngày/tuần/tháng)</td><td>2h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+</table>
+</div>
+
+<div class="dev-card dev2">
+<h4>🟠 NGÀY 3 — Dev 2 (Realtime & Payment) — ~7h</h4>
+<table>
+<tr><th>Task</th><th>Mô tả</th><th>Est.</th><th>Dep.</th></tr>
+<tr><td>FEAT-03</td><td>Tích hợp VNPay: tạo payment URL, checksum</td><td>3.5h</td><td><span class="sequential">🟧 Sau FEAT-01 (Day2)</span></td></tr>
+<tr><td>FEAT-04</td><td>Webhook endpoint /api/webhooks/vnpay: HMAC verify, idempotency</td><td>2.5h</td><td><span class="sequential">🟧 Sau FEAT-03</span></td></tr>
+<tr><td>—</td><td>E2E Testing: QR scan → order → kitchen → payment</td><td>1h</td><td><span class="sequential">🟧 Cuối ngày</span></td></tr>
+</table>
+</div>
+
+<div class="dev-card dev3">
+<h4>🟢 NGÀY 3 — Dev 3 (UI/Client) — ~7h</h4>
+<table>
+<tr><th>Task</th><th>Mô tả</th><th>Est.</th><th>Dep.</th></tr>
+<tr><td>FEAT-12f</td><td>Payment QR display UI (show VNPay QR, auto-detect success)</td><td>2.5h</td><td><span class="blocked">🟥 Đợi Dev2 FEAT-03</span></td></tr>
+<tr><td>FEAT-12g</td><td>Staff: "Served" confirm button + Order Tracking realtime</td><td>2h</td><td><span class="blocked">🟥 Đợi Dev1 FEAT-07</span></td></tr>
+<tr><td>FEAT-08</td><td>Admin: Revenue report page (charts, date filter)</td><td>1.5h</td><td><span class="blocked">🟥 Đợi Dev1 FEAT-08</span></td></tr>
+<tr><td>—</td><td>Polish UI + Integration testing toàn team</td><td>1h</td><td><span class="sequential">🟧 Cuối ngày</span></td></tr>
+</table>
+</div>
+
+<h3>5.4 Quy Tắc Giảm Conflict Code</h3>
+<div class="alert alert-success">
+<b>✅ Phân vùng file rõ ràng:</b><br>
+• <b>Dev 1</b> → chỉ sửa: <code>Application/Services/</code>, <code>Core/</code>, <code>Infrastructure/</code><br>
+• <b>Dev 2</b> → chỉ tạo mới: <code>Hubs/</code>, <code>Webhooks/</code>, sửa <code>Program.cs</code> (DI config)<br>
+• <b>Dev 3</b> → chỉ sửa: <code>FoodQR.Client/</code><br><br>
+<b>Merge rule:</b> Dev 1 merge trước → Dev 2 merging → Dev 3 cuối ngày<br>
+<b>Branching:</b> <code>feature/refactor-services</code>, <code>feature/signalr-hub</code>, <code>feature/client-realtime</code>
+</div>
+
+<h3>5.5 Tóm tắt rủi ro</h3>
+<table>
+<tr><th>Rủi ro</th><th>Mức</th><th>Giải pháp</th></tr>
+<tr><td>QR giả mạo từ xa</td><td><span class="tag-red">🔴</span></td><td>QR Token validation Day 1</td></tr>
+<tr><td>Mất dữ liệu khi merge</td><td><span class="tag-yellow">🟡</span></td><td>Feature branches + daily review</td></tr>
+<tr><td>Payment webhook không an toàn</td><td><span class="tag-red">🔴</span></td><td>HMAC verify + idempotency</td></tr>
+<tr><td>Dev 3 bị block bởi Dev 2</td><td><span class="tag-yellow">🟡</span></td><td>Dev 3 làm UI độc lập Day 1, chờ SignalR Day 2 sáng</td></tr>
+</table>
+
+</div>
+
+<script>mermaid.initialize({startOnLoad:true,theme:'default',securityLevel:'loose'});</script>
+</body>
+</html>

@@ -49,18 +49,21 @@
 @section Scripts {
     <script>
         const tableId = @Model.TableId;
-        const apiBaseUrl = "https://localhost:7197/api";
+        const apiBaseUrl = "@(ViewData["ApiBaseUrl"] ?? "https://localhost:7197/api")";
         document.getElementById('current-table').innerText = tableId > 0 ? tableId : "??";
 
         let cart = JSON.parse(localStorage.getItem('food_cart')) || [];
         renderCart();
 
-        // Tự động điền thông tin cũ nếu có
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedName = localStorage.getItem('food_customer_name');
-            const savedEmail = localStorage.getItem('food_customer_email');
-            if (savedName) document.getElementById('customer-name').value = savedName;
-            if (savedEmail) document.getElementById('customer-email').value = savedEmail;
+        // Tự động điền tên từ active order (nếu có)
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch(`${apiBaseUrl}/Orders/active/${tableId}`);
+                if (res.ok) {
+                    // Đã có đơn active trên bàn này → không cần nhập tên
+                    // (sẽ append vào đơn cũ)
+                }
+            } catch (e) { /* ignore */ }
         });
 
         function renderCart() {
@@ -152,14 +155,10 @@
 
                 if (response.ok) {
                     const result = await response.json();
-                    
-                    // Lưu thông tin để lần sau không phải nhập lại
-                    localStorage.setItem('food_customer_name', name);
-                    localStorage.setItem('food_customer_email', email);
                     localStorage.setItem('food_active_order_id', result.id);
 
                     localStorage.removeItem('food_cart');
-                    window.location.href = '/OrderSuccess?orderId=' + result.id;
+                    window.location.href = `/OrderSuccess?orderId=${result.id}&tableId=${tableId}&orderCode=${result.orderCode}`;
                 } else {
                     throw new Error('Failed to create order');
                 }

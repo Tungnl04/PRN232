@@ -155,6 +155,7 @@ INSERT INTO combo_item (combo_id, product_id, quantity) VALUES
 SET IDENTITY_INSERT [user] ON;
 INSERT INTO [user] (id, name, username, password_hash, role, active) VALUES
 (1, N'Admin User', 'admin', '$2a$11$Y8iC0D.lCaFFEcGstxcJoOGe1z/Pl3fOQQjeZp4mcLBQBvmoK0BbK', 'admin', 1),
-(2, N'Staff User', 'staff', '$2a$11$Y8iC0D.lCaFFEcGstxcJoOGe1z/Pl3fOQQjeZp4mcLBQBvmoK0BbK', 'staff', 1);
+(2, N'Staff User', 'staff', '$2a$11$Y8iC0D.lCaFFEcGstxcJoOGe1z/Pl3fOQQjeZp4mcLBQBvmoK0BbK', 'staff', 1),
+(3, N'Kitchen User', 'kitchen', '$2a$11$Y8iC0D.lCaFFEcGstxcJoOGe1z/Pl3fOQQjeZp4mcLBQBvmoK0BbK', 'kitchen', 1);
 SET IDENTITY_INSERT [user] OFF;
 GO

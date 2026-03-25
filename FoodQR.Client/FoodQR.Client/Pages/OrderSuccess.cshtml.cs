@@ -19,18 +19,29 @@ namespace FoodQR.Client.Pages
         public int OrderId { get; set; }
         public int TableId { get; set; }
 
-        public async Task OnGetAsync(int orderId)
+        public async Task OnGetAsync(int orderId, int tableId, string? orderCode)
         {
             OrderId = orderId;
-            var client = _httpClientFactory.CreateClient();
-            var response = await client.GetAsync($"{_apiBaseUrl}/Orders/{orderId}");
+            TableId = tableId;
 
-            if (response.IsSuccessStatusCode)
+            // Nếu đã có orderCode từ query string (truyền từ Cart page)
+            if (!string.IsNullOrEmpty(orderCode))
             {
-                var json = await response.Content.ReadAsStringAsync();
-                using var doc = JsonDocument.Parse(json);
-                OrderCode = doc.RootElement.GetProperty("orderCode").GetString() ?? "";
-                TableId = doc.RootElement.GetProperty("tableId").GetInt32();
+                OrderCode = orderCode;
+                return;
+            }
+
+            // Fallback: gọi active endpoint (AllowAnonymous)
+            if (tableId > 0)
+            {
+                var client = _httpClientFactory.CreateClient();
+                var response = await client.GetAsync($"{_apiBaseUrl}/Orders/active/{tableId}");
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    using var doc = JsonDocument.Parse(json);
+                    OrderCode = doc.RootElement.GetProperty("orderCode").GetString() ?? "";
+                }
             }
         }
     }
