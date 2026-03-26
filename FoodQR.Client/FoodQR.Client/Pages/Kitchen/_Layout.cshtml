@@ -48,12 +48,45 @@
         @RenderBody()
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
     <script src="~/js/apiClient.js" asp-append-version="true"></script>
     <script>
         if (!apiClient.isAuthenticated() || (apiClient.getUser().role !== 'kitchen' && apiClient.getUser().role !== 'admin')) {
             apiClient.logout();
         }
         document.getElementById('user-display-name').innerText = apiClient.getUser().name || 'Kitchen';
+
+        // === SignalR Connection ===
+        const kitchenConnection = new signalR.HubConnectionBuilder()
+            .withUrl('https://localhost:7197/hubs/order')
+            .withAutomaticReconnect()
+            .build();
+
+        kitchenConnection.on('NewOrderReceived', (data) => {
+            console.log('📦 New order:', data);
+            Swal.fire({
+                icon: 'info',
+                title: '🔔 Đơn mới!',
+                text: `Bàn ${data.tableId} - Đơn ${data.orderCode}`,
+                timer: 3000,
+                showConfirmButton: false,
+                position: 'top-end',
+                toast: true
+            });
+            if (typeof loadKitchenItems === 'function') loadKitchenItems();
+        });
+
+        kitchenConnection.on('ItemStatusChanged', (data) => {
+            console.log('🔄 Item changed:', data);
+            if (typeof loadKitchenItems === 'function') loadKitchenItems();
+        });
+
+        kitchenConnection.start()
+            .then(() => {
+                console.log('✅ SignalR connected (Kitchen)');
+                kitchenConnection.invoke('JoinGroup', 'kitchen');
+            })
+            .catch(err => console.error('SignalR Error:', err));
     </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

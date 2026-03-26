@@ -51,12 +51,73 @@
         @RenderBody()
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
     <script src="~/js/apiClient.js" asp-append-version="true"></script>
     <script>
         if (!apiClient.isAuthenticated() || (apiClient.getUser().role !== 'staff' && apiClient.getUser().role !== 'admin')) {
             apiClient.logout();
         }
         document.getElementById('user-display-name').innerText = apiClient.getUser().name || 'Staff';
+
+        // === SignalR Connection ===
+        const staffConnection = new signalR.HubConnectionBuilder()
+            .withUrl('https://localhost:7197/hubs/order')
+            .withAutomaticReconnect()
+            .build();
+
+        staffConnection.on('NewOrderReceived', (data) => {
+            console.log('📦 New order received:', data);
+            Swal.fire({
+                icon: 'info',
+                title: '🔔 Đơn mới!',
+                text: `Bàn ${data.tableId} vừa đặt đơn ${data.orderCode}`,
+                timer: 4000,
+                showConfirmButton: false,
+                position: 'top-end',
+                toast: true
+            });
+            // Reload data nếu đang ở trang cụ thể
+            if (typeof loadTables === 'function') loadTables();
+        });
+
+        staffConnection.on('ItemStatusChanged', (data) => {
+            console.log('🔄 Item status changed:', data);
+            if (typeof loadOrder === 'function') loadOrder();
+            if (typeof loadTables === 'function') loadTables();
+        });
+
+        staffConnection.on('OrderReady', (data) => {
+            console.log('✅ Order ready:', data);
+            Swal.fire({
+                icon: 'success',
+                title: '✅ Đơn sẵn sàng!',
+                text: `Đơn ${data.orderCode} (Bàn ${data.tableId}) đã sẵn sàng phục vụ!`,
+                timer: 5000,
+                showConfirmButton: false,
+                position: 'top-end',
+                toast: true
+            });
+        });
+
+        staffConnection.on('NewNotification', (data) => {
+            console.log('🔔 Notification:', data);
+            Swal.fire({
+                icon: 'warning',
+                title: '🔔 Thông báo!',
+                text: data.message,
+                timer: 5000,
+                showConfirmButton: false,
+                position: 'top-end',
+                toast: true
+            });
+        });
+
+        staffConnection.start()
+            .then(() => {
+                console.log('✅ SignalR connected (Staff)');
+                staffConnection.invoke('JoinGroup', 'staff');
+            })
+            .catch(err => console.error('SignalR Error:', err));
     </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

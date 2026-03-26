@@ -230,7 +230,7 @@
                     const result = await response.json();
                     localStorage.setItem('food_active_order_id', result.id);
                     localStorage.removeItem('food_cart');
-                    window.location.href = `/OrderSuccess?orderId=${result.id}&tableId=${tableId}&orderCode=${result.orderCode}`;
+                    window.location.href = `/OrderSuccess?orderId=${result.id}&tableId=${tableId}&orderCode=${result.orderCode}${token ? '&token=' + token : ''}`;
                 } else {
                     throw new Error('Failed');
                 }

@@ -2,7 +2,9 @@ using FoodQR.API.Application.DTOs;
 using FoodQR.API.Core.Entities;
 using FoodQR.API.Core.Enums;
 using FoodQR.API.Core.Interfaces;
+using FoodQR.API.Hubs;
 using FoodQR.API.Infrastructure.Persistence;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace FoodQR.API.Application.Services
@@ -10,10 +12,12 @@ namespace FoodQR.API.Application.Services
     public class OrderService : IOrderService
     {
         private readonly FoodStoreDbContext _context;
+        private readonly IHubContext<OrderHub> _hubContext;
 
-        public OrderService(FoodStoreDbContext context)
+        public OrderService(FoodStoreDbContext context, IHubContext<OrderHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         public async Task<Order> CreateOrAppendOrderAsync(OrderCreateDto orderDto)
@@ -216,6 +220,12 @@ namespace FoodQR.API.Application.Services
             table.Status = TableStatus.Taken;
 
             await _context.SaveChangesAsync();
+
+            // === SignalR Broadcast ===
+            var orderPayload = new { orderId = order.Id, orderCode = order.OrderCode, tableId = orderDto.TableId };
+            await _hubContext.Clients.Group("kitchen").SendAsync("NewOrderReceived", orderPayload);
+            await _hubContext.Clients.Group("staff").SendAsync("NewOrderReceived", orderPayload);
+
             return order;
         }
 

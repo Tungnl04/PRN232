@@ -2,7 +2,9 @@ using FoodQR.API.Application.DTOs;
 using FoodQR.API.Core.Entities;
 using FoodQR.API.Core.Enums;
 using FoodQR.API.Core.Interfaces;
+using FoodQR.API.Hubs;
 using FoodQR.API.Infrastructure.Persistence;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace FoodQR.API.Application.Services
@@ -10,10 +12,12 @@ namespace FoodQR.API.Application.Services
     public class KitchenService : IKitchenService
     {
         private readonly FoodStoreDbContext _context;
+        private readonly IHubContext<OrderHub> _hubContext;
 
-        public KitchenService(FoodStoreDbContext context)
+        public KitchenService(FoodStoreDbContext context, IHubContext<OrderHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         public async Task<List<KitchenItemDto>> GetKitchenItemsAsync()
@@ -132,6 +136,27 @@ namespace FoodQR.API.Application.Services
             }
 
             await _context.SaveChangesAsync();
+
+            // === SignalR Broadcast ===
+            var tableId = order?.TableId;
+            var payload = new { itemId, newStatus, orderId = order?.Id, orderStatus = order?.Status, tableId };
+
+            await _hubContext.Clients.Group("kitchen").SendAsync("ItemStatusChanged", payload);
+            await _hubContext.Clients.Group("staff").SendAsync("ItemStatusChanged", payload);
+            if (tableId.HasValue)
+            {
+                await _hubContext.Clients.Group($"table_{tableId}").SendAsync("ItemStatusChanged", payload);
+            }
+
+            // Nếu order Ready → gửi thêm event OrderReady
+            if (order != null && order.Status == OrderStatus.Ready)
+            {
+                var readyPayload = new { orderId = order.Id, orderCode = order.OrderCode, tableId };
+                await _hubContext.Clients.Group("staff").SendAsync("OrderReady", readyPayload);
+                if (tableId.HasValue)
+                    await _hubContext.Clients.Group($"table_{tableId}").SendAsync("OrderReady", readyPayload);
+            }
+
             return true;
         }
     }

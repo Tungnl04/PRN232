@@ -18,11 +18,13 @@ namespace FoodQR.Client.Pages
         public string OrderCode { get; set; } = "";
         public int OrderId { get; set; }
         public int TableId { get; set; }
+        public string? Token { get; set; }
 
-        public async Task OnGetAsync(int orderId, int tableId, string? orderCode)
+        public async Task OnGetAsync(int orderId, int tableId, string? orderCode, string? token)
         {
             OrderId = orderId;
             TableId = tableId;
+            Token = token;
 
             // Nếu đã có orderCode từ query string (truyền từ Cart page)
             if (!string.IsNullOrEmpty(orderCode))
