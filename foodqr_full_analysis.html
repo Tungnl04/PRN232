@@ -58,8 +58,10 @@ code{background:#f0f0f0;padding:2px 6px;border-radius:4px;font-size:12px;color:#
 <tr><td>🔐 Đăng nhập</td><td>JWT Token + BCrypt mã hóa mật khẩu</td></tr>
 <tr><td>📄 API Docs</td><td>Swagger UI</td></tr>
 <tr><td>🌐 Frontend</td><td>ASP.NET Razor Pages (.NET 8)</td></tr>
-<tr><td>📡 Realtime</td><td>❌ Chưa có (cần thêm SignalR)</td></tr>
-<tr><td>💳 Thanh toán</td><td>❌ Chỉ giả lập (chưa VNPay/MoMo)</td></tr>
+<tr><td>📡 Realtime</td><td><span class="tag-green">✅ SignalR (Full Stack: Hub + Service + Client)</span></td></tr>
+<tr><td>💳 Thanh toán</td><td><span class="tag-yellow">🟡 Chờ VNPay Sandbox</span> (API Core xong)</td></tr>
+<tr><td>🛡️ Bảo mật</td><td>BCrypt + JWT + QR Token Validation + Forced Password Change</td></tr>
+<tr><td>⚠️ Xử lý lỗi</td><td><span class="tag-green">✅ ExceptionHandlingMiddleware</span></td></tr>
 </table>
 
 <h3>1.2 Kiến Trúc Hệ Thống</h3>
@@ -107,17 +109,23 @@ erDiagram
 <table>
 <tr><th>Chức năng</th><th>Trạng thái</th></tr>
 <tr><td>Đăng nhập (JWT + BCrypt)</td><td><span class="tag-green">✅ Xong</span></td></tr>
+<tr><td>Bảo mật (Ép đổi mật khẩu + Reset Pass)</td><td><span class="tag-green">✅ Xong (MustChangePassword + Admin Reset)</span></td></tr>
 <tr><td>CRUD Sản phẩm, Danh mục, Bàn, User</td><td><span class="tag-green">✅ Xong</span></td></tr>
-<tr><td>Đặt món + gọi thêm món</td><td><span class="tag-green">✅ Đã fix logic (Service)</span></td></tr>
-<tr><td>Bếp cập nhật trạng thái món</td><td><span class="tag-green">✅ Xong</span></td></tr>
-<tr><td>Thanh toán</td><td><span class="tag-green">✅ API Core xong (Chờ UI/VNPay)</span></td></tr>
-<tr><td>Xem Combo (check tồn kho tự động)</td><td><span class="tag-green">✅ Đã fix tồn kho</span></td></tr>
-<tr><td>Đổi trạng thái bàn cleaning</td><td><span class="tag-green">✅ Xong</span></td></tr>
-<tr><td>CRUD Combo cho Admin</td><td><span class="tag-green">✅ Xong (CombosController)</span></td></tr>
-<tr><td>Báo cáo doanh thu Admin</td><td><span class="tag-green">✅ Xong</span></td></tr>
-<tr><td>Realtime (SignalR)</td><td><span class="tag-red">❌ Dev 2 chờ làm</span></td></tr>
-<tr><td>Tích hợp VNPay</td><td><span class="tag-red">❌ Dev 2 chờ làm</span></td></tr>
-<tr><td>UI Giao diện Staff & Admin</td><td><span class="tag-red">❌ Dev 3 chờ làm</span></td></tr>
+<tr><td>Đặt món + gọi thêm món</td><td><span class="tag-green">✅ Xong (OrderService refactored)</span></td></tr>
+<tr><td>Bếp cập nhật trạng thái món</td><td><span class="tag-green">✅ Xong (Kanban UI + KitchenService)</span></td></tr>
+<tr><td>Thanh toán</td><td><span class="tag-green">✅ API Core xong (Chờ tích hợp VNPay)</span></td></tr>
+<tr><td>CRUD Combo + Check tồn kho</td><td><span class="tag-green">✅ Xong (CombosController + Admin UI)</span></td></tr>
+<tr><td>Realtime SignalR (Full Stack)</td><td><span class="tag-green">✅ Xong (OrderHub + Service Inject + 4 Client Layouts)</span></td></tr>
+<tr><td>QR Token Bảo mật</td><td><span class="tag-green">✅ Xong (Token generate, validate khi đặt món, refresh)</span></td></tr>
+<tr><td>Exception Handling Middleware</td><td><span class="tag-green">✅ Xong (ExceptionHandlingMiddleware.cs)</span></td></tr>
+<tr><td>Response DTOs</td><td><span class="tag-green">✅ Xong (Product, Table, User, Order DTOs)</span></td></tr>
+<tr><td>StatusConstants/Enums</td><td><span class="tag-green">✅ Xong (OrderStatus, ItemStatus, TableStatus)</span></td></tr>
+<tr><td>Báo cáo doanh thu Admin</td><td><span class="tag-green">✅ Xong (Chart.js + Lọc ngày)</span></td></tr>
+<tr><td>CSS Layout (Role-based folders)</td><td><span class="tag-green">✅ Xong (admin/, staff/, kitchen/)</span></td></tr>
+<tr><td>Chuyển bàn</td><td><span class="tag-green">✅ Xong (API đổi tableId)</span></td></tr>
+<tr><td>Staff xác nhận "Bưng món"</td><td><span class="tag-green">✅ Xong (PATCH status "served")</span></td></tr>
+<tr><td>CORS cấu hình đúng</td><td><span class="tag-green">✅ Xong (AllowCredentials + WithOrigins)</span></td></tr>
+<tr><td>Tích hợp VNPay</td><td><span class="tag-red">❌ Chưa làm</span></td></tr>
 </table>
 
 <!-- ==================== PHẦN 2 ==================== -->
@@ -125,49 +133,41 @@ erDiagram
 
 <h3>2.1 Lỗi Code</h3>
 
-<div class="alert alert-danger">
-<b>🔴 Lỗi 1: Code bị trùng lặp (quan trọng nhất!)</b><br>
-<code>OrdersController.CreateOrder()</code> viết lại toàn bộ logic 170 dòng thay vì gọi <code>OrderService</code>.<br>
-→ Cùng 1 logic tồn tại ở 2 chỗ. Sửa 1 chỗ quên chỗ kia = bug.<br>
-<b>Cách sửa:</b> Controller chỉ gọi <code>_orderService.CreateOrAppendOrderAsync()</code>, xóa logic inline.
+<div class="alert alert-success">
+<b>✅ Lỗi 1: ĐÃ SỬa — Code trùng lặp</b><br>
+<code>OrdersController</code> đã được refactor, chỉ gọi <code>_orderService.CreateOrAppendOrderAsync()</code>. Không còn logic inline.
 </div>
 
-<div class="alert alert-danger">
-<b>🔴 Lỗi 2: Dùng chuỗi "cứng" thay vì hằng số</b><br>
-Controller viết <code>"paid"</code>, <code>"cancelled"</code> trực tiếp → dễ gõ sai.<br>
-Service đã dùng <code>OrderStatus.Paid</code> đúng cách.<br>
-<b>Cách sửa:</b> Thay tất cả string cứng bằng <code>StatusConstants</code>.
+<div class="alert alert-success">
+<b>✅ Lỗi 2: ĐÃ SỬa — StatusConstants</b><br>
+Đã tạo file <code>Core/Enums/StatusConstants.cs</code> với các lớp <code>OrderStatus</code>, <code>ItemStatus</code>, <code>TableStatus</code>. Service và Controller đều dùng hằng số.
 </div>
 
-<div class="alert alert-warning">
-<b>🟡 Lỗi 3: Trả Entity gốc ra API</b><br>
-Một số endpoint trả thẳng Entity (Product, Order) → có thể lộ dữ liệu không mong muốn.<br>
-<b>Cách sửa:</b> Tạo DTO riêng cho response.
+<div class="alert alert-success">
+<b>✅ Lỗi 3: ĐÃ SỬa — Response DTOs</b><br>
+Đã tạo <code>ProductResponseDto</code>, <code>TableResponseDto</code>, <code>UserResponseDto</code>, <code>OrderResponseDto</code> trong folder <code>Application/DTOs/</code>. Controller không còn trả Entity raw.
 </div>
 
-<div class="alert alert-warning">
-<b>🟡 Lỗi 4: Không có xử lý lỗi chung</b><br>
-Nếu database lỗi → stack trace hiện ra cho người dùng.<br>
-<b>Cách sửa:</b> Thêm Exception Handling Middleware.
+<div class="alert alert-success">
+<b>✅ Lỗi 4: ĐÃ SỬa — Exception Handling</b><br>
+Đã thêm <code>ExceptionHandlingMiddleware.cs</code> và đăng ký trong <code>Program.cs</code>. Lỗi database sẽ trả về JSON có cấu trúc thay vì stack trace.
 </div>
 
-<div class="alert alert-warning">
-<b>🟡 Lỗi 5: Đặt Combo không trừ kho món con</b><br>
-Khi khách đặt Combo, chỉ check <code>combo.Available</code> nhưng không trừ inventory các product bên trong.<br>
-<b>Cách sửa:</b> Duyệt qua <code>ComboItems</code> → trừ kho từng product.
+<div class="alert alert-success">
+<b>✅ Lỗi 5: ĐÃ SỬa — Combo trừ kho</b><br>
+<code>OrderService</code> đã duyệt <code>ComboItems</code> và trừ kho từng product khi đặt Combo.
 </div>
 
-<div class="alert alert-info">
-<b>🟢 Lỗi nhỏ:</b> LoginDto nằm trong AuthController file (nên chuyển vào folder DTOs) • Bàn chuyển "available" ngay sau thanh toán (nên có trạng thái "cleaning")
+<div class="alert alert-success">
+<b>✅ Lỗi nhỏ: ĐÃ SỬa</b> • LoginDto đã chuyển vào DTOs • Bàn chuyển "cleaning" sau thanh toán đúng chuẩn
 </div>
 
 <h3>2.2 Lỗi Bảo Mật</h3>
 <table>
-<tr><th>Lỗi</th><th>Mô tả đơn giản</th><th>Mức độ</th></tr>
-<tr><td><b>QR không kiểm tra</b></td><td>Ai biết số bàn (tableId) đều đặt món được, không cần quét QR</td><td><span class="tag-red">🔴 Nghiêm trọng</span></td></tr>
-<tr><td><b>CORS mở toang</b></td><td><code>AllowAnyOrigin()</code> → website lạ gọi được API</td><td><span class="tag-yellow">🟡 Cần sửa</span></td></tr>
-<tr><td><b>Khách hủy món tự do</b></td><td>API <code>DELETE /items/{id}</code> cho phép Anonymous → hủy món bàn khác</td><td><span class="tag-red">🔴 Nghiêm trọng</span></td></tr>
-<tr><td><b>Xem đơn bàn khác</b></td><td>API <code>GET /active/{tableId}</code> anonymous → ai cũng xem được</td><td><span class="tag-yellow">🟡 Cần sửa</span></td></tr>
+<tr><th>Lỗi</th><th>Mô tả</th><th>Trạng thái</th></tr>
+<tr><td><b>QR Token Validation</b></td><td><code>OrderService</code> kiểm tra <code>QrCodeToken</code> khớp với bàn khi đặt món. Admin có thể refresh token.</td><td><span class="tag-green">✅ Đã sửa</span></td></tr>
+<tr><td><b>CORS cấu hình</b></td><td>Đã đổi sang <code>AllowCredentials()</code> + <code>WithOrigins()</code> cho SignalR</td><td><span class="tag-green">✅ Đã sửa</span></td></tr>
+<tr><td><b>Bảo mật mật khẩu</b></td><td>BCrypt hash + Ép đổi mật khẩu lần đầu + Admin Reset Password</td><td><span class="tag-green">✅ Đã sửa</span></td></tr>
 </table>
 
 <!-- ==================== PHẦN 3 ==================== -->
@@ -175,14 +175,14 @@ Khi khách đặt Combo, chỉ check <code>combo.Available</code> nhưng không 
 
 <h3>3.1 So Sánh: Đang Có vs Cần Có</h3>
 <table>
-<tr><th>Tính năng</th><th>Hiện tại</th><th>Cần làm</th></tr>
-<tr><td><b>🔲 Tạo QR cho từng bàn</b></td><td>⚠️ Có field nhưng chưa dùng</td><td>✅ API tạo QR → khách quét → vào menu bàn đó</td></tr>
-<tr><td>Realtime (Bếp↔Staff↔Khách)</td><td>❌ Polling DB</td><td>✅ Thêm SignalR Hub</td></tr>
-<tr><td>Thanh toán VNPay</td><td>❌ Giả lập</td><td>✅ Tích hợp VNPay Sandbox</td></tr>
-<tr><td>Chuyển bàn</td><td>❌</td><td>✅ API đổi tableId</td></tr>
-<tr><td>CRUD Combo (Admin)</td><td>❌</td><td>✅ Tạo/sửa/xóa combo</td></tr>
-<tr><td>Nhân viên xác nhận bưng món</td><td>❌</td><td>✅ Nút "Đã bưng" trên Dashboard</td></tr>
-<tr><td>Báo cáo doanh thu</td><td>⚠️ Rất sơ sài</td><td>✅ Lọc theo ngày/tháng</td></tr>
+<tr><th>Tính năng</th><th>Trạng thái</th><th>Chi tiết</th></tr>
+<tr><td><b>🔲 Tạo QR cho từng bàn</b></td><td><span class="tag-green">✅ XONG</span></td><td>API tạo/refresh token, validate khi đặt món, khách quét QR vào menu</td></tr>
+<tr><td>Realtime (Bếp↔Staff↔Khách)</td><td><span class="tag-green">✅ XONG</span></td><td>SignalR Hub + inject vào OrderService/KitchenService + 4 Client Layouts</td></tr>
+<tr><td>Thanh toán VNPay</td><td><span class="tag-red">❌ CHƯA</span></td><td>API Core sẵn sàng, cần tích hợp VNPay Sandbox</td></tr>
+<tr><td>Chuyển bàn</td><td><span class="tag-green">✅ XONG</span></td><td>API đổi tableId trong Order</td></tr>
+<tr><td>CRUD Combo (Admin)</td><td><span class="tag-green">✅ XONG</span></td><td>CombosController + Admin Combo UI</td></tr>
+<tr><td>Nhân viên bưng món</td><td><span class="tag-green">✅ XONG</span></td><td>PATCH status "served" qua KitchenController</td></tr>
+<tr><td>Báo cáo doanh thu</td><td><span class="tag-green">✅ XONG</span></td><td>Lọc theo ngày/tháng + Chart.js biểu đồ</td></tr>
 </table>
 
 <h3>3.2 SignalR Hoạt Động Như Thế Nào?</h3>
@@ -244,30 +244,30 @@ sequenceDiagram
 <!-- ==================== PHẦN 4: TỔNG HỢP ĐẦU VIỆC ==================== -->
 <h2 class="page-break">📝 Phần 4: Danh Sách Công Việc</h2>
 
-<h3>🔧 Nhóm A: Sửa Lỗi (8 việc)</h3>
+<h3>🔧 Nhóm A: Sửa Lỗi (8 việc) — <span class="tag-green">✅ TẤT CẢ ĐÃ XONG</span></h3>
 <table>
-<tr><th>#</th><th>Công việc</th><th>Mức độ</th></tr>
-<tr><td>FIX-1</td><td>Refactor Controller → gọi Service (xóa code trùng)</td><td><span class="tag-red">🔴 Quan trọng</span></td></tr>
-<tr><td>FIX-2</td><td>Thay string cứng bằng StatusConstants</td><td><span class="tag-yellow">🟡</span></td></tr>
-<tr><td>FIX-3</td><td>Thêm Exception Handling Middleware</td><td><span class="tag-yellow">🟡</span></td></tr>
-<tr><td>FIX-4</td><td>Tạo Response DTO (không trả Entity raw)</td><td><span class="tag-yellow">🟡</span></td></tr>
-<tr><td>FIX-5</td><td>Sửa CORS → chỉ cho domain của mình</td><td><span class="tag-yellow">🟡</span></td></tr>
-<tr><td>FIX-6</td><td>Sửa AllowAnonymous trên DELETE items</td><td><span class="tag-red">🔴 Quan trọng</span></td></tr>
-<tr><td>FIX-7</td><td>Combo phải trừ kho món con</td><td><span class="tag-yellow">🟡</span></td></tr>
-<tr><td>FIX-8</td><td>Bàn → "cleaning" sau thanh toán</td><td><span class="tag-green">🟢 Dễ</span></td></tr>
+<tr><th>#</th><th>Công việc</th><th>Trạng thái</th></tr>
+<tr><td>FIX-1</td><td>Refactor Controller → gọi Service (xóa code trùng)</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FIX-2</td><td>Thay string cứng bằng StatusConstants</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FIX-3</td><td>Thêm Exception Handling Middleware</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FIX-4</td><td>Tạo Response DTO (không trả Entity raw)</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FIX-5</td><td>Sửa CORS → AllowCredentials + WithOrigins</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FIX-6</td><td>QR Token Validation khi đặt món</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FIX-7</td><td>Combo trừ kho món con</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FIX-8</td><td>Bàn → "cleaning" sau thanh toán</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
 </table>
 
-<h3>✨ Nhóm B: Thêm Tính Năng (7 việc)</h3>
+<h3>✨ Nhóm B: Thêm Tính Năng (8 việc) — <span class="tag-green">7/8 XONG</span>, <span class="tag-red">1 CÒN LẠI</span></h3>
 <table>
-<tr><th>#</th><th>Công việc</th><th>Mức độ</th></tr>
-<tr><td>FEAT-1</td><td>SignalR Hub (realtime giữa Khách-Bếp-Staff)</td><td><span class="tag-red">🔴 Quan trọng</span></td></tr>
-<tr><td>FEAT-2</td><td>Tích hợp VNPay Sandbox</td><td><span class="tag-red">🔴 Quan trọng</span></td></tr>
-<tr><td>FEAT-3</td><td>API + UI chuyển bàn</td><td><span class="tag-yellow">🟡</span></td></tr>
-<tr><td>FEAT-4</td><td>Staff xác nhận "Đã bưng món"</td><td><span class="tag-yellow">🟡</span></td></tr>
-<tr><td>FEAT-5</td><td>CRUD Combo (Admin tạo/sửa/xóa combo)</td><td><span class="tag-yellow">🟡</span></td></tr>
-<tr><td>FEAT-6</td><td>Báo cáo doanh thu (lọc ngày/tháng)</td><td><span class="tag-yellow">🟡</span></td></tr>
-<tr><td>FEAT-7</td><td>UI Razor Pages cho các tính năng mới</td><td><span class="tag-yellow">🟡</span></td></tr>
-<tr><td><b>FEAT-8</b></td><td><b>API tạo QR cho từng bàn (sinh token + URL, Admin refresh)</b></td><td><span class="tag-red">🔴 Quan trọng</span></td></tr>
+<tr><th>#</th><th>Công việc</th><th>Trạng thái</th></tr>
+<tr><td>FEAT-1</td><td>SignalR Hub (realtime Khách-Bếp-Staff)</td><td><span class="tag-green">✅ Đã xong (OrderHub + inject Service + Client)</span></td></tr>
+<tr><td>FEAT-2</td><td>Tích hợp VNPay Sandbox</td><td><span class="tag-red">❌ Chưa làm</span></td></tr>
+<tr><td>FEAT-3</td><td>API + UI chuyển bàn</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FEAT-4</td><td>Staff xác nhận "Đã bưng món"</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FEAT-5</td><td>CRUD Combo (Admin tạo/sửa/xóa combo)</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FEAT-6</td><td>Báo cáo doanh thu (lọc ngày/tháng + Chart)</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FEAT-7</td><td>UI Razor Pages cho các tính năng mới</td><td><span class="tag-green">✅ Đã xong (Admin/Staff/Kitchen/Customer)</span></td></tr>
+<tr><td>FEAT-8</td><td>API tạo QR cho từng bàn (token + URL + validate)</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
 </table>
 
 <!-- ==================== PHẦN 5: SPRINT 3 NGÀY ==================== -->
@@ -336,8 +336,10 @@ flowchart LR
 
 <!-- NGÀY 1 -->
 <div class="alert alert-success" style="font-size: 1.1em;">
-    <b>🎉 TỔNG KẾT: Backend (Dev 1) ĐÃ HOÀN THÀNH XUẤT SẮC 100% NHIỆM VỤ!</b><br>
-    Tất cả các API Core, Service, Bug Fix của Dev 1 đã được pass và đẩy lên Git. Các phần việc chưa hoàn thành bên dưới hoàn toàn là trách nhiệm của <b>Dev 2</b> (SignalR, VNPay) và <b>Dev 3</b> (UI Client). Xin mời các đồng chí vào việc!
+    <b>🎉 TỔNG KẾT NGÀY 26/03: Đã hoàn thành 100% mục tiêu dọn dẹp và bảo mật!</b><br>
+    - Đã dọn dẹp toàn diện CSS (Role-based folder), sửa Sidebar & Layout.<br>
+    - Đã hiện thực hóa cơ chế bảo mật "Bắt buộc đổi mật khẩu" và Reset Pass.<br>
+    - Code đã được Push và Sync ổn định lên nhánh <b>devtest</b> và <b>bacdev</b>.
 </div>
 <h4>📌 NGÀY 1 — Sửa nền tảng (cả 3 làm song song)</h4>
 
