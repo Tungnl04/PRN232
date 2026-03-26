@@ -445,6 +445,48 @@ flowchart LR
 </table>
 </div>
 
+<!-- ==================== PHẦN 6: HƯỚNG DẪN TÁC CHIẾN CHO DEV 2 & DEV 3 ==================== -->
+<h2 class="page-break">🚀 Phần 6: Hướng Dẫn Tác Chiến (Tiếp Nối Dev 1)</h2>
+
+<div class="dev-card dev2">
+<h4>🟠 DEV 2: TÍCH HỢP SIGNALR & VNPAY</h4>
+<b>1. Tích hợp SignalR (Realtime):</b><br>
+- Tạo file <code>FoodQRHub.cs</code>, đăng ký Hubs trong <code>Program.cs</code>.<br>
+- <b>Điểm nối (Hook):</b> Nhúng (Inject) <code>IHubContext</code> vào bên trong các Service của Dev 1 (OrderService, KitchenService, PaymentService).<br>
+- <i>Ví dụ:</i> Khi <code>CreateOrAppendOrderAsync</code> xong → Gọi Hub bắn tin báo cho Bếp "Có đơn mới!".<br><br>
+
+<b>2. Tích hợp VNPay Sandbox:</b><br>
+- Xây dựng luồng tạo URL VNPay và tạo Webhook nhận Callback.<br>
+- <b>Điểm nối (Hook):</b> Khi VNPay báo thanh toán thành công → Gọi <b>thẳng API</b> <code>_paymentService.ProcessPaymentAsync(orderId, "vnpay", true)</code>. Bàn sẽ tự tự nhảy sang <code>Cleaning</code>.<br><br>
+
+<b>3. API Tạo QR Động (FEAT-8):</b><br>
+- Viết logic sinh Token ngẫu nhiên gán vào cột <code>QrCodeToken</code> của bảng OrderTables.<br>
+- Cập nhật lại <code>OrderService</code> để lúc đặt món kiểm tra Token quét QR có khớp với ID bàn không.
+</div>
+
+<div class="dev-card dev3">
+<h4>🟢 DEV 3: VẼ GIAO DIỆN (UI/UX) - CỦA ĐỂ DÀNH CHO PROMPT AI</h4>
+<i>Mẹo Prompt AI: "Tôi đang làm Giao diện bằng Razor Pages kết nối tới API Backend có sẵn. Dùng CSS hiện đại..."</i><br><br>
+
+<b>1. Dashboad Bàn & Thanh toán (Staff):</b><br>
+- Gọi <code>GET /api/Tables</code>.<br>
+- Bàn có Status <code>Cleaning</code> (Vàng) → Thêm nút <b>[Dọn xong]</b> gọi <code>PATCH /api/Tables/{id}/status</code> với body <code>"available"</code>.<br>
+- Nút "Checkout" KHÔNG được phép đổi status bàn thành available nữa, mà gọi luồng thanh toán VNPay.<br><br>
+
+<b>2. Màn hình Bếp & Việc bưng bê (Staff/Kitchen):</b><br>
+- Dùng CSS Grid Kanban 3 cột: Pending, Preparing, Ready (Gọi <code>GET /api/Kitchen/items</code>).<br>
+- Bếp bấm [Nấu] gọi PATCH status <code>"preparing"</code>, bấm [Xong] gọi status <code>"ready"</code>.<br>
+- Phục vụ chỉ thấy danh sách Ready. Bưng xong bấm [Đã Bưng] gọi PATCH status <code>"served"</code>.<br><br>
+
+<b>3. Admin Quản lý Combo:</b><br>
+- Lấy danh sách từ <code>GET /api/Combos</code>.<br>
+- Nút Thêm mở Modal có form động Add/Remove hàng hóa con (Lấy từ <code>GET /api/Products</code>). Gửi POST lên API <code>CombosController</code> kèm mảng <code>Items[]</code> tuân theo lớp <code>ComboCreateDto</code>.<br><br>
+
+<b>4. Admin Báo Cáo Doanh Thu:</b><br>
+- Giao diện có Datepicker (startDate, endDate). Gọi API <code>GET /api/Orders/reports/revenue?startDate=...&endDate=...</code><br>
+- Dùng Chart.js để vẽ biểu đồ doanh thu theo <code>revenueByDate</code>.
+</div>
+
 <!-- ==================== GIT WORKFLOW ==================== -->
 <h2>🔀 Cách Dùng Git (Tránh Conflict)</h2>
 
