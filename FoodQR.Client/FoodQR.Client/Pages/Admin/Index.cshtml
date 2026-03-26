@@ -71,7 +71,7 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        const apiBaseUrl = "@(ViewData["ApiBaseUrl"] ?? "https://localhost:7197/api")";
+        const apiBaseUrl = "@(ViewData["ApiBaseUrl"])" || (window.location.hostname.includes('localhost') ? "https://localhost:7197/api" : "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api");
 
         async function loadDashboard() {
             try {

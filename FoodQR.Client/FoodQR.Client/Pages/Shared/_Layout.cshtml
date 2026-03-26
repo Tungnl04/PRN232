@@ -75,7 +75,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        const apiBase = "@(Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7197/api")";
+        const apiBase = "@(Configuration["ApiSettings:BaseUrl"])" || (window.location.hostname.includes('localhost') ? "https://localhost:7197/api" : "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api");
 
         function goToTracking() {
             const orderId = localStorage.getItem('food_active_order_id');

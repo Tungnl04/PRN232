@@ -156,6 +156,16 @@ CREATE TABLE order_status_history (
     CONSTRAINT fk_history_order FOREIGN KEY (order_id) REFERENCES [order](id)
 );
 
+-- ===== STORE CONFIGURATION =====
+CREATE TABLE store_configuration (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    store_name NVARCHAR(200) NOT NULL DEFAULT N'FoodQR Restaurant',
+    tax_rate DECIMAL(5,4) NOT NULL DEFAULT 0.08,
+    is_tax_included_in_price BIT NOT NULL DEFAULT 0,
+    currency NVARCHAR(10) NOT NULL DEFAULT 'VND',
+    updated_at DATETIME DEFAULT GETDATE()
+);
+
 -- ===== ACTIVITY LOG =====
 CREATE TABLE activity_log (
     id INT IDENTITY(1,1) PRIMARY KEY,

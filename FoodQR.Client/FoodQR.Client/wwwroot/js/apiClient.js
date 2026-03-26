@@ -1,5 +1,8 @@
 const apiClient = (function() {
-    const API_BASE_URL = "https://localhost:7197/api"; // Centralized API port
+    // Auto-detect: nếu chạy trên Azure thì dùng Azure API, nếu localhost thì dùng localhost
+    const API_BASE_URL = window.location.hostname.includes('localhost')
+        ? "https://localhost:7197/api"
+        : "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api";
 
     // Private helper for fetch with auth
     async function authorizedFetch(endpoint, options = {}) {
@@ -118,6 +121,25 @@ const apiClient = (function() {
         async checkoutCash(orderId) {
             return await authorizedFetch(`/Payments/${orderId}/process?method=cash&simulateSuccess=true`, {
                 method: 'POST'
+            });
+        },
+
+        async createVnPayUrl(orderId) {
+            return await authorizedFetch(`/Payments/${orderId}/vnpay-url`, {
+                method: 'POST'
+            });
+        },
+
+        // STORE CONFIG
+        async getStoreConfig() {
+            const res = await fetch(`${API_BASE_URL}/StoreConfig`);
+            return res.ok ? res.json() : null;
+        },
+
+        async updateStoreConfig(data) {
+            return await authorizedFetch('/StoreConfig', {
+                method: 'PUT',
+                body: JSON.stringify(data)
             });
         },
 

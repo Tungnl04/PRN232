@@ -158,4 +158,11 @@ INSERT INTO [user] (id, name, username, password_hash, role, active, must_change
 (2, N'Staff User', 'staff', '$2a$11$Y8iC0D.lCaFFEcGstxcJoOGe1z/Pl3fOQQjeZp4mcLBQBvmoK0BbK', 'staff', 1, 0),
 (3, N'Kitchen User', 'kitchen', '$2a$11$Y8iC0D.lCaFFEcGstxcJoOGe1z/Pl3fOQQjeZp4mcLBQBvmoK0BbK', 'kitchen', 1, 0);
 SET IDENTITY_INSERT [user] OFF;
+
+-- 8. INSERT STORE CONFIGURATION (Default: 8% VAT)
+DELETE FROM [store_configuration];
+SET IDENTITY_INSERT [store_configuration] ON;
+INSERT INTO [store_configuration] (id, store_name, tax_rate, is_tax_included_in_price, currency)
+VALUES (1, N'FoodQR Restaurant', 0.08, 0, 'VND');
+SET IDENTITY_INSERT [store_configuration] OFF;
 GO

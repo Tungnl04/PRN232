@@ -40,6 +40,8 @@ public partial class FoodStoreDbContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
+    public virtual DbSet<StoreConfiguration> StoreConfigurations { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         // Connection string is configured via DI in Program.cs
@@ -381,8 +383,35 @@ public partial class FoodStoreDbContext : DbContext
                 .HasColumnName("must_change_password");
         });
 
+        modelBuilder.Entity<StoreConfiguration>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.ToTable("store_configuration");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.StoreName)
+                .HasMaxLength(200)
+                .HasColumnName("store_name");
+            entity.Property(e => e.TaxRate)
+                .HasColumnType("decimal(5, 4)")
+                .HasDefaultValue(0.08m)
+                .HasColumnName("tax_rate");
+            entity.Property(e => e.IsTaxIncludedInPrice)
+                .HasDefaultValue(false)
+                .HasColumnName("is_tax_included_in_price");
+            entity.Property(e => e.Currency)
+                .HasMaxLength(10)
+                .HasDefaultValue("VND")
+                .HasColumnName("currency");
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("updated_at");
+        });
+
         OnModelCreatingPartial(modelBuilder);
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
+
