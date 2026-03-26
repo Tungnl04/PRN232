@@ -92,6 +92,10 @@ const apiClient = (function() {
             });
         },
 
+        async getTable(id) {
+            const res = await authorizedFetch(`/Tables/${id}`);
+            return res && res.ok ? res.json() : null;
+        },
         // ORDERS
         async getActiveOrder(tableId) {
             const res = await authorizedFetch(`/Orders/active/${tableId}`);
