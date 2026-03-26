@@ -19,12 +19,14 @@ namespace FoodQR.Client.Pages
         public int TableId { get; set; }
         public string OrderCode { get; set; } = "";
         public string OrderStatus { get; set; } = "";
+        public string? Token { get; set; }
         public List<TrackingItemDto> Items { get; set; } = new();
 
-        public async Task<IActionResult> OnGetAsync(int orderId, int tableId)
+        public async Task<IActionResult> OnGetAsync(int orderId, int tableId, string? token)
         {
             OrderId = orderId;
             TableId = tableId;
+            Token = token;
             var client = _httpClientFactory.CreateClient();
 
             // BUG-09 Fix: Use active/{tableId} endpoint which returns items with names pre-loaded
@@ -41,6 +43,7 @@ namespace FoodQR.Client.Pages
                 int returnedOrderId = root.GetProperty("id").GetInt32();
                 if (returnedOrderId != orderId)
                 {
+                    if (!string.IsNullOrEmpty(Token)) return RedirectToPage("/Index", new { token = Token });
                     return RedirectToPage("/Index", new { tableId = tableId });
                 }
 
@@ -60,6 +63,7 @@ namespace FoodQR.Client.Pages
                 }
                 return Page();
             }
+            if (!string.IsNullOrEmpty(Token)) return RedirectToPage("/Index", new { token = Token });
             return RedirectToPage("/Index", new { tableId = tableId });
         }
     }

@@ -20,10 +20,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowClient", policy =>
     {
-        policy.WithOrigins("http://localhost:5181", "https://localhost:7209")
+        policy.SetIsOriginAllowed(origin => true) // Cho phép mọi origin (kể cả IIS Express port khác)
               .AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowCredentials(); // needed for SignalR later
+              .AllowCredentials(); // needed for SignalR
     });
 });
 

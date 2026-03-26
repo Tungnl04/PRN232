@@ -4,20 +4,28 @@ namespace FoodQR.API.Hubs
 {
     public class OrderHub : Hub
     {
-        /// <summary>
-        /// Client gọi method này để join vào group (kitchen, staff, table_5, etc.)
-        /// </summary>
+        public override async Task OnConnectedAsync()
+        {
+            Console.WriteLine($"[SignalR] Client connected: {Context.ConnectionId}");
+            await base.OnConnectedAsync();
+        }
+
+        public override async Task OnDisconnectedAsync(Exception? exception)
+        {
+            Console.WriteLine($"[SignalR] Client disconnected: {Context.ConnectionId}");
+            await base.OnDisconnectedAsync(exception);
+        }
+
         public async Task JoinGroup(string groupName)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+            Console.WriteLine($"[SignalR] Client {Context.ConnectionId} joined group: {groupName}");
         }
 
-        /// <summary>
-        /// Client gọi method này để rời group
-        /// </summary>
         public async Task LeaveGroup(string groupName)
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
+            Console.WriteLine($"[SignalR] Client {Context.ConnectionId} left group: {groupName}");
         }
     }
 }

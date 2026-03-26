@@ -6,7 +6,7 @@
 
 <div class="container animate-in">
     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
-        <a href="/?tableId=@Model.TableId" style="color: var(--text); font-size: 1.2rem;"><i class="fa-solid fa-arrow-left"></i></a>
+        <a href="/?@(Model.Token != null ? "token=" + Model.Token : "tableId=" + Model.TableId)" style="color: var(--text); font-size: 1.2rem;"><i class="fa-solid fa-arrow-left"></i></a>
         <h2 class="font-bold">Track Your Order</h2>
     </div>
 
