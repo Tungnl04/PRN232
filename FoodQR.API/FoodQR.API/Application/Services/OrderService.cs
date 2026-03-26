@@ -18,6 +18,17 @@ namespace FoodQR.API.Application.Services
 
         public async Task<Order> CreateOrAppendOrderAsync(OrderCreateDto orderDto)
         {
+            // Validate Token
+            var table = await _context.OrderTables.FindAsync(orderDto.TableId);
+            if (table == null)
+            {
+                throw new ArgumentException("Bàn không tồn tại.");
+            }
+            if (string.IsNullOrEmpty(orderDto.Token) || table.QrCodeToken != orderDto.Token)
+            {
+                throw new UnauthorizedAccessException("QR Token không hợp lệ hoặc đã hết hạn. Vui lòng quét lại mã QR tại bàn.");
+            }
+
             // 1. Check for active order on this table
             var activeOrder = await _context.Orders
                 .Include(o => o.OrderItems)
@@ -138,8 +149,51 @@ namespace FoodQR.API.Application.Services
                 }
                 else if (itemDto.ComboId.HasValue)
                 {
-                    var combo = await _context.Combos.FindAsync(itemDto.ComboId.Value);
+                    var combo = await _context.Combos
+                        .Include(c => c.ComboItems)
+                        .ThenInclude(ci => ci.Product)
+                        .FirstOrDefaultAsync(c => c.Id == itemDto.ComboId.Value);
+
                     if (combo == null || combo.Available == false) continue;
+
+                    // Deduct inventory for child products
+                    bool canFulfillCombo = true;
+                    foreach (var comboItem in combo.ComboItems)
+                    {
+                        var product = comboItem.Product;
+                        int requiredQty = (comboItem.Quantity ?? 1) * itemDto.Quantity;
+                        
+                        if (product.Inventory.HasValue && product.Inventory.Value < requiredQty)
+                        {
+                            canFulfillCombo = false;
+                            break;
+                        }
+                    }
+
+                    if (!canFulfillCombo) continue; // Skip if any product in combo is out of stock
+
+                    foreach (var comboItem in combo.ComboItems)
+                    {
+                        var product = comboItem.Product;
+                        int requiredQty = (comboItem.Quantity ?? 1) * itemDto.Quantity;
+
+                        if (product.Inventory.HasValue)
+                        {
+                            product.Inventory -= requiredQty;
+                            if (product.Inventory <= 0)
+                            {
+                                product.IsAvailable = false;
+                                await _context.Notifications.AddAsync(new Notification
+                                {
+                                    Message = $"⚠️ Sản phẩm '{product.Name}' (combo '{combo.Name}') đã hết hàng!",
+                                    Type = "low_inventory",
+                                    TargetRole = AppRoles.Admin,
+                                    CreatedAt = DateTime.Now
+                                });
+                            }
+                        }
+                    }
+
                     unitPrice = combo.Price;
                 }
 
@@ -159,8 +213,7 @@ namespace FoodQR.API.Application.Services
             order.TotalAmount = (order.TotalAmount ?? 0) + additionalAmount;
 
             // 3. Update table status
-            var table = await _context.OrderTables.FindAsync(orderDto.TableId);
-            if (table != null) table.Status = TableStatus.Taken;
+            table.Status = TableStatus.Taken;
 
             await _context.SaveChangesAsync();
             return order;
@@ -301,6 +354,51 @@ namespace FoodQR.API.Application.Services
             {
                 Action = "cancel_item",
                 Description = $"Item {orderItemId} cancelled. Reason: {reason ?? "N/A"}"
+            });
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> SwitchTableAsync(int orderId, int newTableId)
+        {
+            var order = await _context.Orders
+                .Include(o => o.Table)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+
+            if (order == null || new[] { OrderStatus.Paid, OrderStatus.Cancelled, OrderStatus.Rejected }.Contains(order.Status))
+                return false;
+
+            if (order.TableId == newTableId)
+                return false; // Already on this table
+
+            var newTable = await _context.OrderTables.FindAsync(newTableId);
+            if (newTable == null || newTable.Status == TableStatus.Taken)
+                return false; // Table doesn't exist or is currently occupied
+
+            var oldTable = order.Table;
+            
+            // Switch
+            order.TableId = newTableId;
+            newTable.Status = TableStatus.Taken;
+
+            if (oldTable != null)
+            {
+                // Check if old table has any other active orders (edge case), if not set to Available
+                bool hasOtherActiveOrders = await _context.Orders.AnyAsync(o => 
+                    o.TableId == oldTable.Id && o.Id != order.Id && 
+                    !new[] { OrderStatus.Paid, OrderStatus.Cancelled, OrderStatus.Rejected }.Contains(o.Status));
+                
+                if (!hasOtherActiveOrders)
+                {
+                    oldTable.Status = TableStatus.Available;
+                }
+            }
+
+            await _context.ActivityLogs.AddAsync(new ActivityLog
+            {
+                Action = "switch_table",
+                Description = $"Order {order.OrderCode} switched from Table {(oldTable != null ? oldTable.TableNumber : "None")} to Table {newTable.TableNumber}."
             });
 
             await _context.SaveChangesAsync();

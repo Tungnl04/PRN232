@@ -1,9 +1,9 @@
+using FoodQR.API.Application.DTOs;
 using FoodQR.API.Core.Entities;
 using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using FoodQR.API.Application.DTOs;
 
 namespace FoodQR.API.Controllers
 {
@@ -20,14 +20,14 @@ namespace FoodQR.API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<object>>> GetUsers()
+        public async Task<ActionResult<IEnumerable<UserResponseDto>>> GetUsers()
         {
             var users = await _context.Users.ToListAsync();
-            return users.Select(u => new { u.Id, u.Name, u.Username, u.Role, u.Active }).ToList();
+            return users.Select(u => new UserResponseDto { Id = u.Id, Name = u.Name, Username = u.Username, Role = u.Role, Active = u.Active }).ToList();
         }
 
         [HttpPost]
-        public async Task<ActionResult<object>> CreateUser(User user)
+        public async Task<ActionResult<UserResponseDto>> CreateUser(User user)
         {
             if (_context.Users.Any(u => u.Username == user.Username))
                 return BadRequest("Username already taken.");
@@ -41,7 +41,7 @@ namespace FoodQR.API.Controllers
             user.Active = true;
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetUsers), new { id = user.Id }, new { user.Id, user.Name, user.Username, user.Role, user.Active });
+            return CreatedAtAction(nameof(GetUsers), new { id = user.Id }, new UserResponseDto { Id = user.Id, Name = user.Name, Username = user.Username, Role = user.Role, Active = user.Active });
         }
 
         [HttpPut("{id}")]
