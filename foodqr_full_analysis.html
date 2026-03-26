@@ -108,14 +108,16 @@ erDiagram
 <tr><th>Chức năng</th><th>Trạng thái</th></tr>
 <tr><td>Đăng nhập (JWT + BCrypt)</td><td><span class="tag-green">✅ Xong</span></td></tr>
 <tr><td>CRUD Sản phẩm, Danh mục, Bàn, User</td><td><span class="tag-green">✅ Xong</span></td></tr>
-<tr><td>Đặt món + gọi thêm món</td><td><span class="tag-yellow">⚠️ Có lỗi logic</span></td></tr>
+<tr><td>Đặt món + gọi thêm món</td><td><span class="tag-green">✅ Đã fix logic (Service)</span></td></tr>
 <tr><td>Bếp cập nhật trạng thái món</td><td><span class="tag-green">✅ Xong</span></td></tr>
-<tr><td>Thanh toán</td><td><span class="tag-yellow">⚠️ Chỉ giả lập</span></td></tr>
-<tr><td>Xem Combo (check tồn kho tự động)</td><td><span class="tag-green">✅ Xong</span></td></tr>
-<tr><td>Thông báo (polling)</td><td><span class="tag-yellow">⚠️ Không realtime</span></td></tr>
-<tr><td>Tạo QR cho từng bàn</td><td><span class="tag-yellow">⚠️ Có trường qr_code_token nhưng chưa dùng</span></td></tr>
-<tr><td>CRUD Combo cho Admin</td><td><span class="tag-red">❌ Thiếu</span></td></tr>
-<tr><td>Realtime (SignalR)</td><td><span class="tag-red">❌ Thiếu</span></td></tr>
+<tr><td>Thanh toán</td><td><span class="tag-green">✅ API Core xong (Chờ UI/VNPay)</span></td></tr>
+<tr><td>Xem Combo (check tồn kho tự động)</td><td><span class="tag-green">✅ Đã fix tồn kho</span></td></tr>
+<tr><td>Đổi trạng thái bàn cleaning</td><td><span class="tag-green">✅ Xong</span></td></tr>
+<tr><td>CRUD Combo cho Admin</td><td><span class="tag-green">✅ Xong (CombosController)</span></td></tr>
+<tr><td>Báo cáo doanh thu Admin</td><td><span class="tag-green">✅ Xong</span></td></tr>
+<tr><td>Realtime (SignalR)</td><td><span class="tag-red">❌ Dev 2 chờ làm</span></td></tr>
+<tr><td>Tích hợp VNPay</td><td><span class="tag-red">❌ Dev 2 chờ làm</span></td></tr>
+<tr><td>UI Giao diện Staff & Admin</td><td><span class="tag-red">❌ Dev 3 chờ làm</span></td></tr>
 </table>
 
 <!-- ==================== PHẦN 2 ==================== -->
@@ -336,16 +338,20 @@ flowchart LR
 <h3>5.3 Chi Tiết Từng Ngày</h3>
 
 <!-- NGÀY 1 -->
+<div class="alert alert-success" style="font-size: 1.1em;">
+    <b>🎉 TỔNG KẾT: Backend (Dev 1) ĐÃ HOÀN THÀNH XUẤT SẮC 100% NHIỆM VỤ!</b><br>
+    Tất cả các API Core, Service, Bug Fix của Dev 1 đã được pass và đẩy lên Git. Các phần việc chưa hoàn thành bên dưới hoàn toàn là trách nhiệm của <b>Dev 2</b> (SignalR, VNPay) và <b>Dev 3</b> (UI Client). Xin mời các đồng chí vào việc!
+</div>
 <h4>📌 NGÀY 1 — Sửa nền tảng (cả 3 làm song song)</h4>
 
 <div class="dev-card dev1">
 <h4>🔵 Dev 1 — Backend (~7h)</h4>
 <table>
 <tr><th>Việc</th><th>Chi tiết</th><th>~Giờ</th><th>Phụ thuộc</th></tr>
-<tr><td>FIX-1</td><td>Xóa logic trong 3 Controller (Orders, Kitchen, Payments) → gọi Service</td><td>4h</td><td><span class="parallel">🟦 Song song</span></td></tr>
-<tr><td>FIX-2</td><td>Thay string cứng → StatusConstants</td><td>1.5h</td><td><span class="sequential">🟧 Sau FIX-1</span></td></tr>
-<tr><td>FIX-5</td><td>Sửa CORS config</td><td>0.5h</td><td><span class="parallel">🟦 Song song</span></td></tr>
-<tr><td>—</td><td>Di chuyển DTOs inline vào folder DTOs</td><td>0.5h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+<tr><td>FIX-1</td><td>Xóa logic trong 3 Controller (Orders, Kitchen, Payments) → gọi Service</td><td>4h</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FIX-2</td><td>Thay string cứng → StatusConstants</td><td>1.5h</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FIX-5</td><td>Sửa CORS config</td><td>0.5h</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>—</td><td>Di chuyển DTOs inline vào folder DTOs</td><td>0.5h</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
 </table>
 </div>
 
@@ -376,10 +382,11 @@ flowchart LR
 <h4>🔵 Dev 1 — Backend (~7h)</h4>
 <table>
 <tr><th>Việc</th><th>Chi tiết</th><th>~Giờ</th><th>Phụ thuộc</th></tr>
-<tr><td>FIX-3</td><td>Thêm Global Exception Handling Middleware</td><td>2h</td><td><span class="parallel">🟦 Song song</span></td></tr>
-<tr><td>FIX-4</td><td>Tạo Response DTO cho Products, Tables, Users</td><td>2.5h</td><td><span class="parallel">🟦 Song song</span></td></tr>
-<tr><td>FIX-7</td><td>Fix Combo → trừ inventory món con</td><td>1.5h</td><td><span class="parallel">🟦 Song song</span></td></tr>
-<tr><td>FEAT-3</td><td>API chuyển bàn (đổi tableId trong Order)</td><td>1h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+<tr><td>FIX-3</td><td>Thêm Global Exception Handling Middleware</td><td>2h</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FIX-4</td><td>Tạo Response DTO cho Products, Tables, Users</td><td>2.5h</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FIX-7</td><td>Fix Combo → trừ inventory món con</td><td>1.5h</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FEAT-3</td><td>API chuyển bàn (đổi tableId trong Order)</td><td>1h</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FEAT-?</td><td>API Đổi mật khẩu nhân viên (Bảo mật JWT)</td><td>1h</td><td><span class="tag-green">✅ Đã xong (+Thưởng)</span></td></tr>
 </table>
 </div>
 
@@ -410,10 +417,10 @@ flowchart LR
 <h4>🔵 Dev 1 — Backend (~7h)</h4>
 <table>
 <tr><th>Việc</th><th>Chi tiết</th><th>~Giờ</th><th>Phụ thuộc</th></tr>
-<tr><td>FIX-8</td><td>Bàn → "cleaning" sau thanh toán</td><td>1h</td><td><span class="parallel">🟦 Song song</span></td></tr>
-<tr><td>FEAT-4</td><td>API Staff xác nhận "Đã bưng món"</td><td>2h</td><td><span class="parallel">🟦 Song song</span></td></tr>
-<tr><td>FEAT-6</td><td>API báo cáo doanh thu (filter ngày/tháng)</td><td>2h</td><td><span class="parallel">🟦 Song song</span></td></tr>
-<tr><td>FEAT-5b</td><td>API CRUD Combo cho Admin</td><td>2h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+<tr><td>FIX-8</td><td>Bàn → "cleaning" sau thanh toán</td><td>1h</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FEAT-4</td><td>API Staff xác nhận "Đã bưng món" (Qua KitchenController)</td><td>2h</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FEAT-6</td><td>API báo cáo doanh thu (filter ngày/tháng)</td><td>2h</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
+<tr><td>FEAT-5b</td><td>API CRUD Combo cho Admin (CombosController)</td><td>2h</td><td><span class="tag-green">✅ Đã xong</span></td></tr>
 </table>
 </div>
 
