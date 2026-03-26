@@ -54,5 +54,85 @@ namespace FoodQR.API.Controllers
             if (combo == null) return NotFound();
             return combo;
         }
+
+        [Authorize(Roles = "admin")]
+        [HttpPost]
+        public async Task<ActionResult<Combo>> CreateCombo(FoodQR.API.Application.DTOs.ComboCreateDto comboDto)
+        {
+            if (comboDto.Items == null || !comboDto.Items.Any()) return BadRequest("Combo must have at least one product.");
+
+            var combo = new Combo
+            {
+                Name = comboDto.Name,
+                Description = comboDto.Description,
+                Price = comboDto.Price,
+                ImageUrl = comboDto.ImageUrl,
+                Available = comboDto.Available
+            };
+
+            foreach (var item in comboDto.Items)
+            {
+                var product = await _context.Products.FindAsync(item.ProductId);
+                if (product == null) return BadRequest($"Product '{item.ProductId}' not found.");
+
+                combo.ComboItems.Add(new ComboItem
+                {
+                    ProductId = item.ProductId,
+                    Quantity = item.Quantity
+                });
+            }
+
+            _context.Combos.Add(combo);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetCombo), new { id = combo.Id }, combo);
+        }
+
+        [Authorize(Roles = "admin")]
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateCombo(int id, FoodQR.API.Application.DTOs.ComboCreateDto comboDto)
+        {
+            var combo = await _context.Combos
+                .Include(c => c.ComboItems)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (combo == null) return NotFound();
+
+            combo.Name = comboDto.Name;
+            combo.Description = comboDto.Description;
+            combo.Price = comboDto.Price;
+            combo.ImageUrl = comboDto.ImageUrl;
+            combo.Available = comboDto.Available;
+
+            // Remove old items
+            _context.ComboItems.RemoveRange(combo.ComboItems);
+            combo.ComboItems.Clear();
+
+            // Add new items
+            foreach (var item in comboDto.Items)
+            {
+                 combo.ComboItems.Add(new ComboItem
+                 {
+                     ProductId = item.ProductId,
+                     Quantity = item.Quantity
+                 });
+            }
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        [Authorize(Roles = "admin")]
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteCombo(int id)
+        {
+            var combo = await _context.Combos.FindAsync(id);
+            if (combo == null) return NotFound();
+
+            combo.Available = false; // Soft delete or unavailable
+            await _context.SaveChangesAsync();
+            
+            return NoContent();
+        }
     }
 }

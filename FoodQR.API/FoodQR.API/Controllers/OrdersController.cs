@@ -110,6 +110,42 @@ namespace FoodQR.API.Controllers
             };
         }
 
+        [Authorize(Roles = "admin")]
+        [HttpGet("reports/revenue")]
+        public async Task<ActionResult<object>> GetRevenueReport([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        {
+            var query = _context.Orders
+                .Where(o => o.Status.ToLower() == OrderStatus.Paid);
+
+            if (startDate.HasValue)
+                query = query.Where(o => o.CreatedAt >= startDate.Value.Date);
+            
+            if (endDate.HasValue)
+            {
+                var end = endDate.Value.Date.AddDays(1).AddTicks(-1);
+                query = query.Where(o => o.CreatedAt <= end);
+            }
+
+            var totalOrders = await query.CountAsync();
+            var totalRevenue = await query.SumAsync(o => o.TotalAmount ?? 0);
+
+            var revenueByDate = await query
+                .GroupBy(o => o.CreatedAt!.Value.Date)
+                .Select(g => new {
+                    Date = g.Key.ToString("yyyy-MM-dd"),
+                    Revenue = g.Sum(o => o.TotalAmount ?? 0),
+                    OrderCount = g.Count()
+                })
+                .OrderBy(r => r.Date)
+                .ToListAsync();
+
+            return new { 
+                totalOrders, 
+                totalRevenue, 
+                revenueByDate 
+            };
+        }
+
         [Authorize(Roles = "staff,admin")]
         [HttpPatch("{id}/table/{newTableId}")]
         public async Task<IActionResult> SwitchTable(int id, int newTableId)
