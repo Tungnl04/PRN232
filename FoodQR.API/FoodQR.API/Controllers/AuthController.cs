@@ -44,6 +44,29 @@ namespace FoodQR.API.Controllers
             });
         }
 
+        [Authorize]
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+        {
+            // Trích xuất UserId từ Token hiện tại
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out int userId))
+                return Unauthorized();
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null || user.Active != true) return NotFound("User not found or inactive.");
+
+            // Kiểm tra mật khẩu cũ
+            if (!BCrypt.Net.BCrypt.Verify(dto.OldPassword, user.PasswordHash))
+                return BadRequest("Mật khẩu cũ không chính xác.");
+
+            // Mã hóa và lưu mật khẩu mới
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "Đổi mật khẩu thành công." });
+        }
+
         private string GenerateJwtToken(User user)
         {
             var jwtSettings = _config.GetSection("Jwt");

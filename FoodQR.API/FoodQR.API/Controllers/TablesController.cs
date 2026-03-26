@@ -1,3 +1,4 @@
+using FoodQR.API.Application.DTOs;
 using FoodQR.API.Core.Entities;
 using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -19,18 +20,35 @@ namespace FoodQR.API.Controllers
 
         [AllowAnonymous]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<OrderTable>>> GetTables()
+        public async Task<ActionResult<IEnumerable<TableResponseDto>>> GetTables()
         {
-            return await _context.OrderTables.ToListAsync();
+            var tables = await _context.OrderTables.ToListAsync();
+            return tables.Select(t => new TableResponseDto
+            {
+                Id = t.Id,
+                TableNumber = t.TableNumber,
+                Capacity = t.Capacity,
+                Status = t.Status,
+                QrCodeToken = t.QrCodeToken,
+                Location = t.Location
+            }).ToList();
         }
 
         [AllowAnonymous]
         [HttpGet("{id}")]
-        public async Task<ActionResult<OrderTable>> GetTable(int id)
+        public async Task<ActionResult<TableResponseDto>> GetTable(int id)
         {
-            var table = await _context.OrderTables.FindAsync(id);
-            if (table == null) return NotFound();
-            return table;
+            var t = await _context.OrderTables.FindAsync(id);
+            if (t == null) return NotFound();
+            return new TableResponseDto
+            {
+                Id = t.Id,
+                TableNumber = t.TableNumber,
+                Capacity = t.Capacity,
+                Status = t.Status,
+                QrCodeToken = t.QrCodeToken,
+                Location = t.Location
+            };
         }
 
         [Authorize(Roles = "staff,admin")]

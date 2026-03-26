@@ -45,7 +45,7 @@ namespace FoodQR.API.Application.Services
                 order.UpdatedAt = DateTime.Now;
 
                 if (order.Table != null)
-                    order.Table.Status = TableStatus.Available;
+                    order.Table.Status = TableStatus.Cleaning;
 
                 await _context.OrderStatusHistories.AddAsync(new OrderStatusHistory
                 {
