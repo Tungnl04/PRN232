@@ -79,16 +79,19 @@ namespace FoodQR.API.Application.Services
 
             // State machine: Update parent order status
             var order = item.Order;
+            bool justStartedProcessing = false;
             if (order != null)
             {
                 string oldOrderStatus = order.Status ?? OrderStatus.Pending;
 
-                // → PROCESSING if any work started
+                // → PROCESSING if any work started (first time only)
                 bool anyWorkStarted = order.OrderItems.Any(oi => oi.Status == OrderItemStatus.Preparing || oi.Status == OrderItemStatus.Ready);
-                if (anyWorkStarted && string.Equals(oldOrderStatus, OrderStatus.Pending, StringComparison.OrdinalIgnoreCase))
+                bool wasJustPending = string.Equals(oldOrderStatus, OrderStatus.Pending, StringComparison.OrdinalIgnoreCase);
+                if (anyWorkStarted && wasJustPending)
                 {
                     order.Status = OrderStatus.Processing;
                     order.UpdatedAt = DateTime.Now;
+                    justStartedProcessing = true; // Flag for SignalR below
                     await _context.OrderStatusHistories.AddAsync(new OrderStatusHistory
                     {
                         Order = order, OldStatus = oldOrderStatus, NewStatus = OrderStatus.Processing,
@@ -141,14 +144,19 @@ namespace FoodQR.API.Application.Services
             var tableId = order?.TableId;
             var payload = new { itemId, newStatus, orderId = order?.Id, orderStatus = order?.Status, tableId };
 
+            // Kitchen & Staff always get per-item updates (for board refresh)
             await _hubContext.Clients.Group("kitchen").SendAsync("ItemStatusChanged", payload);
             await _hubContext.Clients.Group("staff").SendAsync("ItemStatusChanged", payload);
-            if (tableId.HasValue)
+
+            // Customer chỉ nhận thông báo khi ORDER chuyển trạng thái, KHÔNG phải từng món:
+            // 1) Đơn BẮT ĐẦU chế biến (lần đầu tiên)
+            if (order != null && justStartedProcessing && tableId.HasValue)
             {
-                await _hubContext.Clients.Group($"table_{tableId}").SendAsync("ItemStatusChanged", payload);
+                var startPayload = new { orderId = order.Id, orderCode = order.OrderCode, tableId };
+                await _hubContext.Clients.Group($"table_{tableId}").SendAsync("OrderStartedPreparing", startPayload);
             }
 
-            // Nếu order Ready → gửi thêm event OrderReady
+            // 2) Đơn HOÀN TẤT tất cả món
             if (order != null && order.Status == OrderStatus.Ready)
             {
                 var readyPayload = new { orderId = order.Id, orderCode = order.OrderCode, tableId };
