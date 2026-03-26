@@ -27,9 +27,10 @@
 
 @section Scripts {
     <script>
+        let tables = [];
         async function loadTables() {
             try {
-                const tables = await apiClient.getTables();
+                tables = await apiClient.getTables();
                 renderTables(tables);
             } catch (err) { console.error(err); }
         }
@@ -78,7 +79,9 @@
         }
 
         function viewTable(id) {
-            window.location.href = `/Staff/OrderDetails?tableId=${id}`;
+            const t = tables.find(x => x.id === id);
+            const token = t?.qrCodeToken || '';
+            window.location.href = `/Staff/OrderDetails?tableId=${id}&qrToken=${token}&tableNumber=${t.tableNumber}`;
         }
 
         loadTables();

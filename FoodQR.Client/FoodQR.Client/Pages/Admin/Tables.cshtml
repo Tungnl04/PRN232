@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model FoodQR.Client.Pages.Admin.TablesModel
 @{
     Layout = "_Layout";
@@ -20,7 +20,7 @@
                 <th>Name</th>
                 <th>Capacity</th>
                 <th>Status</th>
-                <th>QR Link</th>
+                <th>QR Code</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -30,9 +30,39 @@
     </table>
 </div>
 
+<!-- QR Modal -->
+<div id="qr-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:20px; padding:36px 32px; max-width:380px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.2); position:relative;">
+        <button onclick="closeQrModal()" style="position:absolute; top:14px; right:16px; background:none; border:none; font-size:1.3rem; cursor:pointer; color:#999;">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <i class="fa-solid fa-qrcode" style="font-size:2rem; color:var(--primary); margin-bottom:8px;"></i>
+        <h3 id="qr-modal-title" style="font-weight:800; margin-bottom:4px;"></h3>
+        <p style="font-size:0.8rem; color:#999; margin-bottom:20px;">Khách hàng quét mã để đặt món</p>
+
+        <!-- QR image được render bởi qrcode.js -->
+        <div id="qr-canvas-container" style="display:flex; justify-content:center; margin-bottom:20px;"></div>
+
+        <p id="qr-url-text" style="font-size:0.72rem; color:#aaa; word-break:break-all; margin-bottom:20px;"></p>
+
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+            <button onclick="downloadQr()" style="background:var(--primary); color:#fff; border:none; padding:10px 20px; border-radius:10px; font-weight:600; cursor:pointer; font-size:0.85rem;">
+                <i class="fa-solid fa-download"></i> Download PNG
+            </button>
+            <button onclick="refreshCurrentQr()" style="background:#f5f5f5; color:#333; border:none; padding:10px 20px; border-radius:10px; font-weight:600; cursor:pointer; font-size:0.85rem;">
+                <i class="fa-solid fa-rotate"></i> Refresh QR
+            </button>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
+    <!-- qrcode.js từ CDN, không cần cài package -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
     <script>
         let tables = [];
+        let activeQrTableId = null; // bàn đang mở trong modal QR
 
         async function loadTables() {
             tables = await apiClient.getTables();
@@ -48,9 +78,14 @@
                         </span>
                     </td>
                     <td>
-                        <a href="/?tableId=${t.id}" target="_blank" style="color: var(--primary); font-size: 0.8rem; text-decoration: none;">
-                            <i class="fa-solid fa-qrcode"></i> View Page
-                        </a>
+                        ${t.qrCodeToken
+                            ? `<button onclick="openQrModal(${t.id})" style="background:none; border:none; cursor:pointer; color:var(--primary); font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:6px;">
+                                <i class="fa-solid fa-qrcode"></i> View QR
+                               </button>`
+                            : `<button onclick="generateAndOpenQr(${t.id})" style="background:none; border:none; cursor:pointer; color:#999; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:6px;">
+                                <i class="fa-solid fa-plus"></i> Generate QR
+                               </button>`
+                        }
                     </td>
                     <td>
                         <div style="display: flex; gap: 8px;">
@@ -62,6 +97,132 @@
             `).join('');
         }
 
+        // Mở modal QR cho bàn đã có token
+        async function openQrModal(tableId) {
+            const t = tables.find(x => x.id === tableId);
+            if (!t || !t.qrCodeToken) return;
+
+            activeQrTableId = tableId;
+
+            const orderUrl = `${window.location.origin}/?token=${t.qrCodeToken}`;
+            renderQrModal(t.tableNumber, orderUrl);
+        }
+
+        // Gen token và mở modal QR cho bàn chưa có token
+        async function generateAndOpenQr(tid) {
+            activeQrTableId = tid;
+
+            const res = await apiClient.generateQr(tid);
+            if (!res || !res.ok) {
+                Swal.fire({ icon: 'error', text: 'Không thể tạo QR. Vui lòng thử lại.' });
+                return;
+            }
+
+            const data = await res.json();
+
+            const idx = tables.findIndex(x => x.id === tid);
+            if (idx !== -1) tables[idx].qrCodeToken = data.token;
+
+            const orderUrl = `${window.location.origin}/?token=${data.token}`;
+
+            renderQrModal(data.tableNumber, orderUrl);
+            updateQrCellInTable(tid, data.token);
+        }
+
+        async function refreshCurrentQr() {
+            if (!activeQrTableId) return;
+
+            closeQrModal();
+
+            const result = await Swal.fire({
+                title: 'Refresh QR?',
+                text: 'QR cũ sẽ bị vô hiệu hóa. Khách đang dùng link cũ sẽ không thể đặt thêm món.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Refresh',
+                confirmButtonColor: '#ff6b35'
+            });
+
+            if (!result.isConfirmed) return;
+
+            const res = await apiClient.generateQr(activeQrTableId);
+            if (!res || !res.ok) {
+                Swal.fire({ icon: 'error', text: 'Không thể tạo QR. Vui lòng thử lại.' });
+                return;
+            }
+
+            const data = await res.json();
+
+            const idx = tables.findIndex(x => x.id === activeQrTableId);
+            if (idx !== -1) tables[idx].qrCodeToken = data.token;
+
+            const orderUrl = `${window.location.origin}/?token=${data.token}`;
+
+            updateQrCellInTable(activeQrTableId, data.token);
+
+            renderQrModal(data.tableNumber, orderUrl);
+        }
+
+        function renderQrModal(tableNumber, orderUrl) {
+            document.getElementById('qr-modal-title').innerText = `Bàn ${tableNumber}`;
+            document.getElementById('qr-url-text').innerText = orderUrl;
+
+            const container = document.getElementById('qr-canvas-container');
+            container.innerHTML = '';
+
+            new QRCode(container, {
+                text: orderUrl,
+                width: 200,
+                height: 200,
+                colorDark: '#1a1a2e',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            document.getElementById('qr-modal').style.display = 'flex';
+        }
+
+        function closeQrModal() {
+            document.getElementById('qr-modal').style.display = 'none';
+        }
+
+        document.getElementById('qr-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                document.getElementById('qr-modal').style.display = 'none';
+            }
+        });
+
+        function updateQrCellInTable(tid, token) {
+            const rows = document.querySelectorAll('#table-table-body tr');
+            rows.forEach(row => {
+                const idCell = row.querySelector('td:first-child');
+                if (idCell && idCell.innerText === `#${tid}`) {
+                    const qrCell = row.querySelector('td:nth-child(5)');
+                    if (qrCell) {
+                        qrCell.innerHTML = `
+                            <button onclick="openQrModal(${tid})" style="background:none; border:none; cursor:pointer; color:var(--primary); font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:6px;">
+                                <i class="fa-solid fa-qrcode"></i> View QR
+                            </button>`;
+                    }
+                }
+            });
+        }
+
+        function downloadQr() {
+            const container = document.getElementById('qr-canvas-container');
+            const canvas = container.querySelector('canvas');
+            if (!canvas) {
+                Swal.fire({ icon: 'error', text: 'Không tìm thấy ảnh QR để download.' });
+                return;
+            }
+
+            const tableNumber = document.getElementById('qr-modal-title').innerText.replace('Bàn ', '');
+            const link = document.createElement('a');
+            link.download = `QR_Ban_${tableNumber}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
         async function openCreateModal() {
             const { value: formValues } = await Swal.fire({
                 title: 'Add New Table',
@@ -70,19 +231,17 @@
                     <input id="swal-capacity" type="number" class="swal2-input" placeholder="Capacity">
                 `,
                 focusConfirm: false,
-                preConfirm: () => {
-                    return {
-                        tableNumber: document.getElementById('swal-tableNumber').value,
-                        capacity: parseInt(document.getElementById('swal-capacity').value),
-                        status: 'available'
-                    }
-                }
+                preConfirm: () => ({
+                    tableNumber: document.getElementById('swal-tableNumber').value,
+                    capacity: parseInt(document.getElementById('swal-capacity').value),
+                    status: 'available'
+                })
             });
 
             if (formValues && formValues.tableNumber) {
                 const res = await apiClient.createTable(formValues);
                 if (res && res.ok) {
-                    Swal.fire('Success!', 'Table created.', 'success');
+                    Swal.fire('Success!', 'Table created. QR sẽ được tạo tự động.', 'success');
                     loadTables();
                 }
             }
@@ -102,14 +261,13 @@
                     </select>
                 `,
                 focusConfirm: false,
-                preConfirm: () => {
-                    return {
-                        id: t.id,
-                        tableNumber: document.getElementById('swal-tableNumber').value,
-                        capacity: parseInt(document.getElementById('swal-capacity').value),
-                        status: document.getElementById('swal-status').value
-                    }
-                }
+                preConfirm: () => ({
+                    id: t.id,
+                    tableNumber: document.getElementById('swal-tableNumber').value,
+                    capacity: parseInt(document.getElementById('swal-capacity').value),
+                    status: document.getElementById('swal-status').value,
+                    qrCodeToken: t.qrCodeToken
+                })
             });
 
             if (formValues) {
@@ -145,7 +303,18 @@
 }
 
 <style>
-    .status-badge.available { background: #e8f5e9; color: #4caf50; }
-    .status-badge.taken { background: #fff3e0; color: #ff9800; }
-    .status-badge.reserved { background: #e3f2fd; color: #2196f3; }
+    .status-badge.available {
+        background: #e8f5e9;
+        color: #4caf50;
+    }
+
+    .status-badge.taken {
+        background: #fff3e0;
+        color: #ff9800;
+    }
+
+    .status-badge.reserved {
+        background: #e3f2fd;
+        color: #2196f3;
+    }
 </style>

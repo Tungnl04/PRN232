@@ -20,7 +20,7 @@
         }
     </div>
 
-    <!    <!-- Special Combos -->
+    <!-- Special Combos -->
     @if (Model.Combos.Any())
     {
         <div class="mt-4">
@@ -76,11 +76,33 @@
 
 @section Scripts {
     <script>
-        const tableId = @Model.TableId;
-        document.getElementById('current-table').innerText = tableId > 0 ? tableId : "??";
+        const apiBaseUrl = "@(ViewData["ApiBaseUrl"] ?? "https://localhost:7197/api")";
 
-        let cart = JSON.parse(localStorage.getItem('food_cart')) || [];
-        updateCartCount();
+        let tableId = @Model.TableId; 
+        let currentToken = null;  
+
+        async function resolveTable() {
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('token');
+
+            if (token) {
+                currentToken = token;
+                try {
+                    const res = await fetch(`${apiBaseUrl}/Tables/by-token/${encodeURIComponent(token)}`);
+                    if (!res.ok) throw new Error('invalid');
+                    const data = await res.json();
+                    tableId = data.id;
+                } catch {
+                    tableId = 0;
+                    currentToken = null;
+                }
+            }
+
+            const tableDisplay = document.getElementById('current-table');
+            if (tableDisplay) {
+                tableDisplay.innerText = tableId > 0 ? tableId : '??';
+            }
+        }
 
         function filterCategory(catId, element) {
             document.querySelectorAll('.cat-item').forEach(el => el.classList.remove('active'));
@@ -99,25 +121,26 @@
         function addToCart(item, isCombo = false) {
             const itemId = isCombo ? `combo_${item.Id}` : item.Id;
             const existing = cart.find(i => i.cartId === itemId);
-            
+
             if (existing) {
                 existing.quantity += 1;
             } else {
                 cart.push({
-                    cartId: itemId,
-                    id: item.Id,
-                    isCombo: isCombo,
-                    name: item.Name,
-                    price: item.Price,
+                    cartId:   itemId,
+                    id:       item.Id,
+                    isCombo:  isCombo,
+                    name:     item.Name,
+                    price:    item.Price,
                     imageUrl: item.ImageUrl,
                     quantity: 1
                 });
             }
             saveCart();
             updateCartCount();
-            
+
             Swal.fire({
-                toast: true, position: 'top-end', icon: 'success', title: 'Added!', showConfirmButton: false, timer: 1000
+                toast: true, position: 'top-end', icon: 'success',
+                title: 'Added!', showConfirmButton: false, timer: 1000
             });
         }
 
@@ -128,23 +151,31 @@
         function updateCartCount() {
             const count = cart.reduce((sum, item) => sum + item.quantity, 0);
             const badge = document.getElementById('cart-count');
-            if (count > 0) {
+            if (badge) {
                 badge.innerText = count;
-                badge.style.display = 'flex';
-            } else {
-                badge.style.display = 'none';
+                badge.style.display = count > 0 ? 'flex' : 'none';
             }
         }
 
         function openCart() {
             if (cart.length === 0) {
-                Swal.fire({
-                    icon: 'info',
-                    text: 'Your cart is empty!'
-                });
+                Swal.fire({ icon: 'info', text: 'Your cart is empty!' });
                 return;
             }
-            window.location.href = '/Cart?tableId=' + tableId;
+
+            // Ưu tiên token, fallback tableId
+            if (currentToken) {
+                window.location.href = `/Cart?token=${currentToken}`;
+            } else if (tableId > 0) {
+                window.location.href = `/Cart?tableId=${tableId}`;
+            } else {
+                Swal.fire({ icon: 'warning', text: 'Không xác định được bàn. Vui lòng quét lại QR.' });
+            }
         }
+
+        let cart = JSON.parse(localStorage.getItem('food_cart')) || [];
+        updateCartCount();
+
+        window.addEventListener('DOMContentLoaded', resolveTable);
     </script>
 }
