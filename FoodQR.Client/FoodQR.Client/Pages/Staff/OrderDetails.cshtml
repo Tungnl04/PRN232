@@ -2,56 +2,60 @@
 @model FoodQR.Client.Pages.Staff.OrderDetailsModel
 @{
     Layout = "_Layout";
-    ViewData["Title"] = "Order Details";
+    ViewData["Title"] = "Chi tiết Đơn hàng";
 }
 
 <div style="margin-bottom: 24px;">
-    <a href="/Staff/Dashboard" style="color: var(--text); font-weight: bold; text-decoration: none;">
-        <i class="fa-solid fa-arrow-left"></i> Back to Tables
+    <a href="/Staff/Dashboard" style="color: var(--text-main); font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-arrow-left"></i> Quay lại Sơ đồ bàn
     </a>
 </div>
 
-<div style="display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start;">
+<div style="display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start;">
 
     <!-- Thông tin đơn hàng -->
-    <div class="card-mgmt">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+    <div class="card-mgmt" style="padding: 30px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;">
             <div>
-                <h3 style="margin: 0; font-weight: 800;">Table Order #<span id="order-id">--</span></h3>
-                <div style="color: #666; font-size: 0.9rem;">Status: <span id="order-status" style="font-weight: bold;">--</span></div>
+                <h3 style="margin: 0; font-weight: 900; font-size: 1.5rem;">Đơn hàng Bàn #<span id="order-id">--</span></h3>
+                <div style="color: var(--text-muted); font-size: 0.95rem; margin-top: 5px;">Trạng thái: <span id="order-status" style="font-weight: 800; color: var(--primary);">--</span></div>
             </div>
             <div id="payment-status"></div>
         </div>
 
-        <div id="items-list" style="display: flex; flex-direction: column; gap: 12px;">
-            <!-- Items will be loaded here -->
+        <div id="items-list" style="display: flex; flex-direction: column; gap: 15px;">
+            <div style="text-align:center; padding: 40px; color: #ccc;">
+                <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+                <p>Đang tải món ăn...</p>
+            </div>
         </div>
 
-        <div id="order-total" style="margin-top: 32px; text-align: right; font-size: 1.2rem; font-weight: 800; border-top: 2px solid #eee; padding-top: 24px;">
-            Total: <span style="color: var(--primary);">0đ</span>
+        <div id="order-total-container" style="margin-top: 40px; text-align: right; border-top: 2px dashed #eee; padding-top: 25px;">
+            <div style="color: var(--text-muted); font-weight: 600; font-size: 0.9rem; margin-bottom: 5px;">Tổng cộng thanh toán</div>
+            <div id="order-total" style="font-size: 2rem; font-weight: 900; color: var(--primary);">0 ₫</div>
         </div>
     </div>
 
     <!-- QR Code bàn -->
-    <div class="card-mgmt" style="min-width: 220px; text-align: center;">
-        <div style="font-size: 0.75rem; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
-            QR Bàn
+    <div class="card-mgmt" style="text-align: center; padding: 30px;">
+        <div style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 15px;">
+            Mã QR Gọi món
         </div>
-        <h4 id="qr-table-label" style="font-weight: 800; margin: 0 0 12px;">--</h4>
+        <h4 id="qr-table-label" style="font-weight: 900; font-size: 1.25rem; margin: 0 0 20px; color: var(--text-main);">--</h4>
 
-        <div id="qr-container" style="display: flex; justify-content: center; margin-bottom: 12px;">
+        <div id="qr-container" style="display: flex; justify-content: center; margin-bottom: 20px; padding: 10px; background: white; border-radius: 12px; border: 1px solid #f0f0f0;">
             <!-- QR render -->
         </div>
 
-        <p id="qr-no-token" style="display:none; font-size:0.8rem; color:#aaa; margin-bottom: 12px;">
-            Chưa có QR. Vào Admin → Tables để tạo.
+        <p id="qr-no-token" style="display:none; font-size:0.85rem; color:#f43f5e; font-weight: 600; margin-bottom: 15px;">
+            Chưa cấu hình mã QR cho bàn này.
         </p>
 
-        <p id="qr-url-label" style="font-size: 0.65rem; color: #bbb; word-break: break-all; margin-bottom: 14px;"></p>
+        <p id="qr-url-label" style="font-size: 0.7rem; color: #cbd5e1; word-break: break-all; margin-bottom: 20px; font-family: monospace;"></p>
 
         <button id="btn-download-qr" onclick="downloadQr()"
-                style="display:none; width:100%; background: var(--primary); color: white; border: none; padding: 9px; border-radius: 10px; font-weight: 700; font-size: 0.8rem; cursor: pointer; margin-bottom: 8px;">
-            <i class="fa-solid fa-download"></i> Download PNG
+                style="display:none; width:100%; background: #f4f7fe; color: #2b3674; border: 1px solid #e2e8f0; padding: 12px; border-radius: 12px; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">
+            <i class="fa-solid fa-download"></i> Tải ảnh QR (PNG)
         </button>
     </div>
 
@@ -61,39 +65,56 @@
     .order-item-card {
         display: flex;
         align-items: center;
-        gap: 16px;
-        padding: 16px;
-        border-radius: 12px;
-        background: #f8f9fa;
+        gap: 20px;
+        padding: 20px;
+        border-radius: 16px;
+        background: #f8fafc;
+        border: 1px solid transparent;
+        transition: all 0.2s;
     }
+    .order-item-card:hover { background: white; border-color: #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
 
     .item-qty {
-        font-weight: 800;
-        font-size: 1.1rem;
+        font-weight: 900;
+        font-size: 1.25rem;
         color: var(--primary);
-        min-width: 40px;
+        min-width: 45px;
+        text-align: center;
     }
 
-    .item-name {
-        flex-grow: 1;
-        font-weight: 700;
-    }
+    .item-info { flex-grow: 1; }
+    .item-name { font-weight: 800; font-size: 1rem; color: var(--text-main); margin-bottom: 4px; }
+    .item-note { font-size: 0.8rem; color: #f43f5e; font-weight: 600; display: flex; align-items: center; gap: 5px; }
 
     .item-status {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         font-weight: 800;
         text-transform: uppercase;
-        padding: 4px 10px;
+        padding: 6px 12px;
         border-radius: 50px;
-        background: white;
+        letter-spacing: 0.5px;
     }
 
-    .status-ready {
-        color: #4caf50;
-        background: #e8f5e9;
-    }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-preparing { background: #dbeafe; color: #1e40af; }
+    .status-ready { background: #dcfce7; color: #166534; }
+    .status-served { background: #f1f5f9; color: #64748b; }
 
-    @@media (max-width: 640px) {
+    .btn-serve {
+        background: #10b981;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-weight: 800;
+        font-size: 0.8rem;
+        cursor: pointer;
+        box-shadow: 0 4px 0 #059669;
+        transition: all 0.1s;
+    }
+    .btn-serve:active { transform: translateY(2px); box-shadow: 0 2px 0 #059669; }
+
+    @@media (max-width: 1024px) {
         div[style*="grid-template-columns"] {
             grid-template-columns: 1fr !important;
         }
@@ -124,8 +145,8 @@
             container.innerHTML = '';
             new QRCode(container, {
                 text: orderUrl,
-                width: 160,
-                height: 160,
+                width: 180,
+                height: 180,
                 colorDark: '#1a1a2e',
                 colorLight: '#ffffff',
                 correctLevel: QRCode.CorrectLevel.H
@@ -138,7 +159,7 @@
             const canvas = document.querySelector('#qr-container canvas');
             if (!canvas) return;
             const link = document.createElement('a');
-            link.download = `QR_Ban_${tableNumber}.png`;
+            link.download = `QR_FoodQR_Ban_${tableNumber}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
         }
@@ -148,34 +169,58 @@
                 const order = await apiClient.getActiveOrder(tableId);
                 if (!order) {
                     document.getElementById('items-list').innerHTML =
-                        '<div style="text-align:center; padding: 40px; color: #888;">No active order for this table.</div>';
+                        '<div style="text-align:center; padding: 60px; color: #94a3b8;"><i class="fa-solid fa-mug-hot fa-3x" style="margin-bottom:20px; opacity:0.3"></i><p style="font-weight:700">Hiện không có đơn hàng nào cho bàn này.</p></div>';
+                    document.getElementById('order-total-container').style.display = 'none';
                     return;
                 }
+                document.getElementById('order-total-container').style.display = 'block';
                 renderOrder(order);
             } catch (err) { console.error(err); }
         }
 
         function renderOrder(order) {
             document.getElementById('order-id').innerText = order.orderCode || order.id;
-            document.getElementById('order-status').innerText = order.status;
+            
+            let statusVN = order.status;
+            if (statusVN.toLowerCase() === 'pending') statusVN = "Đang chờ";
+            if (statusVN.toLowerCase() === 'paid') statusVN = "Đã thanh toán";
+            
+            document.getElementById('order-status').innerText = statusVN;
+
+            const paymentStatusDiv = document.getElementById('payment-status');
+            const sts = order.status.toLowerCase();
+            if (sts !== 'paid' && sts !== 'completed' && sts !== 'cancelled') {
+                paymentStatusDiv.innerHTML = `<button onclick="checkoutOrder(${order.id})" style="background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 800; cursor: pointer; font-size: 1rem; box-shadow: 0 4px 0 #cc0000;">Thanh toán Tiền mặt</button>`;
+            } else {
+                paymentStatusDiv.innerHTML = `<span style="background: #dcfce7; color: #166534; padding: 8px 20px; border-radius: 50px; font-size: 0.9rem; font-weight: 800; text-transform: uppercase;"><i class="fa-solid fa-check-circle"></i> Đã thanh toán</span>`;
+            }
 
             const list = document.getElementById('items-list');
-            list.innerHTML = order.items.map(i => `
-                <div class="order-item-card">
-                    <div class="item-qty">x${i.quantity}</div>
-                    <div class="item-name">
-                        ${i.name}
-                        ${i.note ? `<div style="font-size: 0.75rem; color: #ff5252; font-style: italic;">"${i.note}"</div>` : ''}
-                    </div>
-                    <div class="item-status status-${i.status.toLowerCase()}">${i.status}</div>
-                    ${i.status.toLowerCase() === 'ready' ? `
-                        <button onclick="serveItem(${i.id})" style="background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; cursor: pointer;">SERVE</button>
-                    ` : ''}
-                </div>
-            `).join('');
+            list.innerHTML = order.items.map(i => {
+                const itemSts = i.status.toLowerCase();
+                let itemStsVN = i.status;
+                if (itemSts === 'pending') itemStsVN = "Chờ chế biến";
+                if (itemSts === 'preparing') itemStsVN = "Đang nấu";
+                if (itemSts === 'ready') itemStsVN = "Đã xong";
+                if (itemSts === 'served') itemStsVN = "Đã phục vụ";
 
-            document.querySelector('#order-total span').innerText =
-                (order.totalAmount || 0).toLocaleString('vi-VN') + 'đ';
+                return `
+                    <div class="order-item-card">
+                        <div class="item-qty">x${i.quantity}</div>
+                        <div class="item-info">
+                            <div class="item-name">${i.name}</div>
+                            ${i.note ? `<div class="item-note"><i class="fa-solid fa-comment-dots"></i> ${i.note}</div>` : ''}
+                        </div>
+                        <div class="item-status status-${itemSts}">${itemStsVN}</div>
+                        ${itemSts === 'ready' ? `
+                            <button class="btn-serve" onclick="serveItem(${i.id})">GIAO MÓN</button>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('order-total').innerText =
+                (order.totalAmount || 0).toLocaleString('vi-VN') + ' ₫';
         }
 
         async function serveItem(itemId) {
@@ -183,8 +228,35 @@
             if (res && res.ok) loadOrder();
         }
 
+        async function checkoutOrder(orderId) {
+            const { isConfirmed } = await Swal.fire({
+                title: 'Xác nhận thanh toán?',
+                text: 'Thu tiền mặt từ khách hàng cho đơn này?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#10b981',
+                confirmButtonText: 'Đã nhận tiền',
+                cancelButtonText: 'Hủy'
+            });
+
+            if (isConfirmed) {
+                try {
+                    const res = await apiClient.checkoutCash(orderId);
+                    if (res && res.ok) {
+                        Swal.fire({ icon: 'success', title: 'Thành công', text: 'Đã thanh toán đơn hàng.', timer: 2000 });
+                        loadOrder();
+                    } else {
+                        const err = await res.json();
+                        Swal.fire('Lỗi', err.Error || 'Không thể thanh toán.', 'error');
+                    }
+                } catch(e) {
+                    Swal.fire('Lỗi', 'Có lỗi kết nối.', 'error');
+                }
+            }
+        }
+
         loadTableQr();
         loadOrder();
-        setInterval(loadOrder, 10000);
+        setInterval(loadOrder, 10000); // Polling update
     </script>
 }

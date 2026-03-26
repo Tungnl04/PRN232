@@ -40,7 +40,7 @@ namespace FoodQR.API.Controllers
 
             return Ok(new { 
                 Token = token,
-                User = new { user.Name, user.Username, user.Role }
+                User = new { user.Id, user.Name, user.Username, user.Role, user.MustChangePassword }
             });
         }
 
@@ -62,9 +62,25 @@ namespace FoodQR.API.Controllers
 
             // Mã hóa và lưu mật khẩu mới
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            user.MustChangePassword = false;
             await _context.SaveChangesAsync();
 
             return Ok(new { Message = "Đổi mật khẩu thành công." });
+        }
+
+        [Authorize(Roles = "admin")]
+        [HttpPost("reset-password/{userId}")]
+        public async Task<IActionResult> ResetPassword(int userId)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) return NotFound("User not found.");
+
+            // Set default password to 123456
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456");
+            user.MustChangePassword = true;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "Mật khẩu đã được reset về mặc định (123456)." });
         }
 
         private string GenerateJwtToken(User user)

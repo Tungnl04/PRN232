@@ -2,7 +2,9 @@ using FoodQR.API.Application.DTOs;
 using FoodQR.API.Core.Entities;
 using FoodQR.API.Core.Enums;
 using FoodQR.API.Core.Interfaces;
+using FoodQR.API.Hubs;
 using FoodQR.API.Infrastructure.Persistence;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace FoodQR.API.Application.Services
@@ -10,10 +12,12 @@ namespace FoodQR.API.Application.Services
     public class OrderService : IOrderService
     {
         private readonly FoodStoreDbContext _context;
+        private readonly IHubContext<OrderHub> _hubContext;
 
-        public OrderService(FoodStoreDbContext context)
+        public OrderService(FoodStoreDbContext context, IHubContext<OrderHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         public async Task<Order> CreateOrAppendOrderAsync(OrderCreateDto orderDto)
@@ -216,6 +220,12 @@ namespace FoodQR.API.Application.Services
             table.Status = TableStatus.Taken;
 
             await _context.SaveChangesAsync();
+
+            // === SignalR Broadcast ===
+            var orderPayload = new { orderId = order.Id, orderCode = order.OrderCode, tableId = orderDto.TableId };
+            await _hubContext.Clients.Group("kitchen").SendAsync("NewOrderReceived", orderPayload);
+            await _hubContext.Clients.Group("staff").SendAsync("NewOrderReceived", orderPayload);
+
             return order;
         }
 
@@ -403,6 +413,57 @@ namespace FoodQR.API.Application.Services
 
             await _context.SaveChangesAsync();
             return true;
+        }
+        public async Task<List<Order>> GetOrdersAsync(int limit = 10)
+        {
+            return await _context.Orders
+                .Include(o => o.Customer)
+                .Include(o => o.Table)
+                .OrderByDescending(o => o.CreatedAt)
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        public async Task<object> GetTopProductsReportAsync(DateTime? start, DateTime? end)
+        {
+            var query = _context.OrderItems
+                .Include(oi => oi.Order)
+                .Include(oi => oi.Product)
+                .Where(oi => oi.Order != null && oi.Order.Status.ToLower() == OrderStatus.Paid && oi.ProductId != null);
+
+            if (start.HasValue) query = query.Where(oi => oi.Order!.CreatedAt >= start.Value.Date);
+            if (end.HasValue) query = query.Where(oi => oi.Order!.CreatedAt <= end.Value.Date.AddDays(1).AddTicks(-1));
+
+            return await query
+                .GroupBy(oi => oi.Product!.Name)
+                .Select(g => new {
+                    Name = g.Key,
+                    Quantity = g.Sum(oi => oi.Quantity ?? 1),
+                    Revenue = g.Sum(oi => (oi.Quantity ?? 1) * oi.UnitPrice)
+                })
+                .OrderByDescending(x => x.Revenue)
+                .Take(10)
+                .ToListAsync();
+        }
+
+        public async Task<object> GetCategorySalesReportAsync(DateTime? start, DateTime? end)
+        {
+            var query = _context.OrderItems
+                .Include(oi => oi.Order)
+                .Include(oi => oi.Product).ThenInclude(p => p.Category)
+                .Where(oi => oi.Order != null && oi.Order.Status.ToLower() == OrderStatus.Paid && oi.Product != null && oi.Product.Category != null);
+
+            if (start.HasValue) query = query.Where(oi => oi.Order!.CreatedAt >= start.Value.Date);
+            if (end.HasValue) query = query.Where(oi => oi.Order!.CreatedAt <= end.Value.Date.AddDays(1).AddTicks(-1));
+
+            return await query
+                .GroupBy(oi => oi.Product!.Category!.Name)
+                .Select(g => new {
+                    Category = g.Key,
+                    Revenue = g.Sum(oi => (oi.Quantity ?? 1) * oi.UnitPrice)
+                })
+                .OrderByDescending(x => x.Revenue)
+                .ToListAsync();
         }
     }
 }

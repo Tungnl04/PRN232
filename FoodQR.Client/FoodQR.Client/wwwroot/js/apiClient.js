@@ -51,6 +51,17 @@ const apiClient = (function() {
             localStorage.clear();
             window.location.href = '/Login';
         },
+        async changePassword(oldPassword, newPassword) {
+            return await authorizedFetch('/Auth/change-password', {
+                method: 'POST',
+                body: JSON.stringify({ oldPassword, newPassword })
+            });
+        },
+        async resetPassword(userId) {
+            return await authorizedFetch(`/Auth/reset-password/${userId}`, {
+                method: 'POST'
+            });
+        },
 
         // TABLES
         async getTables() {
@@ -103,6 +114,18 @@ const apiClient = (function() {
             return null;
         },
 
+        // PAYMENTS
+        async checkoutCash(orderId) {
+            return await authorizedFetch(`/Payments/${orderId}/process?method=cash&simulateSuccess=true`, {
+                method: 'POST'
+            });
+        },
+
+        async getOrders(limit = 10) {
+            const res = await authorizedFetch(`/Orders?limit=${limit}`);
+            return res ? res.json() : [];
+        },
+
         // KITCHEN
         async getKitchenItems() {
             const res = await authorizedFetch('/Kitchen/items');
@@ -140,6 +163,12 @@ const apiClient = (function() {
             return await authorizedFetch(`/Categories/${id}`, {
                 method: 'DELETE'
             });
+        },
+
+        // COMBOS
+        async getCombos(includeHidden = false) {
+            const res = await fetch(`${API_BASE_URL}/Combos?includeHidden=${includeHidden}`);
+            return res.ok ? res.json() : [];
         },
 
         // PRODUCTS
@@ -208,8 +237,10 @@ const apiClient = (function() {
 
         getUser() {
             return {
+                id: localStorage.getItem('user_id') || "0",
                 role: (localStorage.getItem('user_role') || "").toLowerCase(),
-                name: localStorage.getItem('user_name') || ""
+                name: localStorage.getItem('user_name') || "",
+                mustChangePassword: localStorage.getItem('must_change_password') === 'true'
             };
         }
     };

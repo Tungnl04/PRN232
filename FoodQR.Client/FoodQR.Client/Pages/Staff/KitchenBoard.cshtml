@@ -1,0 +1,98 @@
+@page
+@model FoodQR.Client.Pages.Staff.KitchenBoardModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Điều phối Bếp (Chế độ xem)";
+}
+
+<link rel="stylesheet" href="~/css/kitchen/board.css" asp-append-version="true" />
+<style>
+    /* Staff specific tweaks for read-only view */
+    .btn-action { display: none !important; }
+    .kitchen-card { cursor: default; }
+</style>
+
+<div class="kanban-container">
+    <div class="kanban-column">
+        <div class="column-header">
+            <div class="column-title"><i class="fa-solid fa-clock"></i> ĐANG CHỜ</div>
+            <div class="column-count" id="count-pending">0</div>
+        </div>
+        <div class="kanban-list" id="list-pending"></div>
+    </div>
+
+    <div class="kanban-column">
+        <div class="column-header">
+            <div class="column-title"><i class="fa-solid fa-fire"></i> ĐANG LÀM</div>
+            <div class="column-count" id="count-preparing">0</div>
+        </div>
+        <div class="kanban-list" id="list-preparing"></div>
+    </div>
+
+    <div class="kanban-column">
+        <div class="column-header">
+            <div class="column-title"><i class="fa-solid fa-circle-check"></i> HOÀN TẤT</div>
+            <div class="column-count" id="count-ready">0</div>
+        </div>
+        <div class="kanban-list" id="list-ready"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function loadKitchenItems() {
+            try {
+                const items = await apiClient.getKitchenItems();
+                renderItems(items);
+            } catch (err) { console.error(err); }
+        }
+
+        function renderItems(items) {
+            const columns = {
+                'pending': document.getElementById('list-pending'),
+                'preparing': document.getElementById('list-preparing'),
+                'ready': document.getElementById('list-ready')
+            };
+            const counts = {
+                'pending': document.getElementById('count-pending'),
+                'preparing': document.getElementById('count-preparing'),
+                'ready': document.getElementById('count-ready')
+            };
+
+            Object.values(columns).forEach(el => el.innerHTML = '');
+            const stats = { 'pending': 0, 'preparing': 0, 'ready': 0 };
+
+            items.forEach(item => {
+                const status = (item.status || 'pending').toLowerCase();
+                if (!columns[status]) return;
+
+                stats[status]++;
+                const card = document.createElement('div');
+                card.className = 'kitchen-card';
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                        <span class="table-badge">BÀN ${item.tableNumber || '?'}</span>
+                        <span class="order-code">ORD-${item.orderCode?.substring(0,8) || '????'}</span>
+                    </div>
+                    <div class="dish-name">${item.dishName || 'Món ăn'}</div>
+                    ${item.note ? `<div class="dish-note"><i class="fa-solid fa-comment-dots"></i> ${item.note}</div>` : ''}
+                    <div class="dish-meta">
+                        <div class="dish-qty">x${item.quantity}</div>
+                        <div style="text-align: right; font-size: 0.7rem; color: #94a3b8; font-weight: 600;">
+                            ${status === 'ready' ? 'Chờ bưng món...' : 'Đang xử lý...'}
+                        </div>
+                    </div>
+                `;
+                columns[status].appendChild(card);
+            });
+
+            Object.keys(stats).forEach(k => counts[k].innerText = stats[k]);
+        }
+
+        // Add real-time update listener
+        window.onNewOrder = () => loadKitchenItems();
+
+        setInterval(loadKitchenItems, 10000); // Polling as fallback
+        window.addEventListener('DOMContentLoaded', loadKitchenItems);
+    </script>
+}

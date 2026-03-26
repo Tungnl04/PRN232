@@ -4,6 +4,7 @@ using FoodQR.API.Core.Interfaces;
 using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using FoodQR.API.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,10 +20,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowClient", policy =>
     {
-        policy.WithOrigins("http://localhost:5181", "https://localhost:7209")
+        policy.SetIsOriginAllowed(origin => true) // Cho phép mọi origin (kể cả IIS Express port khác)
               .AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowCredentials(); // needed for SignalR later
+              .AllowCredentials(); // needed for SignalR
     });
 });
 
@@ -77,6 +78,8 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
 app.UseMiddleware<FoodQR.API.Application.Middleware.ExceptionHandlingMiddleware>();
@@ -96,5 +99,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<OrderHub>("/hubs/order");
 
 app.Run();

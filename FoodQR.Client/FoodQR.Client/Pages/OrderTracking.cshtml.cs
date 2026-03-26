@@ -19,12 +19,14 @@ namespace FoodQR.Client.Pages
         public int TableId { get; set; }
         public string OrderCode { get; set; } = "";
         public string OrderStatus { get; set; } = "";
+        public string? Token { get; set; }
         public List<TrackingItemDto> Items { get; set; } = new();
 
-        public async Task<IActionResult> OnGetAsync(int orderId, int tableId)
+        public async Task<IActionResult> OnGetAsync(int orderId, int tableId, string? token)
         {
             OrderId = orderId;
             TableId = tableId;
+            Token = token;
             var client = _httpClientFactory.CreateClient();
 
             // BUG-09 Fix: Use active/{tableId} endpoint which returns items with names pre-loaded
@@ -41,6 +43,7 @@ namespace FoodQR.Client.Pages
                 int returnedOrderId = root.GetProperty("id").GetInt32();
                 if (returnedOrderId != orderId)
                 {
+                    if (!string.IsNullOrEmpty(Token)) return RedirectToPage("/Index", new { token = Token });
                     return RedirectToPage("/Index", new { tableId = tableId });
                 }
 
@@ -55,14 +58,22 @@ namespace FoodQR.Client.Pages
                     {
                         Name = item.GetProperty("name").GetString() ?? "Unknown Item",
                         Quantity = item.GetProperty("quantity").GetInt32(),
-                        Status = item.GetProperty("status").GetString() ?? "Pending"
+                        Status = item.GetProperty("status").GetString() ?? "Pending",
+                        Note = item.TryGetProperty("note", out var noteProp) ? noteProp.GetString() : null
                     });
                 }
                 return Page();
             }
+            if (!string.IsNullOrEmpty(Token)) return RedirectToPage("/Index", new { token = Token });
             return RedirectToPage("/Index", new { tableId = tableId });
         }
     }
 
-    public class TrackingItemDto { public string Name { get; set; } = ""; public int Quantity { get; set; } public string Status { get; set; } = ""; }
+    public class TrackingItemDto 
+    { 
+        public string Name { get; set; } = ""; 
+        public int Quantity { get; set; } 
+        public string Status { get; set; } = ""; 
+        public string? Note { get; set; }
+    }
 }

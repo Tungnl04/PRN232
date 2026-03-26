@@ -96,17 +96,35 @@ namespace FoodQR.API.Controllers
         [HttpGet("stats/overview")]
         public async Task<ActionResult<object>> GetDashboardStats()
         {
+            var today = DateTime.Today;
             var totalOrders = await _context.Orders.CountAsync();
-            var totalRevenue = await _context.Orders
-                .Where(o => o.Status.ToLower() == OrderStatus.Paid)
-                .SumAsync(o => o.TotalAmount ?? 0);
-            var activeTables = await _context.OrderTables
-                .CountAsync(t => t.Status.ToLower() == "taken");
+            var totalRevenue = await _context.Orders.Where(o => o.Status.ToLower() == OrderStatus.Paid).SumAsync(o => o.TotalAmount ?? 0);
+            
+            var todayOrders = await _context.Orders.CountAsync(o => o.CreatedAt >= today);
+            var todayRevenue = await _context.Orders.Where(o => o.Status.ToLower() == OrderStatus.Paid && o.CreatedAt >= today).SumAsync(o => o.TotalAmount ?? 0);
 
-            return new { 
-                totalOrders, 
-                totalRevenue, 
-                activeTables 
+            var activeTables = await _context.OrderTables.CountAsync(t => t.Status.ToLower() == "taken");
+            var cleaningTables = await _context.OrderTables.CountAsync(t => t.Status.ToLower() == "cleaning");
+            var availableTables = await _context.OrderTables.CountAsync(t => t.Status.ToLower() == "available");
+
+            // Hourly traffic for today
+            var hourlyTraffic = await _context.Orders
+                .Where(o => o.CreatedAt >= today)
+                .GroupBy(o => o.CreatedAt!.Value.Hour)
+                .Select(g => new { Hour = g.Key, Count = g.Count() })
+                .OrderBy(x => x.Hour)
+                .ToListAsync();
+
+            return new
+            {
+                TotalOrders = totalOrders,
+                TotalRevenue = totalRevenue,
+                TodayOrders = todayOrders,
+                TodayRevenue = todayRevenue,
+                ActiveTables = activeTables,
+                CleaningTables = cleaningTables,
+                AvailableTables = availableTables,
+                HourlyTraffic = hourlyTraffic
             };
         }
 
@@ -129,15 +147,21 @@ namespace FoodQR.API.Controllers
             var totalOrders = await query.CountAsync();
             var totalRevenue = await query.SumAsync(o => o.TotalAmount ?? 0);
 
-            var revenueByDate = await query
+            var rawData = await query
                 .GroupBy(o => o.CreatedAt!.Value.Date)
                 .Select(g => new {
-                    Date = g.Key.ToString("yyyy-MM-dd"),
+                    Date = g.Key,
                     Revenue = g.Sum(o => o.TotalAmount ?? 0),
                     OrderCount = g.Count()
                 })
                 .OrderBy(r => r.Date)
                 .ToListAsync();
+
+            var revenueByDate = rawData.Select(r => new {
+                Date = r.Date.ToString("yyyy-MM-dd"),
+                Revenue = r.Revenue,
+                OrderCount = r.OrderCount
+            }).ToList();
 
             return new { 
                 totalOrders, 
@@ -171,6 +195,27 @@ namespace FoodQR.API.Controllers
             var result = await _orderService.CancelOrderItemAsync(itemId, reason);
             if (!result) return BadRequest(new { Error = "Không thể hủy món. Chỉ hủy được món đang pending." });
             return Ok(new { Message = "Món đã được hủy." });
+        }
+
+        [Authorize(Roles = "admin,staff")]
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Order>>> GetOrders([FromQuery] int limit = 10)
+        {
+            return await _orderService.GetOrdersAsync(limit);
+        }
+
+        [Authorize(Roles = "admin")]
+        [HttpGet("reports/top-products")]
+        public async Task<ActionResult<object>> GetTopProductsReport([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        {
+            return await _orderService.GetTopProductsReportAsync(startDate, endDate);
+        }
+
+        [Authorize(Roles = "admin")]
+        [HttpGet("reports/category-sales")]
+        public async Task<ActionResult<object>> GetCategorySalesReport([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        {
+            return await _orderService.GetCategorySalesReportAsync(startDate, endDate);
         }
     }
 }

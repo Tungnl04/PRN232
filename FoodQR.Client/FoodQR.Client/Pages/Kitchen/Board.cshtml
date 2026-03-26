@@ -2,45 +2,54 @@
 @model FoodQR.Client.Pages.Kitchen.BoardModel
 @{
     Layout = "_Layout";
-    ViewData["Title"] = "Kitchen Board";
+    ViewData["Title"] = "Điều phối Bếp";
 }
 
+<link rel="stylesheet" href="~/css/kitchen/board.css" asp-append-version="true" />
+
 <div class="kanban-container">
+    <!-- ĐANG CHỜ -->
     <div class="kanban-column" id="col-pending">
-        <div class="column-header"><i class="fa-solid fa-clock"></i> PENDING <span class="badge" id="count-pending">0</span></div>
-        <div class="item-list"></div>
+        <div class="column-header">
+            <div class="column-title">
+                <i class="fa-solid fa-clock"></i>
+                <span>Đang chờ</span>
+            </div>
+            <span class="column-count" id="count-pending">0</span>
+        </div>
+        <div class="kanban-list"></div>
     </div>
 
+    <!-- ĐANG LÀM -->
     <div class="kanban-column" id="col-preparing">
-        <div class="column-header" style="border-bottom-color: #2196f3;"><i class="fa-solid fa-fire-burner"></i> PREPARING <span class="badge" id="count-preparing">0</span></div>
-        <div class="item-list"></div>
+        <div class="column-header">
+            <div class="column-title">
+                <i class="fa-solid fa-fire-burner"></i>
+                <span>Đang làm</span>
+            </div>
+            <span class="column-count" id="count-preparing">0</span>
+        </div>
+        <div class="kanban-list"></div>
     </div>
 
+    <!-- HOÀN TẤT -->
     <div class="kanban-column" id="col-ready">
-        <div class="column-header" style="border-bottom-color: #4caf50;"><i class="fa-solid fa-check-double"></i> READY <span class="badge" id="count-ready">0</span></div>
-        <div class="item-list"></div>
+        <div class="column-header">
+            <div class="column-title">
+                <i class="fa-solid fa-check-double"></i>
+                <span>Hoàn tất</span>
+            </div>
+            <span class="column-count" id="count-ready">0</span>
+        </div>
+        <div class="kanban-list"></div>
     </div>
 </div>
 
-<style>
-    .column-header { font-weight: 800; font-size: 0.9rem; padding-bottom: 12px; border-bottom: 3px solid #ccc; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .badge { background: #fff; padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .item-list { display: flex; flex-direction: column; gap: 12px; }
-    .kitchen-card.pending { border-left-color: #ff9800; }
-    .kitchen-card.preparing { border-left-color: #2196f3; }
-    .kitchen-card.ready { border-left-color: #4caf50; }
-    .card-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-    .table-label { font-size: 0.7rem; font-weight: 700; color: #888; text-transform: uppercase; }
-    .time-label { font-size: 0.7rem; color: #bbb; }
-    .dish-name { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
-    .dish-note { font-size: 0.8rem; color: #ff5252; font-style: italic; margin-bottom: 8px; }
-    .dish-qty { font-weight: 800; color: var(--primary); font-size: 1.1rem; }
-    .card-footer { margin-top: 16px; display: flex; justify-content: flex-end; }
-    .action-btn { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; cursor: pointer; }
-</style>
-
 @section Scripts {
     <script>
+        // Override global function if needed or listen to it
+        window.onNewOrder = () => loadKitchenItems();
+
         async function loadKitchenItems() {
             try {
                 const items = await apiClient.getKitchenItems();
@@ -50,9 +59,9 @@
 
         function renderItems(items) {
             const cols = {
-                'pending': document.querySelector('#col-pending .item-list'),
-                'preparing': document.querySelector('#col-preparing .item-list'),
-                'ready': document.querySelector('#col-ready .item-list')
+                'pending': document.querySelector('#col-pending .kanban-list'),
+                'preparing': document.querySelector('#col-preparing .kanban-list'),
+                'ready': document.querySelector('#col-ready .kanban-list')
             };
 
             Object.values(cols).forEach(c => c.innerHTML = '');
@@ -64,23 +73,25 @@
                 counts[status]++;
                 
                 const card = document.createElement('div');
-                card.className = `kitchen-card ${status}`;
+                card.className = `kitchen-card`;
                 card.innerHTML = `
-                    <div class="card-header">
-                        <span class="table-label">Table ${item.tableNumber || '?'}</span>
-                        <span class="time-label">Order ${item.orderCode}</span>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                        <span class="table-badge">BÀN ${item.tableNumber || '?'}</span>
+                        <span class="order-code">${item.orderCode.substring(0,8)}</span>
                     </div>
+                    
                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div>
+                        <div style="flex: 1; padding-right: 15px;">
                             <div class="dish-name">${item.dishName}</div>
-                            ${item.note ? `<div class="dish-note">"${item.note}"</div>` : ''}
+                            ${item.note ? `<div class="dish-note"><i class="fa-solid fa-comment-dots"></i> ${item.note}</div>` : ''}
                         </div>
                         <div class="dish-qty">x${item.quantity}</div>
                     </div>
-                    <div class="card-footer">
-                        ${status === 'pending' ? `<button class="action-btn" onclick="updateItem(${item.id}, 'preparing')">ACCEPT</button>` : ''}
-                        ${status === 'preparing' ? `<button class="action-btn" style="background:#4caf50" onclick="updateItem(${item.id}, 'ready')">READY</button>` : ''}
-                        ${status === 'ready' ? `<button class="action-btn" style="background:#2196f3" onclick="updateItem(${item.id}, 'served')">SERVED</button>` : ''}
+
+                    <div class="dish-meta">
+                         ${status === 'pending' ? `<button class="btn-action primary" onclick="updateItem(${item.id}, 'preparing')"><i class="fa-solid fa-play"></i> CHẾ BIẾN</button>` : ''}
+                         ${status === 'preparing' ? `<button class="btn-action primary" style="background:#3b82f6" onclick="updateItem(${item.id}, 'ready')"><i class="fa-solid fa-check"></i> XONG</button>` : ''}
+                         ${status === 'ready' ? `<div style="text-align:center; width:100%; color:#94a3b8; font-size:0.8rem; font-weight:600; font-style:italic;">Chờ bưng món...</div>` : ''}
                     </div>
                 `;
                 cols[status].appendChild(card);
@@ -92,8 +103,12 @@
         }
 
         async function updateItem(itemId, newStatus) {
-            const res = await apiClient.updateItemStatus(itemId, newStatus);
-            if (res && res.ok) loadKitchenItems();
+            try {
+                const res = await apiClient.updateItemStatus(itemId, newStatus);
+                if (res && res.ok) {
+                    loadKitchenItems();
+                }
+            } catch (err) { console.error(err); }
         }
 
         loadKitchenItems();

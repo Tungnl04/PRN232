@@ -1,62 +1,124 @@
+@inject IConfiguration Configuration
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Staff Portal</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="~/css/management.css" asp-append-version="true" />
+    <title>@ViewData["Title"] - Nhân viên</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/staff/layout.css" asp-append-version="true" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="mgmt-body">
-    <div class="sidebar">
-        <div class="logo">
+    <aside class="sidebar" id="sidebar">
+        <a href="/" class="logo">
             <i class="fa-solid fa-user-tie"></i>
-            <span>Staff</span>
-        </div>
+            <span>FOOD<span style="color:var(--primary)">QR</span></span>
+        </a>
 
-        <nav>
-            <a href="/Staff/Dashboard" class="nav-item @(ViewContext.RouteData.Values["page"].ToString().Contains("Dashboard") ? "active" : "")">
-                <i class="fa-solid fa-table-cells"></i>
-                <span>Table Map</span>
+        <nav class="nav-group">
+            <a href="/Staff/Dashboard" class="nav-item @(ViewContext.RouteData.Values["page"]?.ToString().Contains("Dashboard") == true ? "active" : "")">
+                <i class="fa-solid fa-table-cells"></i><span>Sơ đồ bàn</span>
             </a>
-            <a href="/Staff/Notifications" class="nav-item @(ViewContext.RouteData.Values["page"].ToString().Contains("Notifications") ? "active" : "")">
-                <i class="fa-solid fa-bell"></i>
-                <span>Alerts</span>
+            <a href="/Staff/KitchenBoard" class="nav-item @(ViewContext.RouteData.Values["page"]?.ToString().Contains("KitchenBoard") == true ? "active" : "")">
+                <i class="fa-solid fa-kitchen-set"></i><span>Xem Bếp</span>
             </a>
         </nav>
 
-        <div style="margin-top: auto;">
-            <a href="#" onclick="apiClient.logout()" class="nav-item" style="color: #ff4d4d;">
-                <i class="fa-solid fa-right-from-bracket"></i>
-                <span>Logout</span>
+        <div class="logout-section">
+            <a href="#" onclick="apiClient.logout()" class="nav-item" style="color: #ff4d4d; background: #fff5f5;">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i><span>Đăng xuất</span>
             </a>
         </div>
-    </div>
+    </aside>
 
-    <div class="main-content">
-        <div class="top-bar">
-            <h2 id="page-title" style="font-weight: 800; margin: 0;">@ViewData["Title"]</h2>
-            <div class="user-profile">
-                <div style="text-align: right;">
-                    <div class="user-name" id="user-display-name">Staff User</div>
-                    <div class="user-role">Service Team</div>
+    <main class="main-content">
+        <header class="top-bar">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button class="mobile-toggle" style="display:none" id="m-toggle" onclick="document.getElementById('sidebar').classList.toggle('active')">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="page-info"><h2>@ViewData["Title"]</h2></div>
+            </div>
+
+            <div class="user-actions">
+                <div class="bell-btn">
+                    <button class="mobile-toggle" style="box-shadow: none; border: 1px solid #f0f0f0;" onclick="toggleNotifications()">
+                        <i class="fa-solid fa-bell"></i>
+                    </button>
+                    <div class="bell-badge" id="notif-badge">0</div>
+                    <div class="notification-dropdown" id="notif-dropdown">
+                        <div class="notification-header">
+                            <h4>Thông báo</h4>
+                            <span style="font-size: 0.7rem; color: var(--primary); font-weight: 700; cursor: pointer;" onclick="clearNotifs()">Xóa hết</span>
+                        </div>
+                        <div class="notification-list" id="notif-list">
+                            <div class="notification-empty">Không có thông báo mới</div>
+                        </div>
+                    </div>
                 </div>
-                <div style="width: 40px; height: 40px; border-radius: 50%; background: #eee; display: flex; align-items: center; justify-content: center;">
-                    <i class="fa-solid fa-user-service"></i>
+
+                <div class="profile-badge">
+                    <div style="text-align: right; line-height: 1.2;">
+                        <div class="name" id="user-display-name">Loading...</div>
+                        <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">NHÂN VIÊN</div>
+                    </div>
+                    <div class="profile-img" id="user-initial">?</div>
                 </div>
             </div>
-        </div>
-        @RenderBody()
-    </div>
+        </header>
 
+        @RenderBody()
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
     <script src="~/js/apiClient.js" asp-append-version="true"></script>
     <script>
-        if (!apiClient.isAuthenticated() || (apiClient.getUser().role !== 'staff' && apiClient.getUser().role !== 'admin')) {
-            apiClient.logout();
+        const user = apiClient.getUser();
+        if (!user || (user.role !== 'staff' && user.role !== 'admin')) apiClient.logout();
+        document.getElementById('user-display-name').innerText = user.name || 'Nhân viên';
+        document.getElementById('user-initial').innerText = (user.name || 'N')[0].toUpperCase();
+
+        const apiBase = "@(Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7197/api")";
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl(apiBase.replace('/api', '') + '/hubs/order')
+            .withAutomaticReconnect().build();
+
+        connection.on('NewOrderReceived', (data) => {
+            addNotification(`Đơn mới từ Bàn ${data.tableId}`, `Vừa nhận đơn hàng ${data.orderCode}`);
+            if (window.onNewOrder) window.onNewOrder(data);
+        });
+
+        connection.on('NewNotification', (data) => {
+            addNotification('Yêu cầu hỗ trợ', data.message);
+        });
+
+        connection.start().then(() => connection.invoke('JoinGroup', 'staff')).catch(console.error);
+
+        let notifications = [];
+        function addNotification(title, message) {
+            notifications.unshift({ title, message, time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) });
+            if (notifications.length > 10) notifications.pop();
+            renderNotifications();
+            Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: `🔔 ${title}`, text: message, timer: 4000 });
         }
-        document.getElementById('user-display-name').innerText = apiClient.getUser().name || 'Staff';
+
+        function renderNotifications() {
+            const list = document.getElementById('notif-list');
+            const badge = document.getElementById('notif-badge');
+            if (notifications.length === 0) {
+                list.innerHTML = '<div class="notification-empty">Không có thông báo mới</div>';
+                badge.classList.remove('active');
+                return;
+            }
+            badge.innerText = notifications.length; badge.classList.add('active');
+            list.innerHTML = notifications.map(n => `<div class="notification-item"><i class="fa-solid fa-bell"></i><div class="text"><div style="font-weight: 800; font-size: 0.8rem;">${n.title}</div><div>${n.message}</div><div class="time">${n.time}</div></div></div>`).join('');
+        }
+
+        function toggleNotifications() { document.getElementById('notif-dropdown').classList.toggle('show'); }
+        function clearNotifs() { notifications = []; renderNotifications(); }
+        document.addEventListener('click', (e) => { if (!e.target.closest('.bell-btn')) document.getElementById('notif-dropdown').classList.remove('show'); });
     </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
