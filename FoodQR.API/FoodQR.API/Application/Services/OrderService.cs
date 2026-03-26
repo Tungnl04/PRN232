@@ -18,6 +18,17 @@ namespace FoodQR.API.Application.Services
 
         public async Task<Order> CreateOrAppendOrderAsync(OrderCreateDto orderDto)
         {
+            // Validate Token
+            var table = await _context.OrderTables.FindAsync(orderDto.TableId);
+            if (table == null)
+            {
+                throw new ArgumentException("Bàn không tồn tại.");
+            }
+            if (string.IsNullOrEmpty(orderDto.Token) || table.QrCodeToken != orderDto.Token)
+            {
+                throw new UnauthorizedAccessException("QR Token không hợp lệ hoặc đã hết hạn. Vui lòng quét lại mã QR tại bàn.");
+            }
+
             // 1. Check for active order on this table
             var activeOrder = await _context.Orders
                 .Include(o => o.OrderItems)
@@ -202,8 +213,7 @@ namespace FoodQR.API.Application.Services
             order.TotalAmount = (order.TotalAmount ?? 0) + additionalAmount;
 
             // 3. Update table status
-            var table = await _context.OrderTables.FindAsync(orderDto.TableId);
-            if (table != null) table.Status = TableStatus.Taken;
+            table.Status = TableStatus.Taken;
 
             await _context.SaveChangesAsync();
             return order;
