@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>FoodQR - Báo Cáo Kiểm Toán Kiến Trúc</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#0f0f1a;color:#e0e0e0;line-height:1.7;padding:20px}
+.container{max-width:1100px;margin:auto;background:#1a1a2e;padding:40px;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+h1{text-align:center;color:#fff;font-size:28px;margin-bottom:5px;background:linear-gradient(135deg,#e94560,#0f3460);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+h2{color:#e94560;border-bottom:2px solid #e94560;padding-bottom:8px;margin:35px 0 18px;font-size:20px}
+h3{color:#a8dadc;margin:20px 0 12px;font-size:17px}
+h4{color:#ffd166;margin:14px 0 8px}
+.subtitle{text-align:center;color:#888;margin-bottom:30px;font-size:13px}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+th{background:linear-gradient(135deg,#16213e,#0f3460);color:#fff;padding:10px 12px;text-align:left;font-weight:700}
+td{padding:9px 12px;border-bottom:1px solid #2a2a4a;color:#ccc}
+tr:hover td{background:rgba(233,69,96,0.05)}
+.tag-red{background:rgba(239,68,68,.15);color:#ef4444;padding:3px 10px;border-radius:6px;font-weight:700;font-size:12px}
+.tag-yellow{background:rgba(251,191,36,.12);color:#fbbf24;padding:3px 10px;border-radius:6px;font-weight:700;font-size:12px}
+.tag-green{background:rgba(34,197,94,.12);color:#22c55e;padding:3px 10px;border-radius:6px;font-weight:700;font-size:12px}
+.tag-blue{background:rgba(59,130,246,.12);color:#3b82f6;padding:3px 10px;border-radius:6px;font-weight:700;font-size:12px}
+.alert{padding:14px 18px;border-radius:10px;margin:12px 0;font-size:13px;line-height:1.6}
+.alert-danger{background:rgba(239,68,68,.08);border-left:4px solid #ef4444}
+.alert-warning{background:rgba(251,191,36,.08);border-left:4px solid #fbbf24}
+.alert-info{background:rgba(59,130,246,.08);border-left:4px solid #3b82f6}
+.alert-success{background:rgba(34,197,94,.08);border-left:4px solid #22c55e}
+code{background:#2a2a4a;padding:2px 7px;border-radius:4px;font-size:12px;color:#f472b6;font-family:'Cascadia Code','Fira Code',monospace}
+.code-block{background:#12121f;padding:16px 20px;border-radius:10px;font-family:'Cascadia Code',monospace;font-size:13px;margin:10px 0;white-space:pre-line;border:1px solid #2a2a4a;color:#a8dadc}
+.score-card{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:15px 0}
+.score-item{background:#16213e;border-radius:12px;padding:16px;text-align:center;border:1px solid #2a2a4a}
+.score-item .label{font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.score-item .value{font-size:1.8rem;font-weight:900;background:linear-gradient(135deg,#e94560,#ffd166);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.score-item.bad .value{background:linear-gradient(135deg,#ef4444,#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.score-item.good .value{background:linear-gradient(135deg,#22c55e,#a8dadc);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.vuln-card{border:1px solid #2a2a4a;border-radius:12px;padding:18px;margin:14px 0;transition:all 0.2s}
+.vuln-card:hover{border-color:#e94560;box-shadow:0 0 20px rgba(233,69,96,.1)}
+.vuln-card.critical{border-left:4px solid #ef4444;background:rgba(239,68,68,.03)}
+.vuln-card.medium{border-left:4px solid #fbbf24;background:rgba(251,191,36,.03)}
+.vuln-card.low{border-left:4px solid #3b82f6;background:rgba(59,130,246,.03)}
+.vuln-card .title{font-weight:800;font-size:0.95rem;margin-bottom:6px}
+.vuln-card .file{font-size:0.75rem;color:#888;margin-bottom:8px}
+.vuln-card .risk{color:#fbbf24;font-size:0.85rem;margin:6px 0}
+.section-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.stat-box{background:#16213e;border-radius:10px;padding:14px;text-align:center;border:1px solid #2a2a4a}
+.stat-box .num{font-size:1.6rem;font-weight:900;color:#e94560}
+.stat-box .desc{font-size:0.75rem;color:#888;margin-top:4px}
+.priority-row td:first-child{font-weight:900;font-size:1.1rem}
+.mermaid{margin:15px 0;text-align:center}
+.page-break{page-break-before:always}
+.tree{background:#12121f;padding:16px;border-radius:10px;font-family:'Cascadia Code',monospace;font-size:12px;line-height:1.8;border:1px solid #2a2a4a;color:#a8dadc;white-space:pre}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700}
+.badge-crit{background:#ef4444;color:#fff}
+.badge-warn{background:#fbbf24;color:#1a1a2e}
+.badge-ok{background:#22c55e;color:#fff}
+@media print{body{padding:0;background:#fff;color:#1a1a2e}.container{box-shadow:none;padding:20px;background:#fff}th{background:#16213e}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>🔍 BÁO CÁO KIỂM TOÁN KIẾN TRÚC TOÀN DIỆN</h1>
+<p class="subtitle">Dự án FoodQR — Đồ án PRN232 | Senior Software Architect Review | 26/03/2026</p>
+
+<!-- ==================== TỔNG QUAN ==================== -->
+<h2>📊 Tổng Quan Hệ Thống</h2>
+
+<div class="section-grid">
+    <div class="stat-box"><div class="num">10</div><div class="desc">API Controllers</div></div>
+    <div class="stat-box"><div class="num">3</div><div class="desc">Service Layer</div></div>
+    <div class="stat-box"><div class="num">1</div><div class="desc">SignalR Hub</div></div>
+    <div class="stat-box"><div class="num">10</div><div class="desc">Database Tables</div></div>
+    <div class="stat-box"><div class="num">4</div><div class="desc">Client Roles</div></div>
+    <div class="stat-box"><div class="num">21</div><div class="desc">Razor Pages</div></div>
+</div>
+
+<table>
+<tr><th>Thành phần</th><th>Chi tiết</th></tr>
+<tr><td>API Controllers</td><td>Auth, Orders, Kitchen, Payments, Tables, Products, Categories, Combos, Users, Notifications</td></tr>
+<tr><td>Services</td><td><code>OrderService</code> (470 LOC), <code>KitchenService</code>, <code>PaymentService</code></td></tr>
+<tr><td>Realtime</td><td><code>OrderHub</code> → SignalR full stack (Hub + Service inject + 4 Client layouts)</td></tr>
+<tr><td>Middleware</td><td><code>ExceptionHandlingMiddleware</code> (Global error handling)</td></tr>
+<tr><td>Security</td><td>JWT + BCrypt + QR Token Validation + Forced Password Change</td></tr>
+<tr><td>Client Pages</td><td>Admin (8), Staff (5), Kitchen (2), Customer (6)</td></tr>
+</table>
+
+<!-- ==================== ĐIỂM ==================== -->
+<h2>🏆 Bảng Điểm Tổng Thể</h2>
+
+<div class="score-card">
+    <div class="score-item good"><div class="label">Kiến trúc</div><div class="value">7.5</div></div>
+    <div class="score-item bad"><div class="label">Bảo mật</div><div class="value">4.0</div></div>
+    <div class="score-item"><div class="label">Nghiệp vụ F&B</div><div class="value">6.5</div></div>
+    <div class="score-item good"><div class="label">Code Quality</div><div class="value">7.0</div></div>
+    <div class="score-item"><div class="label">FE-BE Link</div><div class="value">6.0</div></div>
+    <div class="score-item good"><div class="label">UI/UX</div><div class="value">7.5</div></div>
+    <div class="score-item"><div class="label" style="color:#e94560;font-weight:900">TỔNG</div><div class="value" style="font-size:2.2rem">6.4</div></div>
+</div>
+
+<div class="alert alert-info">
+<b>💡 Nhận xét tổng:</b> Nền tảng kiến trúc rất vững (Clean Architecture, Service Layer, SignalR). Vấn đề lớn nhất là <b>bảo mật API</b> (4 lỗi P0 sửa trong 1h) và <b>tích hợp thanh toán thật</b> (VNPay). Sau khi vá 2 mảng này → chất lượng cao.
+</div>
+
+<!-- ==================== PHẦN 1: BẢO MẬT ==================== -->
+<h2 class="page-break">🔴 Phần 1: Lỗ Hổng Bảo Mật</h2>
+
+<h3>1.1 — Lỗ hổng NGHIÊM TRỌNG <span class="badge badge-crit">CRITICAL</span></h3>
+
+<div class="vuln-card critical">
+<div class="title">❌ SEC-01: CORS hoàn toàn mở — API bị gọi từ bất kỳ website nào</div>
+<div class="file">📁 <code>Program.cs</code> → Dòng 23</div>
+<b>Hiện trạng:</b> <code>SetIsOriginAllowed(origin => true)</code> cho phép <b>MỌI website</b> gọi API.<br>
+<div class="risk">⚡ Rủi ro: Kẻ tấn công tạo website giả, nhúng JS gọi API đặt/hủy món nhân danh khách hợp lệ.</div>
+<b>Đề xuất:</b>
+<div class="code-block">policy.WithOrigins("https://localhost:7209", "https://yourdomain.com")
+      .AllowAnyMethod().AllowAnyHeader().AllowCredentials();</div>
+</div>
+
+<div class="vuln-card critical">
+<div class="title">❌ SEC-02: CancelOrderItem cho phép Anonymous — Ai cũng hủy được bất kỳ món nào</div>
+<div class="file">📁 <code>OrdersController.cs</code> → Dòng 191-198</div>
+<b>Hiện trạng:</b> <code>[AllowAnonymous]</code> + chỉ cần biết <code>itemId</code> (số nguyên tuần tự).<br>
+<div class="risk">⚡ Rủi ro: Kẻ xấu duyệt itemId từ 1→9999, hủy toàn bộ món đang chờ của tất cả bàn.</div>
+<b>Đề xuất:</b> Yêu cầu QR token của bàn để xác thực quyền hủy, hoặc chỉ cho Staff/Admin.
+</div>
+
+<div class="vuln-card critical">
+<div class="title">❌ SEC-03: CreateNotification cho phép Anonymous — Spam thông báo giả</div>
+<div class="file">📁 <code>NotificationsController.cs</code> → Dòng 36-57</div>
+<b>Hiện trạng:</b> <code>[AllowAnonymous]</code> + POST notification → Broadcast SignalR đến Staff/Kitchen.<br>
+<div class="risk">⚡ Rủi ro: Spam nghìn thông báo giả → nhân viên bỏ qua thông báo thật → thiệt hại nghiêm trọng.</div>
+<b>Đề xuất:</b> Chuyển sang <code>[Authorize]</code> hoặc ít nhất validate nội dung + rate limit.
+</div>
+
+<div class="vuln-card critical">
+<div class="title">❌ SEC-04: GetTables lộ QrCodeToken cho mọi người</div>
+<div class="file">📁 <code>TablesController.cs</code> → Dòng 21-34</div>
+<b>Hiện trạng:</b> API <code>GET /api/Tables</code> trả về <code>QrCodeToken</code> cho Anonymous.<br>
+<div class="risk">⚡ Rủi ro: Kẻ tấn công lấy token → đặt món từ xa mà không quét QR tại bàn → <b>phá vỡ hoàn toàn cơ chế bảo mật QR!</b></div>
+<b>Đề xuất:</b> Tách 2 endpoint: Public (không có token) vs Admin (có token đầy đủ).
+</div>
+
+<div class="vuln-card critical">
+<div class="title">❌ SEC-05: Không có Rate Limiting — DDoS và Brute-force</div>
+<div class="file">📁 Toàn bộ API</div>
+<b>Hiện trạng:</b> Không giới hạn số request trên bất kỳ endpoint nào.<br>
+<div class="risk">⚡ Rủi ro: Brute-force login, spam đặt món, spam notification không bị chặn.</div>
+<b>Đề xuất:</b> Thêm NuGet <code>AspNetCoreRateLimit</code> hoặc middleware tự viết.
+</div>
+
+<h3>1.2 — Lỗ hổng TRUNG BÌNH <span class="badge badge-warn">MEDIUM</span></h3>
+
+<div class="vuln-card medium">
+<div class="title">⚠️ SEC-06: GetActiveOrderByTable cho phép Anonymous — Xem đơn bàn khác</div>
+<div class="file">📁 <code>OrdersController.cs</code> → Dòng 56-93</div>
+Ai biết <code>tableId</code> cũng xem được đơn hàng (tên khách, danh sách món, tổng tiền).<br>
+<b>Đề xuất:</b> Yêu cầu thêm <code>token</code> query param để xác thực QR.
+</div>
+
+<div class="vuln-card medium">
+<div class="title">⚠️ SEC-07: UpdateTableStatus không validate giá trị</div>
+<div class="file">📁 <code>TablesController.cs</code> → Dòng 103-112</div>
+Nhận <code>[FromBody] string status</code> bất kỳ → có thể set status thành "hacked", "xyz".<br>
+<b>Đề xuất:</b> Validate status phải thuộc <code>TableStatus</code> enum.
+</div>
+
+<div class="vuln-card medium">
+<div class="title">⚠️ SEC-08: QR Token không có thời hạn (Expiry)</div>
+Token tạo 1 lần, dùng mãi mãi. Khách chụp ảnh QR → về nhà vẫn đặt món được.<br>
+<b>Đề xuất:</b> Thêm cột <code>QrTokenExpiry</code> (DateTime) và kiểm tra trong OrderService.
+</div>
+
+<div class="vuln-card medium">
+<div class="title">⚠️ SEC-09: Không có cơ chế Concurrency Control cho Inventory</div>
+<div class="file">📁 <code>OrderService.cs</code> → Dòng 133-138</div>
+Trừ kho không lock → 2 khách đặt cùng lúc có thể vượt số lượng tồn kho.<br>
+<b>Đề xuất:</b> Dùng Optimistic Concurrency (<code>RowVersion</code>) hoặc Transaction isolation.
+</div>
+
+<!-- ==================== PHẦN 2: CODE SMELL ==================== -->
+<h2 class="page-break">🟡 Phần 2: Code Smell & Anti-Pattern</h2>
+
+<table>
+<tr><th>#</th><th>Vấn đề</th><th>File</th><th>Chi tiết</th></tr>
+<tr><td><span class="tag-yellow">CS-01</span></td><td>Trả raw Entity qua API</td><td><code>OrdersController:53</code></td><td><code>GetOrder()</code> trả <code>Order</code> entity thay vì DTO → lộ navigation props</td></tr>
+<tr><td><span class="tag-yellow">CS-02</span></td><td>Trả raw Entity</td><td><code>NotificationsController:26</code></td><td><code>GetNotifications()</code> trả <code>Notification</code> entity</td></tr>
+<tr><td><span class="tag-yellow">CS-03</span></td><td>Status dùng string literal</td><td><code>OrdersController:106-108</code></td><td><code>"taken"</code>, <code>"cleaning"</code> — mặc dù đã có <code>TableStatus</code> enum</td></tr>
+<tr><td><span class="tag-yellow">CS-04</span></td><td>Không dùng Transaction</td><td><code>OrderService:222</code></td><td><code>SaveChangesAsync()</code> không wrap Transaction → lỗi giữa chừng = data lỗi</td></tr>
+<tr><td><span class="tag-yellow">CS-05</span></td><td>Controller phình to</td><td><code>OrdersController</code></td><td>222 dòng, chứa logic truy vấn trực tiếp thay vì delegate Service</td></tr>
+<tr><td><span class="tag-blue">CS-06</span></td><td>Folder chồng chéo</td><td><code>DTOs/</code> vs <code>Models/</code></td><td>2 folder thừa, nên merge vào <code>Application/DTOs</code></td></tr>
+<tr><td><span class="tag-blue">CS-07</span></td><td>Thiếu Input Validation</td><td><code>CreateUser</code></td><td>Không validate độ dài password, tên, format email</td></tr>
+</table>
+
+<!-- ==================== PHẦN 3: F&B ==================== -->
+<h2 class="page-break">🍔 Phần 3: Phân Tích Nghiệp Vụ F&B</h2>
+
+<h3>3.1 — Luồng nghiệp vụ ĐANG CÓ</h3>
+
+<table>
+<tr><th>Nghiệp vụ</th><th>Trạng thái</th><th>Nhận xét</th></tr>
+<tr><td>Quét QR đặt món</td><td><span class="tag-green">✅ Có</span></td><td>Token validation tốt, thiếu expiry</td></tr>
+<tr><td>Gọi thêm món (append)</td><td><span class="tag-green">✅ Có</span></td><td>Đơn active tự gộp, đúng chuẩn</td></tr>
+<tr><td>Bếp nhận/Nấu/Xong (Kanban)</td><td><span class="tag-green">✅ Có</span></td><td>3 cột Pending → Preparing → Ready</td></tr>
+<tr><td>Bưng món (served)</td><td><span class="tag-green">✅ Có</span></td><td>Staff PATCH status "served"</td></tr>
+<tr><td>Thanh toán</td><td><span class="tag-yellow">⚠️ Giả lập</span></td><td><code>simulateSuccess=true</code>, chưa VNPay</td></tr>
+<tr><td>Chuyển bàn</td><td><span class="tag-green">✅ Có</span></td><td>API đổi tableId, kiểm tra bàn trống</td></tr>
+<tr><td>Bàn → cleaning → available</td><td><span class="tag-green">✅ Có</span></td><td>Đúng flow F&B</td></tr>
+<tr><td>Hoàn kho khi hủy</td><td><span class="tag-green">✅ Có</span></td><td>Tự động +inventory khi cancel</td></tr>
+<tr><td>Realtime SignalR</td><td><span class="tag-green">✅ Có</span></td><td>Full stack: Hub + Service + 4 Layouts</td></tr>
+<tr><td>Báo cáo doanh thu</td><td><span class="tag-green">✅ Có</span></td><td>Lọc ngày + Chart.js</td></tr>
+</table>
+
+<h3>3.2 — Nghiệp vụ F&B ĐANG THIẾU</h3>
+
+<h4>🔴 Thiếu nghiêm trọng:</h4>
+
+<div class="vuln-card critical">
+<div class="title">1. Tích hợp thanh toán thật (VNPay/MoMo)</div>
+API hiện chỉ dùng <code>simulateSuccess=true</code>. Cần:<br>
+• Controller riêng cho VNPay webhook/IPN<br>
+• HMAC-SHA512 verification cho callback<br>
+• Luồng: Tạo URL → Redirect → VNPay callback → Cập nhật đơn
+</div>
+
+<div class="vuln-card critical">
+<div class="title">2. Tách bill / Thanh toán một phần (Split Bill)</div>
+Nhà hàng thực tế: 1 bàn có thể chia bill cho từng khách hoặc thanh toán từng phần.<br>
+Cần thêm: <code>PaymentSession</code> entity, cho phép thanh toán subset của đơn hàng.
+</div>
+
+<div class="vuln-card critical">
+<div class="title">3. Phí dịch vụ (Service Charge) + VAT</div>
+Hầu hết nhà hàng tính 5-10% phí dịch vụ + 8-10% VAT.<br>
+Cần: Config <code>ServiceChargePercent</code>, <code>VATPercent</code> trong Settings, tính tự động vào hóa đơn.
+</div>
+
+<h4>🟡 Nên có:</h4>
+
+<table>
+<tr><th>#</th><th>Nghiệp vụ</th><th>Chi tiết</th></tr>
+<tr><td>4</td><td><b>Khuyến mãi / Voucher</b></td><td>Không có cơ chế giảm giá nào. Cần bảng <code>discount</code>, <code>voucher</code></td></tr>
+<tr><td>5</td><td><b>Ghi chú cấp bàn</b></td><td>Ghi chú món ✅ có, nhưng thiếu ghi chú chung (VD: "Dị ứng đậu phộng")</td></tr>
+<tr><td>6</td><td><b>Gộp bàn (Merge Tables)</b></td><td>Nhóm đông gộp 2-3 bàn → 1 đơn. Cần <code>TableGroup</code> entity</td></tr>
+<tr><td>7</td><td><b>Xuất hóa đơn PDF</b></td><td>Sau thanh toán cần xuất bill cho khách. Dùng <code>QuestPDF</code></td></tr>
+<tr><td>8</td><td><b>ActivityLog thiếu UserId</b></td><td>Không biết ai thao tác. Cần FK <code>UserId</code></td></tr>
+<tr><td>9</td><td><b>Dashboard realtime</b></td><td>Admin/Index dùng AJAX polling, chưa subscribe SignalR events</td></tr>
+<tr><td>10</td><td><b>Quản lý ca trực</b></td><td>F&B cần biết ai trực ca nào → thống kê doanh thu/ca</td></tr>
+</table>
+
+<!-- ==================== PHẦN 4: FE-BE ==================== -->
+<h2 class="page-break">🔗 Phần 4: Liên Kết FE — BE</h2>
+
+<h3>4.1 — API có sẵn nhưng FE CHƯA CÓ UI</h3>
+
+<table>
+<tr><th>API Endpoint</th><th>API</th><th>UI</th><th>Trạng thái</th></tr>
+<tr><td><code>PATCH /Orders/{id}/table/{newTableId}</code></td><td><span class="tag-green">✅</span></td><td><span class="tag-red">❌</span></td><td>Chưa có nút "Chuyển bàn" ở Staff Dashboard</td></tr>
+<tr><td><code>DELETE /Orders/{id}</code></td><td><span class="tag-green">✅</span></td><td><span class="tag-red">❌</span></td><td>Chưa có nút "Hủy đơn" ở Staff OrderDetails</td></tr>
+<tr><td><code>PATCH /Payments/{id}/expire</code></td><td><span class="tag-green">✅</span></td><td><span class="tag-red">❌</span></td><td>Không có UI xử lý hết hạn thanh toán</td></tr>
+<tr><td><code>GET /Orders/reports/top-products</code></td><td><span class="tag-green">✅</span></td><td><span class="tag-red">❌</span></td><td>Không có biểu đồ Top sản phẩm</td></tr>
+<tr><td><code>GET /Orders/reports/category-sales</code></td><td><span class="tag-green">✅</span></td><td><span class="tag-red">❌</span></td><td>Không có biểu đồ doanh thu theo danh mục</td></tr>
+<tr><td><code>POST /Tables/{id}/generate-qr</code></td><td><span class="tag-green">✅</span></td><td><span class="tag-yellow">⚠️</span></td><td>Có nút nhưng không hiện QR Code hình ảnh</td></tr>
+<tr><td><code>PATCH /Notifications/{id}/read</code></td><td><span class="tag-green">✅</span></td><td><span class="tag-red">❌</span></td><td>Notification chưa có nút "Đã đọc"</td></tr>
+<tr><td><code>GET /Notifications?role=</code></td><td><span class="tag-green">✅</span></td><td><span class="tag-yellow">⚠️</span></td><td>Chỉ dùng realtime, không load lịch sử</td></tr>
+</table>
+
+<h3>4.2 — Phân quyền UI theo Role</h3>
+
+<table>
+<tr><th>Role</th><th>Trang</th><th>Nhận xét</th><th>Đánh giá</th></tr>
+<tr><td><b>🔑 Admin</b></td><td>8 trang</td><td>CRUD Products, Categories, Combos, Tables, Users, Reports, KitchenBoard (view-only)</td><td><span class="tag-green">✅ Tốt</span></td></tr>
+<tr><td><b>💼 Staff</b></td><td>5 trang</td><td>Dashboard (bàn), OrderDetails, KitchenBoard (view-only), Notifications</td><td><span class="tag-yellow">⚠️ Thiếu UI chuyển bàn/hủy đơn</span></td></tr>
+<tr><td><b>👨‍🍳 Kitchen</b></td><td>2 trang</td><td>Board (Kanban 3 cột)</td><td><span class="tag-green">✅ Đúng vai trò</span></td></tr>
+<tr><td><b>📱 Customer</b></td><td>6 trang</td><td>Menu, Cart, OrderSuccess, OrderTracking, ChangePassword, Login</td><td><span class="tag-green">✅ Tốt</span></td></tr>
+</table>
+
+<h3>4.3 — Đề xuất tổ chức thư mục</h3>
+
+<h4>API — Đề xuất:</h4>
+<div class="tree">FoodQR.API/
+├── Application/
+│   ├── DTOs/           ← ✅ Giữ nguyên
+│   ├── Middleware/      ← ✅ Giữ nguyên
+│   └── Services/        ← ✅ Giữ nguyên
+├── Controllers/         ← ⚠️ Nên nhóm theo domain:
+│   ├── Auth/            → AuthController
+│   ├── Orders/          → OrdersController, PaymentsController
+│   ├── Kitchen/         → KitchenController
+│   └── Management/      → Tables, Products, Categories, Combos, Users
+├── Core/
+│   ├── Entities/
+│   ├── Enums/
+│   └── Interfaces/
+├── <s>DTOs/</s>         ← ❌ Xóa (merge vào Application/DTOs)
+├── Hubs/
+├── Infrastructure/
+└── <s>Models/</s>       ← ❌ Xóa (merge vào Core/Entities)</div>
+
+<h4>Client — Đề xuất:</h4>
+<div class="tree">Pages/
+├── Admin/               ← ✅ Giữ nguyên
+├── Staff/               ← ✅ Giữ nguyên
+├── Kitchen/             ← ✅ Giữ nguyên
+├── Customer/            ← 🆕 Tạo mới, chuyển Index, Cart,
+│                          OrderTracking, OrderSuccess vào đây
+├── Shared/
+└── (Login, ChangePassword, Error) ← Shared pages</div>
+
+<!-- ==================== PHẦN 5: MA TRẬN ==================== -->
+<h2 class="page-break">📋 Phần 5: Ma Trận Ưu Tiên Sửa</h2>
+
+<table>
+<tr><th>Ưu tiên</th><th>Mã</th><th>Công việc</th><th>Độ khó</th><th>Ảnh hưởng</th></tr>
+<tr class="priority-row"><td style="color:#ef4444">🔴 P0</td><td>SEC-02</td><td>Bỏ AllowAnonymous trên CancelOrderItem</td><td>Dễ</td><td>Chặn phá hoại</td></tr>
+<tr class="priority-row"><td style="color:#ef4444">🔴 P0</td><td>SEC-03</td><td>Bỏ AllowAnonymous trên CreateNotification</td><td>Dễ</td><td>Chặn spam</td></tr>
+<tr class="priority-row"><td style="color:#ef4444">🔴 P0</td><td>SEC-04</td><td>Ẩn QrCodeToken khỏi API public</td><td>Dễ</td><td>Chặn giả QR</td></tr>
+<tr class="priority-row"><td style="color:#ef4444">🔴 P0</td><td>SEC-01</td><td>Siết CORS domain</td><td>Dễ</td><td>Chặn cross-site</td></tr>
+<tr><td style="color:#fbbf24">🟡 P1</td><td>SEC-07</td><td>Validate TableStatus enum</td><td>Dễ</td><td>Data integrity</td></tr>
+<tr><td style="color:#fbbf24">🟡 P1</td><td>CS-01</td><td>GetOrder trả DTO thay Entity</td><td>TB</td><td>Clean API</td></tr>
+<tr><td style="color:#fbbf24">🟡 P1</td><td>CS-04</td><td>Wrap Transaction cho OrderService</td><td>TB</td><td>Data safety</td></tr>
+<tr><td style="color:#fbbf24">🟡 P1</td><td>SEC-09</td><td>Optimistic Concurrency cho inventory</td><td>Khó</td><td>Tránh oversell</td></tr>
+<tr><td style="color:#fbbf24">🟡 P1</td><td>SEC-08</td><td>Thêm QR Token Expiry</td><td>TB</td><td>QR security</td></tr>
+<tr><td style="color:#22c55e">🟢 P2</td><td>BIZ-01</td><td>Tích hợp VNPay Sandbox</td><td>Khó</td><td>Core feature</td></tr>
+<tr><td style="color:#22c55e">🟢 P2</td><td>UI-01</td><td>Thêm UI chuyển bàn / hủy đơn</td><td>TB</td><td>UX completeness</td></tr>
+<tr><td style="color:#22c55e">🟢 P2</td><td>BIZ-02</td><td>Thêm service charge + VAT</td><td>TB</td><td>F&B compliance</td></tr>
+</table>
+
+<!-- ==================== KẾT LUẬN ==================== -->
+<h2>✅ Kết Luận</h2>
+
+<div class="alert alert-success" style="font-size:1.05em">
+<b>🎯 Dự án FoodQR có nền tảng kiến trúc TỐT:</b><br>
+• Clean Architecture rõ ràng (Controller → Service → Repository)<br>
+• SignalR Realtime được inject đúng chuẩn vào Service Layer<br>
+• Giao diện hiện đại, responsive, phân quyền role tốt<br><br>
+
+<b>⚡ Chỉ cần sửa 2 mảng để hoàn hảo:</b><br>
+1. <b>Bảo mật</b>: 4 lỗ hổng P0 (CORS, AllowAnonymous, QR token leak) — sửa trong <b>1 giờ</b><br>
+2. <b>Thanh toán</b>: Tích hợp VNPay thay cho <code>simulateSuccess</code> — cần <b>3-4 giờ</b><br><br>
+
+<b>→ Sau khi vá xong: Điểm dự kiến tăng từ 6.4 → 8.0+/10</b>
+</div>
+
+</div>
+
+<script>mermaid.initialize({startOnLoad:true,theme:'dark',securityLevel:'loose'});</script>
+</body>
+</html>
