@@ -90,6 +90,13 @@
             const bar = document.getElementById('order-tracker-bar');
             let tableId = parseInt(document.getElementById('hidden-table-id').value);
 
+            // Ẩn widget khi đã ở trang OrderTracking (tránh chồng chéo)
+            if (window.location.pathname.toLowerCase().includes('ordertracking')) {
+                bar.classList.remove('active');
+                bar.style.display = 'none';
+                return;
+            }
+
             if (tableId <= 0) {
                 const params = new URLSearchParams(window.location.search);
                 const token = params.get('token');
