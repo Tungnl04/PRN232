@@ -64,7 +64,8 @@ CREATE TABLE [user] (
     username NVARCHAR(50) UNIQUE NOT NULL,
     password_hash NVARCHAR(255) NOT NULL,
     role NVARCHAR(20) CHECK (role IN ('staff', 'admin', 'kitchen')),
-    active BIT DEFAULT 1
+    active BIT DEFAULT 1,
+    must_change_password BIT DEFAULT 1 NOT NULL
 );
 
 -- ===== ORDER TABLE =====

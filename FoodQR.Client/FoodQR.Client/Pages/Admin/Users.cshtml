@@ -84,13 +84,38 @@
                         </span>
                     </td>
                     <td>
-                        <button class="btn-icon" onclick="editUser(${u.id})"><i class="fa-solid fa-pen"></i></button>
-                        <button class="btn-icon btn-delete" onclick="toggleUser(${u.id}, ${u.active})">
+                        <button class="btn-icon" onclick="editUser(${u.id})" title="Edit User"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn-icon" style="color: #ed8936" onclick="confirmReset(${u.id}, '${u.name}')" title="Reset Password">
+                            <i class="fa-solid fa-key"></i>
+                        </button>
+                        <button class="btn-icon btn-delete" onclick="toggleUser(${u.id}, ${u.active})" title="${u.active ? 'Deactivate' : 'Activate'} User">
                             <i class="fa-solid ${u.active ? 'fa-user-slash' : 'fa-user-check'}"></i>
                         </button>
                     </td>
                 </tr>
             `).join('');
+        }
+
+        async function confirmReset(id, name) {
+            const { isConfirmed } = await Swal.fire({
+                title: 'Reset mật khẩu?',
+                text: `Mật khẩu của ${name} sẽ được đặt lại thành "123456" và yêu cầu đổi mật khẩu khi đăng nhập lại.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Đồng ý Reset',
+                cancelButtonText: 'Hủy'
+            });
+
+            if (isConfirmed) {
+                try {
+                    const res = await apiClient.resetPassword(id);
+                    if (res && res.ok) {
+                        Swal.fire('Thành công!', 'Mật khẩu đã được reset về 123456', 'success');
+                    } else {
+                        Swal.fire('Lỗi', 'Không thể reset mật khẩu.', 'error');
+                    }
+                } catch (err) { console.error(err); }
+            }
         }
 
         function openAddModal() {

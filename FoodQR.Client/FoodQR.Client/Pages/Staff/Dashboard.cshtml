@@ -2,28 +2,17 @@
 @model FoodQR.Client.Pages.Staff.DashboardModel
 @{
     Layout = "_Layout";
-    ViewData["Title"] = "Table Management";
+    ViewData["Title"] = "Quản lý Bàn";
 }
 
 <div class="table-grid" id="table-list">
     <div style="padding: 40px; text-align: center; width: 100%;">
         <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
-        <p>Loading tables...</p>
+        <p>Đang tải danh sách bàn...</p>
     </div>
 </div>
 
-<style>
-    .table-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
-    .status-badge { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; padding: 4px 10px; border-radius: 50px; display: inline-block; margin-bottom: 16px; }
-    .status-available { background: #e8f5e9; color: #4caf50; }
-    .status-taken { background: #ffebee; color: #f44336; }
-    .table-number { font-size: 1.5rem; font-weight: 800; margin-bottom: 4px; }
-    .table-info { font-size: 0.85rem; color: #888; margin-bottom: 20px; }
-    .btn-group { display: flex; gap: 8px; }
-    .btn { flex-grow: 1; border: none; padding: 10px; border-radius: 10px; font-weight: 700; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-outline { background: white; border: 1px solid #ddd; color: #666; }
-</style>
+<link rel="stylesheet" href="~/css/staff/dashboard.css" asp-append-version="true" />
 
 @section Scripts {
     <script>
@@ -37,39 +26,47 @@
 
         function renderTables(tables) {
             const container = document.getElementById('table-list');
-            container.innerHTML = tables.map(t => `
-                <div class="card-mgmt">
-                    <span class="status-badge status-${t.status.toLowerCase()}">${t.status}</span>
-                    <div class="table-number">Table ${t.tableNumber}</div>
-                    <div class="table-info"><i class="fa-solid fa-users"></i> Capacity: ${t.capacity} guests</div>
-                    
-                    <div class="btn-group">
-                        <button class="btn btn-outline" onclick="viewTable(${t.id})">Details</button>
-                        ${t.status === 'taken' ? `
-                            <button class="btn btn-primary" onclick="closeTable(${t.id})">Check out</button>
-                        ` : `
-                            <button class="btn btn-primary" style="background:#4caf50" onclick="openTable(${t.id})">Open</button>
-                        `}
+            container.innerHTML = tables.map(t => {
+                const status = t.status.toLowerCase();
+                let statusVN = "Trống";
+                let statusClass = "status-available";
+                if (status === 'taken') { statusVN = "Có khách"; statusClass = "status-taken"; }
+                if (status === 'cleaning') { statusVN = "Chờ dọn"; statusClass = "status-cleaning"; }
+
+                return `
+                    <div class="card-mgmt ${status === 'taken' ? 'status-taken-border' : ''}">
+                        <span class="status-badge ${statusClass}">${statusVN}</span>
+                        <div class="table-number">Bàn ${t.tableNumber}</div>
+                        <div class="table-info"><i class="fa-solid fa-users"></i> Sức chứa: ${t.capacity} người</div>
+                        
+                        <div class="btn-group">
+                            <button class="btn btn-outline" onclick="viewTable(${t.id})">
+                                <i class="fa-solid fa-eye"></i> Chi tiết
+                            </button>
+                            ${status === 'taken' ? `
+                                <button class="btn btn-primary" onclick="viewTable(${t.id})">
+                                    <i class="fa-solid fa-receipt"></i> Đang gọi...
+                                </button>
+                            ` : status === 'cleaning' ? `
+                                <button class="btn btn-warning" onclick="cleanTable(${t.id})">
+                                    <i class="fa-solid fa-broom"></i> Dọn xong
+                                </button>
+                            ` : `
+                                <button class="btn btn-success" onclick="openTable(${t.id})">
+                                    <i class="fa-solid fa-play"></i> Mở bàn
+                                </button>
+                            `}
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
-        async function closeTable(id) {
-            const { isConfirmed } = await Swal.fire({
-                title: 'Check out?',
-                text: 'Confirm payment received and set table to available.',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#4caf50'
-            });
-
-            if (isConfirmed) {
-                const res = await apiClient.updateTableStatus(id, 'available');
-                if (res && res.ok) {
-                    Swal.fire('Success!', 'Table is now available.', 'success');
-                    loadTables();
-                }
+        async function cleanTable(id) {
+            const res = await apiClient.updateTableStatus(id, 'available');
+            if (res && res.ok) {
+                Swal.fire({ toast:true, position:'top-end', icon:'success', title:'Hệ thống: Bàn đã trống!', showConfirmButton:false, timer:1500 });
+                loadTables();
             }
         }
 
@@ -85,6 +82,6 @@
         }
 
         loadTables();
-        setInterval(loadTables, 15000);
+        setInterval(loadTables, 10000);
     </script>
 }

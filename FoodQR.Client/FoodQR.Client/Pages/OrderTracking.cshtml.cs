@@ -58,7 +58,8 @@ namespace FoodQR.Client.Pages
                     {
                         Name = item.GetProperty("name").GetString() ?? "Unknown Item",
                         Quantity = item.GetProperty("quantity").GetInt32(),
-                        Status = item.GetProperty("status").GetString() ?? "Pending"
+                        Status = item.GetProperty("status").GetString() ?? "Pending",
+                        Note = item.TryGetProperty("note", out var noteProp) ? noteProp.GetString() : null
                     });
                 }
                 return Page();
@@ -68,5 +69,11 @@ namespace FoodQR.Client.Pages
         }
     }
 
-    public class TrackingItemDto { public string Name { get; set; } = ""; public int Quantity { get; set; } public string Status { get; set; } = ""; }
+    public class TrackingItemDto 
+    { 
+        public string Name { get; set; } = ""; 
+        public int Quantity { get; set; } 
+        public string Status { get; set; } = ""; 
+        public string? Note { get; set; }
+    }
 }

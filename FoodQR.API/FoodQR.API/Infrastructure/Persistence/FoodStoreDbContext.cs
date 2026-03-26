@@ -375,6 +375,10 @@ public partial class FoodStoreDbContext : DbContext
             entity.Property(e => e.Username)
                 .HasMaxLength(50)
                 .HasColumnName("username");
+
+            entity.Property(e => e.MustChangePassword)
+                .HasDefaultValue(true)
+                .HasColumnName("must_change_password");
         });
 
         OnModelCreatingPartial(modelBuilder);

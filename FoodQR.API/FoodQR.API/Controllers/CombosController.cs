@@ -19,27 +19,34 @@ namespace FoodQR.API.Controllers
 
         [AllowAnonymous]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<dynamic>>> GetCombos()
+        public async Task<ActionResult<IEnumerable<dynamic>>> GetCombos([FromQuery] bool includeHidden = false)
         {
-            // Fetch combos and their items to check availability
             var combos = await _context.Combos
                 .Include(c => c.ComboItems)
                     .ThenInclude(ci => ci.Product)
                 .ToListAsync();
 
-            var result = combos.Select(c => new
+            var resultQuery = combos.Select(c => new
             {
                 c.Id,
                 c.Name,
                 c.Description,
                 c.Price,
                 c.ImageUrl,
-                // Business Rule: Combo disable nếu món con hết hàng
-                IsAvailable = c.Available == true && c.ComboItems.All(ci => ci.Product != null && ci.Product.IsAvailable == true)
-            }).Where(c => c.IsAvailable) // Hide unavailable combos for guests
-            .ToList();
+                IsAvailable = c.Available == true && c.ComboItems.All(ci => ci.Product != null && ci.Product.IsAvailable == true),
+                ComboItems = c.ComboItems.Select(ci => new { 
+                    ci.ProductId, 
+                    ci.Quantity,
+                    Product = new { Name = ci.Product?.Name }
+                })
+            });
 
-            return result;
+            if (!includeHidden)
+            {
+                return resultQuery.Where(c => c.IsAvailable).ToList();
+            }
+
+            return resultQuery.ToList();
         }
 
         [AllowAnonymous]

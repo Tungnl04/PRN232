@@ -414,5 +414,56 @@ namespace FoodQR.API.Application.Services
             await _context.SaveChangesAsync();
             return true;
         }
+        public async Task<List<Order>> GetOrdersAsync(int limit = 10)
+        {
+            return await _context.Orders
+                .Include(o => o.Customer)
+                .Include(o => o.Table)
+                .OrderByDescending(o => o.CreatedAt)
+                .Take(limit)
+                .ToListAsync();
+        }
+
+        public async Task<object> GetTopProductsReportAsync(DateTime? start, DateTime? end)
+        {
+            var query = _context.OrderItems
+                .Include(oi => oi.Order)
+                .Include(oi => oi.Product)
+                .Where(oi => oi.Order != null && oi.Order.Status.ToLower() == OrderStatus.Paid && oi.ProductId != null);
+
+            if (start.HasValue) query = query.Where(oi => oi.Order!.CreatedAt >= start.Value.Date);
+            if (end.HasValue) query = query.Where(oi => oi.Order!.CreatedAt <= end.Value.Date.AddDays(1).AddTicks(-1));
+
+            return await query
+                .GroupBy(oi => oi.Product!.Name)
+                .Select(g => new {
+                    Name = g.Key,
+                    Quantity = g.Sum(oi => oi.Quantity ?? 1),
+                    Revenue = g.Sum(oi => (oi.Quantity ?? 1) * oi.UnitPrice)
+                })
+                .OrderByDescending(x => x.Revenue)
+                .Take(10)
+                .ToListAsync();
+        }
+
+        public async Task<object> GetCategorySalesReportAsync(DateTime? start, DateTime? end)
+        {
+            var query = _context.OrderItems
+                .Include(oi => oi.Order)
+                .Include(oi => oi.Product).ThenInclude(p => p.Category)
+                .Where(oi => oi.Order != null && oi.Order.Status.ToLower() == OrderStatus.Paid && oi.Product != null && oi.Product.Category != null);
+
+            if (start.HasValue) query = query.Where(oi => oi.Order!.CreatedAt >= start.Value.Date);
+            if (end.HasValue) query = query.Where(oi => oi.Order!.CreatedAt <= end.Value.Date.AddDays(1).AddTicks(-1));
+
+            return await query
+                .GroupBy(oi => oi.Product!.Category!.Name)
+                .Select(g => new {
+                    Category = g.Key,
+                    Revenue = g.Sum(oi => (oi.Quantity ?? 1) * oi.UnitPrice)
+                })
+                .OrderByDescending(x => x.Revenue)
+                .ToListAsync();
+        }
     }
 }

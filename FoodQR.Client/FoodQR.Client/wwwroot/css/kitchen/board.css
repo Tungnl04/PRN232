@@ -1,0 +1,136 @@
+.kanban-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 25px;
+    height: calc(100vh - 180px);
+    min-height: 500px;
+    margin-top: 10px;
+}
+
+@media (max-width: 1400px) {
+    .kanban-container {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+}
+
+.kanban-column {
+    background: #f8fafc;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.column-header {
+    padding: 20px;
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.column-title {
+    font-weight: 800;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.column-count {
+    background: #f1f5f9;
+    color: #64748b;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+.kanban-list {
+    padding: 15px;
+    flex-grow: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    scrollbar-width: none;
+}
+.kanban-list::-webkit-scrollbar { display: none; }
+
+.kitchen-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+    border: 1px solid #e2e8f0;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.kitchen-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+
+/* Column Themes */
+.kanban-column:nth-child(1) .column-title i { color: #f59e0b; }
+.kanban-column:nth-child(2) .column-title i { color: #3b82f6; }
+.kanban-column:nth-child(3) .column-title i { color: #10b981; }
+
+.kanban-column:nth-child(1) .kitchen-card { border-left: 5px solid #f59e0b; }
+.kanban-column:nth-child(2) .kitchen-card { border-left: 5px solid #3b82f6; }
+.kanban-column:nth-child(3) .kitchen-card { border-left: 5px solid #10b981; }
+
+.dish-name { font-weight: 800; font-size: 1.1rem; color: var(--text-main); margin-bottom: 2px; line-height: 1.3; }
+
+.dish-meta { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 15px; }
+
+.dish-note {
+    font-size: 0.8rem;
+    color: #ef4444;
+    background: #fef2f2;
+    padding: 8px 12px;
+    border-radius: 10px;
+    margin-top: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #fee2e2;
+}
+
+.table-badge {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+.order-code { font-family: monospace; font-size: 0.65rem; color: #94a3b8; letter-spacing: 0.5px; }
+
+.btn-action {
+    width: 100%;
+    margin-top: 15px;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    background: #f1f5f9;
+    color: #64748b;
+    font-weight: 800;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.btn-action:hover { background: #e2e8f0; color: #1e293b; }
+.btn-action.primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(255, 77, 77, 0.2); }
+.btn-action.primary:hover { opacity: 0.9; transform: scale(0.98); }
+
+.dish-qty { font-size: 1.6rem; font-weight: 900; color: #3b82f6; background: #eff6ff; min-width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }

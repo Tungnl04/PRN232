@@ -30,5 +30,6 @@ namespace FoodQR.API.Application.DTOs
         public string Username { get; set; } = null!;
         public string? Role { get; set; }
         public bool? Active { get; set; }
+        public bool MustChangePassword { get; set; }
     }
 }
