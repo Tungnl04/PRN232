@@ -20,7 +20,7 @@ const apiClient = (function() {
 
         try {
             const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-            
+
             if (response.status === 401) {
                 // Token expired or invalid
                 console.warn("Session expired. Redirecting to login.");
@@ -28,7 +28,7 @@ const apiClient = (function() {
                 window.location.href = '/Login';
                 return null;
             }
-            
+
             return response;
         } catch (error) {
             console.error("API Fetch Error:", error);
@@ -82,6 +82,13 @@ const apiClient = (function() {
         async deleteTable(id) {
             return await authorizedFetch(`/Tables/${id}`, {
                 method: 'DELETE'
+            });
+        },
+
+        // QR Code
+        async generateQr(tableId) {
+            return await authorizedFetch(`/Tables/${tableId}/generate-qr`, {
+                method: 'POST'
             });
         },
 
