@@ -47,7 +47,6 @@
 
 @section Scripts {
     <script>
-        // Override global function if needed or listen to it
         window.onNewOrder = () => loadKitchenItems();
 
         async function loadKitchenItems() {
@@ -57,44 +56,84 @@
             } catch (err) { console.error(err); }
         }
 
+        function groupByTable(items) {
+            const groups = {};
+            items.forEach(item => {
+                const key = `${item.orderCode}`;
+                if (!groups[key]) {
+                    groups[key] = {
+                        orderCode: item.orderCode,
+                        tableNumber: item.tableNumber,
+                        items: []
+                    };
+                }
+                groups[key].items.push(item);
+            });
+            return Object.values(groups);
+        }
+
         function renderItems(items) {
             const cols = {
                 'pending': document.querySelector('#col-pending .kanban-list'),
                 'preparing': document.querySelector('#col-preparing .kanban-list'),
                 'ready': document.querySelector('#col-ready .kanban-list')
             };
-
             Object.values(cols).forEach(c => c.innerHTML = '');
             let counts = { pending: 0, preparing: 0, ready: 0 };
 
+            // Count per status
             items.forEach(item => {
-                const status = item.status.toLowerCase();
-                if (!cols[status]) return;
-                counts[status]++;
-                
-                const card = document.createElement('div');
-                card.className = `kitchen-card`;
-                card.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                        <span class="table-badge">BÀN ${item.tableNumber || '?'}</span>
-                        <span class="order-code">${item.orderCode.substring(0,8)}</span>
-                    </div>
-                    
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div style="flex: 1; padding-right: 15px;">
-                            <div class="dish-name">${item.dishName}</div>
-                            ${item.note ? `<div class="dish-note"><i class="fa-solid fa-comment-dots"></i> ${item.note}</div>` : ''}
-                        </div>
-                        <div class="dish-qty">x${item.quantity}</div>
-                    </div>
+                const s = item.status.toLowerCase();
+                if (counts[s] !== undefined) counts[s]++;
+            });
 
-                    <div class="dish-meta">
-                         ${status === 'pending' ? `<button class="btn-action primary" onclick="updateItem(${item.id}, 'preparing')"><i class="fa-solid fa-play"></i> CHẾ BIẾN</button>` : ''}
-                         ${status === 'preparing' ? `<button class="btn-action primary" style="background:#3b82f6" onclick="updateItem(${item.id}, 'ready')"><i class="fa-solid fa-check"></i> XONG</button>` : ''}
-                         ${status === 'ready' ? `<div style="text-align:center; width:100%; color:#94a3b8; font-size:0.8rem; font-weight:600; font-style:italic;">Chờ bưng món...</div>` : ''}
-                    </div>
-                `;
-                cols[status].appendChild(card);
+            // Group items by status first, then by table
+            ['pending', 'preparing', 'ready'].forEach(status => {
+                const statusItems = items.filter(i => i.status.toLowerCase() === status);
+                const groups = groupByTable(statusItems);
+
+                groups.forEach(group => {
+                    const card = document.createElement('div');
+                    card.className = 'kitchen-card';
+
+                    // --- Table Header ---
+                    let headerHtml = `
+                        <div class="table-group-header">
+                            <div class="table-group-info">
+                                <span class="table-badge">BÀN ${group.tableNumber || '?'}</span>
+                                <span class="order-code">${group.orderCode.substring(0,8)}</span>
+                                <span class="item-count-badge">${group.items.length} món</span>
+                            </div>`;
+
+                    // --- Batch Action Button (only if >1 item) ---
+                    if (group.items.length > 1) {
+                        if (status === 'pending') {
+                            headerHtml += `<button class="btn-batch primary" onclick="batchUpdate('${group.orderCode}', 'pending', 'preparing')"><i class="fa-solid fa-forward"></i> Chế biến TẤT CẢ</button>`;
+                        } else if (status === 'preparing') {
+                            headerHtml += `<button class="btn-batch primary" style="background:#3b82f6" onclick="batchUpdate('${group.orderCode}', 'preparing', 'ready')"><i class="fa-solid fa-check-double"></i> Xong TẤT CẢ</button>`;
+                        }
+                    }
+                    headerHtml += `</div>`;
+
+                    // --- Item Rows ---
+                    let itemsHtml = group.items.map(item => `
+                        <div class="table-group-item">
+                            <div class="item-info">
+                                <span class="dish-name-sm">${item.dishName}</span>
+                                ${item.note ? `<span class="dish-note-sm" title="${item.note}"><i class="fa-solid fa-comment-dots"></i> ${item.note}</span>` : ''}
+                            </div>
+                            <div class="item-actions">
+                                <span class="dish-qty-sm">x${item.quantity}</span>
+                                ${status === 'pending' ? `<button class="btn-item primary" onclick="updateItem(${item.id}, 'preparing')" title="Chế biến"><i class="fa-solid fa-play"></i></button>` : ''}
+                                ${status === 'preparing' ? `<button class="btn-item primary" style="background:#3b82f6" onclick="updateItem(${item.id}, 'ready')" title="Xong"><i class="fa-solid fa-check"></i></button>` : ''}
+                                ${status === 'ready' ? `<span class="status-done"><i class="fa-solid fa-clock"></i></span>` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+
+                    card.innerHTML = headerHtml + `<div class="table-group-items">${itemsHtml}</div>`;
+                    cols[status].appendChild(card);
+                });
             });
 
             document.getElementById('count-pending').innerText = counts.pending;
@@ -105,9 +144,23 @@
         async function updateItem(itemId, newStatus) {
             try {
                 const res = await apiClient.updateItemStatus(itemId, newStatus);
-                if (res && res.ok) {
-                    loadKitchenItems();
+                if (res && res.ok) loadKitchenItems();
+            } catch (err) { console.error(err); }
+        }
+
+        async function batchUpdate(orderCode, fromStatus, toStatus) {
+            try {
+                const items = await apiClient.getKitchenItems();
+                const targets = items.filter(i =>
+                    i.orderCode === orderCode && i.status.toLowerCase() === fromStatus
+                );
+                if (!targets.length) return;
+
+                // Gọi tuần tự để tránh race condition
+                for (const item of targets) {
+                    await apiClient.updateItemStatus(item.id, toStatus);
                 }
+                loadKitchenItems();
             } catch (err) { console.error(err); }
         }
 

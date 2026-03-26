@@ -90,6 +90,13 @@
             const bar = document.getElementById('order-tracker-bar');
             let tableId = parseInt(document.getElementById('hidden-table-id').value);
 
+            // Ẩn widget khi đã ở trang OrderTracking (tránh chồng chéo)
+            if (window.location.pathname.toLowerCase().includes('ordertracking')) {
+                bar.classList.remove('active');
+                bar.style.display = 'none';
+                return;
+            }
+
             if (tableId <= 0) {
                 const params = new URLSearchParams(window.location.search);
                 const token = params.get('token');
@@ -162,14 +169,24 @@
                         .withAutomaticReconnect()
                         .build();
 
-                    customerConnection.on('ItemStatusChanged', () => checkActiveOrder());
+                    customerConnection.on('OrderStartedPreparing', () => {
+                        checkActiveOrder();
+                        Swal.fire({
+                            icon: 'info',
+                            title: '👨‍🍳 BẾP ĐANG CHẾ BIẾN!',
+                            text: 'Đơn hàng của bạn đã được bếp bắt đầu chế biến. Vui lòng chờ nhé!',
+                            timer: 5000,
+                            showConfirmButton: false,
+                            background: '#fff'
+                        });
+                    });
 
                     customerConnection.on('OrderReady', () => {
                         checkActiveOrder();
                         Swal.fire({
                             icon: 'success',
                             title: '🌟 MÓN ĂN ĐÃ XONG!',
-                            text: 'Món của bạn đã hoàn thành. Vui lòng chờ phục vụ bưng đến nhé!',
+                            text: 'Tất cả món của bạn đã hoàn thành. Vui lòng chờ phục vụ bưng đến nhé!',
                             timer: 8000,
                             showConfirmButton: true,
                             confirmButtonText: 'Tuyệt vời',

@@ -7,8 +7,8 @@
 
 <link rel="stylesheet" href="~/css/kitchen/board.css" asp-append-version="true" />
 <style>
-    /* Admin specific tweaks for read-only view */
-    .btn-action { display: none !important; }
+    /* Admin: read-only — hide all action buttons */
+    .btn-action, .btn-batch, .btn-item { display: none !important; }
     .kitchen-card { cursor: default; }
 </style>
 
@@ -47,52 +47,73 @@
             } catch (err) { console.error(err); }
         }
 
+        function groupByTable(items) {
+            const groups = {};
+            items.forEach(item => {
+                const key = item.orderCode;
+                if (!groups[key]) {
+                    groups[key] = { orderCode: item.orderCode, tableNumber: item.tableNumber, items: [] };
+                }
+                groups[key].items.push(item);
+            });
+            return Object.values(groups);
+        }
+
         function renderItems(items) {
             const columns = {
                 'pending': document.getElementById('list-pending'),
                 'preparing': document.getElementById('list-preparing'),
                 'ready': document.getElementById('list-ready')
             };
-            const counts = {
-                'pending': document.getElementById('count-pending'),
-                'preparing': document.getElementById('count-preparing'),
-                'ready': document.getElementById('count-ready')
-            };
-
             Object.values(columns).forEach(el => el.innerHTML = '');
             const stats = { 'pending': 0, 'preparing': 0, 'ready': 0 };
 
             items.forEach(item => {
-                const status = (item.status || 'pending').toLowerCase();
-                if (!columns[status]) return;
-
-                stats[status]++;
-                const card = document.createElement('div');
-                card.className = 'kitchen-card';
-                card.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                        <span class="table-badge">BÀN ${item.tableNumber || '?'}</span>
-                        <span class="order-code">ORD-${item.orderCode?.substring(0,8) || '????'}</span>
-                    </div>
-                    <div class="dish-name">${item.dishName || 'Món ăn'}</div>
-                    ${item.note ? `<div class="dish-note"><i class="fa-solid fa-comment-dots"></i> ${item.note}</div>` : ''}
-                    <div class="dish-meta">
-                        <div class="dish-qty">x${item.quantity}</div>
-                        <div style="text-align: right; font-size: 0.7rem; color: #94a3b8; font-weight: 600;">
-                            ${status === 'ready' ? 'Chờ bưng món...' : 'Đang xử lý...'}
-                        </div>
-                    </div>
-                `;
-                columns[status].appendChild(card);
+                const s = (item.status || 'pending').toLowerCase();
+                if (stats[s] !== undefined) stats[s]++;
             });
 
-            Object.keys(stats).forEach(k => counts[k].innerText = stats[k]);
+            ['pending', 'preparing', 'ready'].forEach(status => {
+                const statusItems = items.filter(i => (i.status || 'pending').toLowerCase() === status);
+                const groups = groupByTable(statusItems);
+
+                groups.forEach(group => {
+                    const card = document.createElement('div');
+                    card.className = 'kitchen-card';
+                    card.innerHTML = `
+                        <div class="table-group-header">
+                            <div class="table-group-info">
+                                <span class="table-badge">BÀN ${group.tableNumber || '?'}</span>
+                                <span class="order-code">${group.orderCode.substring(0,8)}</span>
+                                <span class="item-count-badge">${group.items.length} món</span>
+                            </div>
+                        </div>
+                        <div class="table-group-items">
+                            ${group.items.map(item => `
+                                <div class="table-group-item">
+                                    <div class="item-info">
+                                        <span class="dish-name-sm">${item.dishName}</span>
+                                        ${item.note ? `<span class="dish-note-sm"><i class="fa-solid fa-comment-dots"></i> ${item.note}</span>` : ''}
+                                    </div>
+                                    <div class="item-actions">
+                                        <span class="dish-qty-sm">x${item.quantity}</span>
+                                        <span class="status-done"><i class="fa-solid fa-${status === 'ready' ? 'check' : status === 'preparing' ? 'fire' : 'clock'}"></i></span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    columns[status].appendChild(card);
+                });
+            });
+
+            document.getElementById('count-pending').innerText = stats.pending;
+            document.getElementById('count-preparing').innerText = stats.preparing;
+            document.getElementById('count-ready').innerText = stats.ready;
         }
 
-        // Add real-time update listener
         window.onNewOrder = () => loadKitchenItems();
-
-        setInterval(loadKitchenItems, 10000); // Polling as fallback
+        setInterval(loadKitchenItems, 10000);
         window.addEventListener('DOMContentLoaded', loadKitchenItems);
     </script>
 }

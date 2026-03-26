@@ -23,6 +23,12 @@
             <div id="payment-status"></div>
         </div>
 
+        <div id="batch-serve-bar" style="display: none; margin-bottom: 15px;">
+            <button id="btn-serve-all" onclick="serveAll()" class="btn-serve" style="width: 100%; padding: 14px; font-size: 0.95rem; border-radius: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <i class="fa-solid fa-check-double"></i> GIAO TẤT CẢ
+            </button>
+        </div>
+
         <div id="items-list" style="display: flex; flex-direction: column; gap: 15px;">
             <div style="text-align:center; padding: 40px; color: #ccc;">
                 <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
@@ -219,6 +225,16 @@
                 `;
             }).join('');
 
+            // Show batch serve button if multiple items are ready
+            const readyItems = order.items.filter(i => i.status.toLowerCase() === 'ready');
+            const batchBar = document.getElementById('batch-serve-bar');
+            if (readyItems.length > 1) {
+                batchBar.style.display = 'block';
+                document.getElementById('btn-serve-all').setAttribute('data-ids', JSON.stringify(readyItems.map(i => i.id)));
+            } else {
+                batchBar.style.display = 'none';
+            }
+
             document.getElementById('order-total').innerText =
                 (order.totalAmount || 0).toLocaleString('vi-VN') + ' ₫';
         }
@@ -226,6 +242,18 @@
         async function serveItem(itemId) {
             const res = await apiClient.updateItemStatus(itemId, 'served');
             if (res && res.ok) loadOrder();
+        }
+
+        async function serveAll() {
+            const btn = document.getElementById('btn-serve-all');
+            const ids = JSON.parse(btn.getAttribute('data-ids') || '[]');
+            if (!ids.length) return;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang giao...';
+            for (const id of ids) {
+                await apiClient.updateItemStatus(id, 'served');
+            }
+            loadOrder();
         }
 
         async function checkoutOrder(orderId) {
