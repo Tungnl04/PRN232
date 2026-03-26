@@ -4,6 +4,7 @@ using FoodQR.API.Core.Interfaces;
 using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using FoodQR.API.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,6 +78,8 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
 app.UseMiddleware<FoodQR.API.Application.Middleware.ExceptionHandlingMiddleware>();
@@ -96,5 +99,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<OrderHub>("/hubs/order");
 
 app.Run();

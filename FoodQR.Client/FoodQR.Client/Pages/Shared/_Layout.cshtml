@@ -44,6 +44,7 @@
         <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.8rem;"></i>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         const apiBase = "@(Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7197/api")";
@@ -98,7 +99,38 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             setTimeout(checkActiveOrder, 500);
-            setInterval(checkActiveOrder, 15000);
+
+            // === SignalR Connection (Customer) ===
+            const tableIdStr = document.getElementById('current-table').innerText;
+            const tId = parseInt(tableIdStr);
+            if (!isNaN(tId) && tId > 0) {
+                const customerConnection = new signalR.HubConnectionBuilder()
+                    .withUrl('https://localhost:7197/hubs/order')
+                    .withAutomaticReconnect()
+                    .build();
+
+                customerConnection.on('ItemStatusChanged', () => {
+                    checkActiveOrder();
+                });
+
+                customerConnection.on('OrderReady', () => {
+                    checkActiveOrder();
+                    Swal.fire({
+                        icon: 'success',
+                        title: '🌟 Món đã sẵn sàng!',
+                        text: 'Món của bạn đã hoàn thành. Vui lòng chờ phục vụ!',
+                        timer: 5000,
+                        showConfirmButton: false
+                    });
+                });
+
+                customerConnection.start()
+                    .then(() => {
+                        console.log('✅ SignalR connected (Customer)');
+                        customerConnection.invoke('JoinGroup', `table_${tId}`);
+                    })
+                    .catch(err => console.error('SignalR Error:', err));
+            }
         });
     </script>
     @await RenderSectionAsync("Scripts", required: false)
