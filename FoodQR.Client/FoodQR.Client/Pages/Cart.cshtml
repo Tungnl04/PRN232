@@ -204,10 +204,14 @@
 
             Swal.fire({ title: 'Confirming Order...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('token');
+
             const orderData = {
                 customerName:  name,
                 customerEmail: email,
                 tableId:       tableId,
+                token:         token,
                 items: cart.map(item => ({
                     productId: item.isCombo ? null : item.id,
                     comboId:   item.isCombo ? item.id : null,
