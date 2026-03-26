@@ -276,8 +276,8 @@ sequenceDiagram
 <div class="alert alert-info">
 <b>Quy tắc phân chia:</b><br>
 • <b>Dev 1 (bạn)</b> — Backend: sửa Service, logic, database<br>
-• <b>Dev 2</b> — SignalR + Thanh toán VNPay<br>
-• <b>Dev 3</b> — Giao diện (Razor Pages)
+• <b>Dev 2</b> — SignalR<br>
+• <b>Dev 3</b> — Giao diện (Razor Pages) + VNPay
 </div>
 
 <div class="legend">
@@ -298,15 +298,14 @@ gantt
     Exception Handler + DTOs + Combo fix :d1b, 2026-03-27, 1d
     Chuyển bàn + Served + Báo cáo       :d1c, 2026-03-28, 1d
 
-    section Dev 2 - Realtime + Payment
+    section Dev 2 - Realtime
     Sửa CORS + Auth fixes               :d2a, 2026-03-26, 1d
     SignalR Hub setup                    :d2b, 2026-03-27, 1d
-    VNPay Sandbox                        :d2c, 2026-03-28, 1d
 
     section Dev 3 - UI Client
     Menu + Cart + Combo Admin UI         :d3a, 2026-03-26, 1d
     Kitchen + Staff realtime UI          :d3b, 2026-03-27, 1d
-    Payment UI + Reports + Polish        :d3c, 2026-03-28, 1d
+    VNPay + UI Payment + Reports     :d3c, 2026-03-28, 1d
 </div>
 
 <h3>5.2 Ai Phải Đợi Ai?</h3>
@@ -324,14 +323,12 @@ flowchart LR
         D3B["🟢 Dev3: UI realtime"]
     end
 
-    subgraph "NGÀY 3 - Dev3 cần đợi cả Dev1 + Dev2"
+    subgraph "NGÀY 3 - Dev3 cần đợi Dev1"
         D1C["🔵 Dev1: API mới"]
-        D2C["🟠 Dev2: VNPay"]
-        D3C["🟢 Dev3: UI thanh toán + reports"]
+        D3C["🟢 Dev3: VNPay + UI Thanh toán"]
     end
 
     D2B -->|"Dev3 cần SignalR Hub ready"| D3B
-    D2C -->|"Dev3 cần VNPay API ready"| D3C
     D1C -->|"Dev3 cần API báo cáo ready"| D3C
 </div>
 
@@ -425,23 +422,21 @@ flowchart LR
 </div>
 
 <div class="dev-card dev2">
-<h4>🟠 Dev 2 — VNPay (~7h)</h4>
+<h4>🟠 Dev 2 — Thử nghiệm SignalR (~2h)</h4>
 <table>
 <tr><th>Việc</th><th>Chi tiết</th><th>~Giờ</th><th>Phụ thuộc</th></tr>
-<tr><td>FEAT-2a</td><td>Tích hợp VNPay Sandbox: tạo link thanh toán</td><td>3.5h</td><td><span class="parallel">🟦 Song song</span></td></tr>
-<tr><td>FEAT-2b</td><td>Nhận callback từ VNPay → cập nhật đơn hàng</td><td>2h</td><td><span class="sequential">🟧 Sau FEAT-2a</span></td></tr>
-<tr><td>—</td><td>Test toàn bộ flow: đặt món → nấu → thanh toán</td><td>1.5h</td><td><span class="sequential">🟧 Cuối ngày</span></td></tr>
+<tr><td>—</td><td>Kiểm thử kết nối SignalR toàn diện</td><td>2h</td><td><span class="sequential">🟧 Sau Ngày 2</span></td></tr>
 </table>
 </div>
 
 <div class="dev-card dev3">
-<h4>🟢 Dev 3 — UI hoàn thiện (~7h)</h4>
+<h4>🟢 Dev 3 — VNPay & UI hoàn thiện (~9h)</h4>
 <table>
 <tr><th>Việc</th><th>Chi tiết</th><th>~Giờ</th><th>Phụ thuộc</th></tr>
-<tr><td>FEAT-7e</td><td>UI thanh toán VNPay (hiện QR, tự detect thành công)</td><td>2.5h</td><td><span class="blocked">🟥 Đợi Dev2 FEAT-2a</span></td></tr>
-<tr><td>FEAT-7f</td><td>Nút "Đã bưng" + trang báo cáo doanh thu</td><td>2h</td><td><span class="blocked">🟥 Đợi Dev1 FEAT-4 + FEAT-6</span></td></tr>
-<tr><td>—</td><td>Chỉnh sửa giao diện đẹp, responsive</td><td>1.5h</td><td><span class="parallel">🟦 Song song</span></td></tr>
-<tr><td>—</td><td>Test tổng hợp cả nhóm</td><td>1h</td><td><span class="sequential">🟧 Cuối ngày</span></td></tr>
+<tr><td>FEAT-2a</td><td>Tích hợp VNPay Sandbox (Backend IPN & Webhook)</td><td>3.5h</td><td><span class="parallel">🟦 Song song</span></td></tr>
+<tr><td>FEAT-7e</td><td>UI thanh toán VNPay (hiện QR, tự detect thành công)</td><td>2.5h</td><td><span class="sequential">🟧 Đợi FEAT-2a</span></td></tr>
+<tr><td>FEAT-7f</td><td>Nút "Đã bưng" + trang báo cáo doanh thu</td><td>2h</td><td><span class="blocked">🟥 Đợi Dev1 API</span></td></tr>
+<tr><td>—</td><td>Test tổng hợp toàn bộ flow thanh toán</td><td>1h</td><td><span class="sequential">🟧 Cuối ngày</span></td></tr>
 </table>
 </div>
 
@@ -455,9 +450,9 @@ flowchart LR
 - <b>Điểm nối (Hook):</b> Nhúng (Inject) <code>IHubContext</code> vào bên trong các Service của Dev 1 (OrderService, KitchenService, PaymentService).<br>
 - <i>Ví dụ:</i> Khi <code>CreateOrAppendOrderAsync</code> xong → Gọi Hub bắn tin báo cho Bếp "Có đơn mới!".<br><br>
 
-<b>2. Tích hợp VNPay Sandbox:</b><br>
-- Xây dựng luồng tạo URL VNPay và tạo Webhook nhận Callback.<br>
-- <b>Điểm nối (Hook):</b> Khi VNPay báo thanh toán thành công → Gọi <b>thẳng API</b> <code>_paymentService.ProcessPaymentAsync(orderId, "vnpay", true)</code>. Bàn sẽ tự tự nhảy sang <code>Cleaning</code>.<br><br>
+<b>2. Bàn giao VNPay cho Dev 3:</b><br>
+- Nhiệm vụ tích hợp VNPay (FEAT-2a, FEAT-2b) đã được chuyển giao cho Dev 3.<br>
+- Dev 2 chỉ tập trung làm SignalR cho đến khi chạy Realtime hoàn hảo.<br><br>
 
 <b>3. API Tạo QR Động (FEAT-8):</b><br>
 - Viết logic sinh Token ngẫu nhiên gán vào cột <code>QrCodeToken</code> của bảng OrderTables.<br>
@@ -468,10 +463,11 @@ flowchart LR
 <h4>🟢 DEV 3: VẼ GIAO DIỆN (UI/UX) - CỦA ĐỂ DÀNH CHO PROMPT AI</h4>
 <i>Mẹo Prompt AI: "Tôi đang làm Giao diện bằng Razor Pages kết nối tới API Backend có sẵn. Dùng CSS hiện đại..."</i><br><br>
 
-<b>1. Dashboad Bàn & Thanh toán (Staff):</b><br>
-- Gọi <code>GET /api/Tables</code>.<br>
+<b>1. Dashboad Bàn & Thanh toán (Staff) & TÍCH HỢP VNPAY:</b><br>
+- Tích hợp <b>VNPay Sandbox Backend:</b> Tạo file Webhook nhận Callback từ VNPay <code>GET/POST /api/webhooks/vnpay</code>. Khi VNPay báo thành công → Gọi <code>_paymentService.ProcessPaymentAsync(..)</code> để đổi trạng thái bàn thành Cleaning.<br>
+- <b>Giao diện Staff:</b> Gọi <code>GET /api/Tables</code>.<br>
 - Bàn có Status <code>Cleaning</code> (Vàng) → Thêm nút <b>[Dọn xong]</b> gọi <code>PATCH /api/Tables/{id}/status</code> với body <code>"available"</code>.<br>
-- Nút "Checkout" KHÔNG được phép đổi status bàn thành available nữa, mà gọi luồng thanh toán VNPay.<br><br>
+- Nút "Checkout" mở trang quét mã QR VNPay.<br><br>
 
 <b>2. Màn hình Bếp & Việc bưng bê (Staff/Kitchen):</b><br>
 - Dùng CSS Grid Kanban 3 cột: Pending, Preparing, Ready (Gọi <code>GET /api/Kitchen/items</code>).<br>
@@ -516,8 +512,8 @@ gitGraph
 <table>
 <tr><th>Dev</th><th>Chỉ được sửa</th><th>Không đụng vào</th></tr>
 <tr><td><b>🔵 Dev 1</b></td><td><code>Application/Services/</code>, <code>Core/</code>, <code>Infrastructure/</code></td><td>Hubs/, Client/</td></tr>
-<tr><td><b>🟠 Dev 2</b></td><td><code>Hubs/</code> (mới), <code>Webhooks/</code> (mới), <code>Program.cs</code></td><td>Services/, Client/</td></tr>
-<tr><td><b>🟢 Dev 3</b></td><td><code>FoodQR.Client/</code> (toàn bộ)</td><td>API project</td></tr>
+<tr><td><b>🟠 Dev 2</b></td><td><code>Hubs/</code> (mới), <code>Program.cs</code></td><td>Services/, Client/</td></tr>
+<tr><td><b>🟢 Dev 3</b></td><td><code>FoodQR.Client/</code> (toàn bộ), <code>Webhooks/</code> (mới)</td><td>API project</td></tr>
 </table>
 
 <h3>Cách merge (bạn là người merge)</h3>
