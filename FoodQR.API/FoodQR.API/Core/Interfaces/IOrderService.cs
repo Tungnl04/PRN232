@@ -11,5 +11,6 @@ namespace FoodQR.API.Core.Interfaces
         Task<object> GetDashboardStatsAsync();
         Task<bool> CancelOrderAsync(int orderId, string? reason);
         Task<bool> CancelOrderItemAsync(int orderItemId, string? reason);
+        Task<bool> SwitchTableAsync(int orderId, int newTableId);
     }
 }

@@ -1,3 +1,4 @@
+using FoodQR.API.Application.DTOs;
 using FoodQR.API.Core.Entities;
 using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -19,9 +20,9 @@ namespace FoodQR.API.Controllers
 
         [AllowAnonymous]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProducts(int? categoryId, bool? onlyAvailable)
+        public async Task<ActionResult<IEnumerable<ProductResponseDto>>> GetProducts(int? categoryId, bool? onlyAvailable)
         {
-            IQueryable<Product> query = _context.Products;
+            IQueryable<Product> query = _context.Products.Include(p => p.Category);
             
             if (onlyAvailable == true)
             {
@@ -33,16 +34,39 @@ namespace FoodQR.API.Controllers
                 query = query.Where(p => p.CategoryId == categoryId);
             }
 
-            return await query.ToListAsync();
+            var products = await query.ToListAsync();
+            return products.Select(p => new ProductResponseDto
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Description = p.Description,
+                Price = p.Price,
+                ImageUrl = p.ImageUrl,
+                Inventory = p.Inventory,
+                CategoryId = p.CategoryId,
+                CategoryName = p.Category?.Name,
+                IsAvailable = p.IsAvailable
+            }).ToList();
         }
 
         [AllowAnonymous]
         [HttpGet("{id}")]
-        public async Task<ActionResult<Product>> GetProduct(int id)
+        public async Task<ActionResult<ProductResponseDto>> GetProduct(int id)
         {
-            var product = await _context.Products.Include(p => p.Category).FirstOrDefaultAsync(p => p.Id == id);
-            if (product == null) return NotFound();
-            return product;
+            var p = await _context.Products.Include(p => p.Category).FirstOrDefaultAsync(x => x.Id == id);
+            if (p == null) return NotFound();
+            return new ProductResponseDto
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Description = p.Description,
+                Price = p.Price,
+                ImageUrl = p.ImageUrl,
+                Inventory = p.Inventory,
+                CategoryId = p.CategoryId,
+                CategoryName = p.Category?.Name,
+                IsAvailable = p.IsAvailable
+            };
         }
 
         [Authorize(Roles = "admin")]
