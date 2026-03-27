@@ -338,6 +338,49 @@ Trừ kho không lock → 2 khách đặt cùng lúc có thể vượt số lư�
 2. <b>Thêm UI & Luồng đơn giản</b>: Button in Bill (in nhiệt Web), thêm trang đổi bàn, xoá món cho Staff.<br>
 </div>
 
+<!-- ==================== PHẦN 6: PHÂN CÔNG ==================== -->
+<h2 class="page-break">👥 Phần 6: Phân Công Công Việc (27/03/2026)</h2>
+
+<div class="alert alert-info">
+<b>📌 Nguyên tắc:</b> 3 người làm song song, không conflict file. Người 1 push P0 trước sớm nhất có thể.
+</div>
+
+<h3>👤 Người 1 — Bảo Mật + Backend (~1.5h)</h3>
+<table>
+<tr><th>#</th><th>Mã</th><th>Công việc</th><th>File</th><th>Thời gian</th></tr>
+<tr><td>1</td><td><span class="tag-red">SEC-01</span></td><td>Siết CORS — chỉ allow localhost + Azure domain</td><td><code>Program.cs</code></td><td>10p</td></tr>
+<tr><td>2</td><td><span class="tag-red">SEC-02</span></td><td>Bỏ <code>[AllowAnonymous]</code> trên <code>CancelOrderItem</code></td><td><code>OrdersController.cs</code></td><td>10p</td></tr>
+<tr><td>3</td><td><span class="tag-red">SEC-03</span></td><td>Bỏ <code>[AllowAnonymous]</code> trên <code>CreateNotification</code></td><td><code>NotificationsController.cs</code></td><td>5p</td></tr>
+<tr><td>4</td><td><span class="tag-red">SEC-04</span></td><td>Ẩn <code>QrCodeToken</code> khỏi API public <code>GET /Tables</code></td><td><code>TablesController.cs</code></td><td>15p</td></tr>
+<tr><td>5</td><td><span class="tag-yellow">SEC-07</span></td><td>Validate <code>UpdateTableStatus</code> → chỉ chấp nhận <code>TableStatus</code> enum</td><td><code>TablesController.cs</code></td><td>10p</td></tr>
+<tr><td>6</td><td><span class="tag-yellow">CS-04</span></td><td>Wrap <code>Transaction</code> cho <code>OrderService.CreateOrderAsync</code></td><td><code>OrderService.cs</code></td><td>20p</td></tr>
+<tr><td>7</td><td><span class="tag-yellow">SEC-06</span></td><td><code>GetActiveOrderByTable</code> yêu cầu QR token xác thực</td><td><code>OrdersController.cs</code></td><td>20p</td></tr>
+</table>
+
+<h3>👤 Người 2 — UI Staff (~1.5h)</h3>
+<table>
+<tr><th>#</th><th>Mã</th><th>Công việc</th><th>File</th><th>Thời gian</th></tr>
+<tr><td>1</td><td><span class="tag-green">UI-01</span></td><td>Nút <b>Chuyển bàn</b> — popup chọn bàn trống → <code>PATCH /Orders/{id}/table/{newTableId}</code></td><td><code>Staff/OrderDetails.cshtml</code></td><td>30p</td></tr>
+<tr><td>2</td><td><span class="tag-green">UI-02</span></td><td>Nút <b>Hủy đơn</b> — confirm SweetAlert → <code>DELETE /Orders/{id}</code></td><td><code>Staff/OrderDetails.cshtml</code></td><td>20p</td></tr>
+<tr><td>3</td><td><span class="tag-green">UI-04</span></td><td>Nút <b>In bill</b> — <code>window.print()</code> với CSS print-friendly</td><td><code>Staff/OrderDetails.cshtml</code></td><td>20p</td></tr>
+</table>
+
+<h3>👤 Người 3 — UI Admin + Notification (~1.5h)</h3>
+<table>
+<tr><th>#</th><th>Mã</th><th>Công việc</th><th>File</th><th>Thời gian</th></tr>
+<tr><td>1</td><td><span class="tag-green">UI-03</span></td><td>Biểu đồ <b>Top sản phẩm</b> bán chạy (Chart.js + <code>GET /Orders/reports/top-products</code>)</td><td><code>Admin/Reports.cshtml</code></td><td>30p</td></tr>
+<tr><td>2</td><td><span class="tag-green">UI-03b</span></td><td>Biểu đồ <b>Doanh thu theo danh mục</b> (<code>GET /Orders/reports/category-sales</code>)</td><td><code>Admin/Reports.cshtml</code></td><td>30p</td></tr>
+<tr><td>3</td><td><span class="tag-green">UI-05</span></td><td>Notification <b>Đã đọc</b> — bell icon + lịch sử + <code>PATCH /Notifications/{id}/read</code></td><td><code>Staff/_Layout.cshtml</code></td><td>30p</td></tr>
+</table>
+
+<div class="alert alert-warning" style="margin-top: 20px;">
+<b>⏭️ Nếu còn thời gian (Nice-to-have):</b><br>
+• <b>SEC-08:</b> QR Token Expiry — thêm cột <code>QrTokenExpiry</code> (Người 1)<br>
+• <b>SEC-09:</b> Optimistic Concurrency cho inventory (Người 1)<br>
+• <b>CS-01:</b> GetOrder trả DTO thay Entity (Người 1)<br>
+• Dashboard realtime SignalR thay polling (Người 3)
+</div>
+
 </div>
 
 <script>mermaid.initialize({startOnLoad:true,theme:'dark',securityLevel:'loose'});</script>
