@@ -24,14 +24,13 @@ namespace FoodQR.API.Controllers
         public async Task<ActionResult<IEnumerable<TableResponseDto>>> GetTables()
         {
             var tables = await _context.OrderTables.ToListAsync();
-            bool isStaffOrAdmin = User.IsInRole("staff") || User.IsInRole("admin");
             return tables.Select(t => new TableResponseDto
             {
                 Id = t.Id,
                 TableNumber = t.TableNumber,
                 Capacity = t.Capacity,
                 Status = t.Status,
-                QrCodeToken = isStaffOrAdmin ? t.QrCodeToken : null, // SEC-04: Ẩn token khỏi public
+                QrCodeToken = t.QrCodeToken,
                 Location = t.Location
             }).ToList();
         }
