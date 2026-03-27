@@ -29,10 +29,21 @@ namespace FoodQR.API.Controllers
             if (orderDto.TableId <= 0) return BadRequest("Table ID is required.");
             if (orderDto.Items == null || !orderDto.Items.Any()) return BadRequest("Order must have at least one item.");
 
-            var order = await _orderService.CreateOrAppendOrderAsync(orderDto);
-            if (order == null) return BadRequest("Could not create order.");
+            try
+            {
+                var order = await _orderService.CreateOrAppendOrderAsync(orderDto);
+                if (order == null) return BadRequest("Could not create order.");
 
-            return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
+                return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Error = ex.Message });
+            }
         }
 
         [Authorize(Roles = "staff,admin")]

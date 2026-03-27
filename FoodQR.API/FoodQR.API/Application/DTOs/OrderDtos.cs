@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace FoodQR.API.Application.DTOs
 {
     public class OrderCreateDto
@@ -13,6 +15,7 @@ namespace FoodQR.API.Application.DTOs
     {
         public int? ProductId { get; set; }
         public int? ComboId { get; set; }
+        [Range(1, 100, ErrorMessage = "Số lượng phải lớn hơn 0")]
         public int Quantity { get; set; }
         public string? Note { get; set; }
     }

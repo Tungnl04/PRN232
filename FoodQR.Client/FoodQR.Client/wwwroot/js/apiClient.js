@@ -111,6 +111,21 @@ const apiClient = (function() {
             return res && res.ok ? res.json() : null;
         },
         // ORDERS
+        async switchTable(orderId, newTableId) {
+            return await authorizedFetch(`/Orders/${orderId}/table/${newTableId}`, {
+                method: 'PATCH'
+            });
+        },
+        async cancelOrder(orderId, reason) {
+            return await authorizedFetch(`/Orders/${orderId}?reason=${encodeURIComponent(reason)}`, {
+                method: 'DELETE'
+            });
+        },
+        async cancelOrderItem(itemId, reason) {
+            return await authorizedFetch(`/Orders/items/${itemId}?reason=${encodeURIComponent(reason)}`, {
+                method: 'DELETE'
+            });
+        },
         async getActiveOrder(tableId, token) {
             const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
             const res = await authorizedFetch(`/Orders/active/${tableId}${tokenParam}`);

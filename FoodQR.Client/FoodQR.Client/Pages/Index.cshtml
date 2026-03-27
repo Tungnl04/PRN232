@@ -189,6 +189,15 @@
         function addToCart(item, isCombo = false) {
             const itemId = isCombo ? `combo_${item.Id}` : item.Id;
             const existing = cart.find(i => i.cartId === itemId);
+            const newQty = existing ? existing.quantity + 1 : 1;
+            
+            const maxInv = item.Inventory !== undefined ? item.Inventory : item.inventory;
+            if (maxInv !== undefined && maxInv !== null) {
+                if (newQty > maxInv) {
+                    Swal.fire({ icon: 'warning', title: 'Hết hàng', text: `Chỉ còn ${maxInv} phần trong kho.` });
+                    return;
+                }
+            }
 
             if (existing) {
                 existing.quantity += 1;
@@ -200,6 +209,7 @@
                     name:     item.Name,
                     price:    item.Price,
                     imageUrl: item.ImageUrl,
+                    inventory: maxInv,
                     quantity: 1
                 });
             }

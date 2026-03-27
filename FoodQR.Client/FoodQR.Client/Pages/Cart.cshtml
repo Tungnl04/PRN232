@@ -225,8 +225,22 @@
         }
 
         function updateQty(index, delta) {
-            cart[index].quantity += delta;
-            if (cart[index].quantity <= 0) cart.splice(index, 1);
+            const currentItem = cart[index];
+            const newQty = currentItem.quantity + delta;
+            
+            const maxInv = currentItem.inventory !== undefined ? currentItem.inventory : currentItem.Inventory;
+            if (delta > 0 && maxInv !== undefined && maxInv !== null) {
+                if (newQty > maxInv) {
+                    Swal.fire({
+                        icon: 'warning', title: 'Vượt quá số lượng', 
+                        text: `Chỉ còn ${maxInv} phần trong kho.`
+                    });
+                    return;
+                }
+            }
+
+            currentItem.quantity = newQty;
+            if (currentItem.quantity <= 0) cart.splice(index, 1);
             localStorage.setItem('food_cart', JSON.stringify(cart));
             renderCart();
         }
@@ -279,10 +293,12 @@
                     localStorage.removeItem('food_cart');
                     window.location.href = `/OrderSuccess?orderId=${result.id}&tableId=${tableId}&orderCode=${result.orderCode}${token ? '&token=' + token : ''}`;
                 } else {
-                    throw new Error('Failed');
+                    const errObj = await response.json().catch(() => ({}));
+                    throw errObj;
                 }
-            } catch {
-                Swal.fire({ icon: 'error', title: 'Lỗi gửi đơn', text: 'Có lỗi xảy ra. Vui lòng thử lại hoặc nhờ nhân viên hỗ trợ.' });
+            } catch (err) {
+                const message = err.error || err.Error || 'Có lỗi xảy ra. Vui lòng thử lại hoặc nhờ nhân viên hỗ trợ.';
+                Swal.fire({ icon: 'error', title: 'Lỗi gửi đơn', text: message });
             }
         }
 
