@@ -79,10 +79,18 @@
 
         function goToTracking() {
             const orderId = localStorage.getItem('food_active_order_id');
-            const tableId = parseInt(document.getElementById('hidden-table-id').value);
-            const token = new URLSearchParams(window.location.search).get('token');
+            let tableId = parseInt(document.getElementById('hidden-table-id').value);
+            let token = new URLSearchParams(window.location.search).get('token') || localStorage.getItem('food_qr_token') || '';
+
+            // Fallback: lấy tableId từ localStorage nếu hidden input chưa cập nhật
+            if (tableId <= 0) {
+                tableId = parseInt(localStorage.getItem('food_table_id') || '0');
+            }
+
             if (orderId && tableId > 0) {
                 window.location.href = `/OrderTracking?orderId=${orderId}&tableId=${tableId}${token ? '&token=' + token : ''}`;
+            } else if (orderId) {
+                window.location.href = `/OrderTracking?orderId=${orderId}${token ? '&token=' + token : ''}`;
             }
         }
 
@@ -133,6 +141,8 @@
 
                 const order = await response.json();
                 localStorage.setItem('food_active_order_id', order.id);
+                localStorage.setItem('food_table_id', tableId.toString());
+                if (qrToken) localStorage.setItem('food_qr_token', qrToken);
 
                 const status = (order.status || "").toLowerCase();
                 if (['paid', 'cancelled', 'rejected', 'completed'].includes(status)) {
