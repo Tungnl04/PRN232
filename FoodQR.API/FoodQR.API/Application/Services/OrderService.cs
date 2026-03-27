@@ -289,8 +289,23 @@ namespace FoodQR.API.Application.Services
                 .SumAsync(o => o.TotalAmount ?? 0);
             var activeTables = await _context.OrderTables
                 .CountAsync(t => t.Status == TableStatus.Taken);
+            var availableTables = await _context.OrderTables
+                .CountAsync(t => t.Status == TableStatus.Available);
+            var cleaningTables = await _context.OrderTables
+                .CountAsync(t => t.Status == TableStatus.Cleaning);
 
-            return new { totalOrders, totalRevenue, activeTables };
+            var today = DateTime.Today;
+            var todayOrders = await _context.Orders
+                .Where(o => o.CreatedAt >= today)
+                .ToListAsync();
+
+            var hourlyTraffic = todayOrders
+                .Where(o => o.CreatedAt.HasValue)
+                .GroupBy(o => o.CreatedAt.Value.Hour)
+                .Select(g => new { hour = g.Key, count = g.Count() })
+                .ToList();
+
+            return new { totalOrders, totalRevenue, activeTables, availableTables, cleaningTables, hourlyTraffic = hourlyTraffic };
         }
 
         public async Task<bool> CancelOrderAsync(int orderId, string? reason)

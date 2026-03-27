@@ -71,7 +71,24 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        const apiBaseUrl = "@(ViewData["ApiBaseUrl"])" || (window.location.hostname.includes('localhost') ? "https://localhost:7197/api" : "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api");
+        const apiBaseUrlDashboard = "@(ViewData["ApiBaseUrl"])" || (window.location.hostname.includes('localhost') ? "https://localhost:7197/api" : "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api");
+
+        window.onNewOrder = (data) => {
+            console.log('Realtime update: NewOrderReceived via window.onNewOrder', data);
+            loadDashboard(); // Refresh stats and lists
+        };
+        
+        if (typeof connection !== 'undefined') {
+            connection.on('OrderUpdated', (data) => {
+                console.log('Realtime update: OrderUpdated', data);
+                loadDashboard(); // Refresh stats and lists
+            });
+            
+            connection.on('TableStatusChanged', (data) => {
+                console.log('Realtime update: TableStatusChanged');
+                loadDashboard();
+            });
+        }
 
         async function loadDashboard() {
             try {
@@ -107,14 +124,19 @@
             }
         }
 
+        let dashboardCharts = {};
+
         function renderHealthCharts(stats) {
+            if (dashboardCharts.tableStatus) dashboardCharts.tableStatus.destroy();
+            if (dashboardCharts.traffic) dashboardCharts.traffic.destroy();
+
             // Table Status Distribution (Doughnut)
-            new Chart(document.getElementById('tableStatusChart'), {
+            dashboardCharts.tableStatus = new Chart(document.getElementById('tableStatusChart'), {
                 type: 'doughnut',
                 data: {
                     labels: ['Bàn trống', 'Có khách', 'Chờ dọn'],
                     datasets: [{
-                        data: [stats.availableTables, stats.activeTables, stats.cleaningTables],
+                        data: [stats.availableTables || 0, stats.activeTables || 0, stats.cleaningTables || 0],
                         backgroundColor: ['#e6fffa', '#ff4d4d', '#ebf8ff'],
                         borderColor: ['#047481', '#ff4d4d', '#2b6cb0'],
                         borderWidth: 1
@@ -130,12 +152,13 @@
 
             // Hourly Traffic (Bar)
             const hours = Array.from({length: 12}, (_, i) => i + 9); // 9 AM to 9 PM
+            const trafficList = stats.hourlyTraffic || [];
             const trafficData = hours.map(h => {
-                const found = stats.hourlyTraffic.find(t => t.hour === h);
+                const found = trafficList.find(t => t.hour === h);
                 return found ? found.count : 0;
             });
 
-            new Chart(document.getElementById('trafficChart'), {
+            dashboardCharts.traffic = new Chart(document.getElementById('trafficChart'), {
                 type: 'bar',
                 data: {
                     labels: hours.map(h => h + ':00'),

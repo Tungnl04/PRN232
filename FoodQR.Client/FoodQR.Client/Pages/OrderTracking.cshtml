@@ -156,7 +156,7 @@
 
         async function callStaff() {
             try {
-                const response = await fetch(`${apiBaseUrl}/Notifications`, {
+                const response = await fetch(`${apiBaseUrl}/Notifications/call-staff`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
