@@ -82,30 +82,41 @@
             const { value: formValues } = await Swal.fire({
                 title: 'Tạo mã giảm giá',
                 html: `
-                    <div style="text-align: left; font-size: 0.9em;">
-                        <label>Mã Coupon (Code)</label>
+                    <div style="text-align: left;">
+                        <label class="swal-label">Mã Coupon (Code)</label>
                         <input id="swal-code" class="swal2-input" style="text-transform:uppercase" placeholder="VD: TET50K">
                         
-                        <label>Loại giảm giá</label>
-                        <select id="swal-type" class="swal2-input">
-                            <option value="Percent">Phần trăm (%)</option>
-                            <option value="Fixed">Số tiền cứng (VNĐ)</option>
-                        </select>
+                        <div style="display: flex; gap: 15px;">
+                            <div style="flex: 1;">
+                                <label class="swal-label">Loại giảm giá</label>
+                                <select id="swal-type" class="swal2-select">
+                                    <option value="Percent">Phần trăm (%)</option>
+                                    <option value="Fixed">Số tiền cứng (VNĐ)</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1;">
+                                <label class="swal-label">Giá trị giảm</label>
+                                <input id="swal-value" type="number" class="swal2-input" placeholder="VD: 50 hoặc 50000">
+                            </div>
+                        </div>
                         
-                        <label>Giá trị giảm</label>
-                        <input id="swal-value" type="number" class="swal2-input" placeholder="VD: 50 (nếu chọn %), hoặc 50000">
+                        <div style="display: flex; gap: 15px;">
+                            <div style="flex: 1;">
+                                <label class="swal-label">Đơn tối thiểu bắt buộc</label>
+                                <input id="swal-min" type="number" class="swal2-input" value="0">
+                            </div>
+                            <div style="flex: 1;">
+                                <label class="swal-label">Giới hạn số lần dùng</label>
+                                <input id="swal-max" type="number" class="swal2-input" placeholder="Trống = vô hạn">
+                            </div>
+                        </div>
                         
-                        <label>Đơn tối thiểu bắt buộc</label>
-                        <input id="swal-min" type="number" class="swal2-input" value="0">
-                        
-                        <label>Giới hạn số lần dùng (Bỏ trống nếu vô hạn)</label>
-                        <input id="swal-max" type="number" class="swal2-input" placeholder="VD: 100">
-                        
-                        <label>Ngày hết hạn</label>
+                        <label class="swal-label">Ngày hết hạn (Không bắt buộc)</label>
                         <input id="swal-expiry" type="date" class="swal2-input">
                         
-                        <div style="margin-top:15px">
-                            <input type="checkbox" id="swal-active" checked> <label for="swal-active">Kích hoạt</label>
+                        <div class="swal2-checkbox-container">
+                            <input type="checkbox" id="swal-active" checked>
+                            <label for="swal-active">Trạng thái (Kích hoạt)</label>
                         </div>
                     </div>
                 `,
@@ -141,30 +152,41 @@
             const { value: formValues } = await Swal.fire({
                 title: 'Sửa mã giảm giá',
                 html: `
-                    <div style="text-align: left; font-size: 0.9em;">
-                        <label>Mã Coupon</label>
+                    <div style="text-align: left;">
+                        <label class="swal-label">Mã Coupon</label>
                         <input id="swal-code" class="swal2-input" style="text-transform:uppercase" value="${p.code}">
                         
-                        <label>Loại giảm giá</label>
-                        <select id="swal-type" class="swal2-input">
-                            <option value="Percent" ${p.discountType==='Percent'?'selected':''}>Phần trăm (%)</option>
-                            <option value="Fixed" ${p.discountType==='Fixed'?'selected':''}>Số tiền cứng (VNĐ)</option>
-                        </select>
+                        <div style="display: flex; gap: 15px;">
+                            <div style="flex: 1;">
+                                <label class="swal-label">Loại giảm giá</label>
+                                <select id="swal-type" class="swal2-select">
+                                    <option value="Percent" ${p.discountType==='Percent'?'selected':''}>Phần trăm (%)</option>
+                                    <option value="Fixed" ${p.discountType==='Fixed'?'selected':''}>Số tiền cứng</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1;">
+                                <label class="swal-label">Giá trị giảm</label>
+                                <input id="swal-value" type="number" class="swal2-input" value="${p.discountValue}">
+                            </div>
+                        </div>
                         
-                        <label>Giá trị giảm</label>
-                        <input id="swal-value" type="number" class="swal2-input" value="${p.discountValue}">
+                        <div style="display: flex; gap: 15px;">
+                            <div style="flex: 1;">
+                                <label class="swal-label">Đơn tối thiểu bắt buộc</label>
+                                <input id="swal-min" type="number" class="swal2-input" value="${p.minOrderAmount}">
+                            </div>
+                            <div style="flex: 1;">
+                                <label class="swal-label">Giới hạn số lần dùng</label>
+                                <input id="swal-max" type="number" class="swal2-input" value="${p.maxUsage || ''}">
+                            </div>
+                        </div>
                         
-                        <label>Đơn tối thiểu bắt buộc</label>
-                        <input id="swal-min" type="number" class="swal2-input" value="${p.minOrderAmount}">
-                        
-                        <label>Giới hạn số lần dùng</label>
-                        <input id="swal-max" type="number" class="swal2-input" value="${p.maxUsage || ''}">
-                        
-                        <label>Ngày hết hạn</label>
+                        <label class="swal-label">Ngày hết hạn</label>
                         <input id="swal-expiry" type="date" class="swal2-input" value="${p.expiryDate ? p.expiryDate.split('T')[0] : ''}">
                         
-                        <div style="margin-top:15px">
-                            <input type="checkbox" id="swal-active" ${p.isActive ? 'checked':''}> <label for="swal-active">Kích hoạt</label>
+                        <div class="swal2-checkbox-container">
+                            <input type="checkbox" id="swal-active" ${p.isActive ? 'checked':''}>
+                            <label for="swal-active">Trạng thái (Kích hoạt)</label>
                         </div>
                     </div>
                 `,
@@ -216,3 +238,54 @@
         window.addEventListener('DOMContentLoaded', init);
     </script>
 }
+
+<style>
+    /* Modern SweetAlert Customization */
+    .swal2-popup { width: 550px !important; border-radius: 20px !important; padding: 24px 30px !important; box-shadow: 0 10px 40px rgba(0,0,0,0.1) !important; }
+    .swal2-title { font-weight: 800 !important; color: #1e293b !important; font-size: 1.5rem !important; margin-bottom: 5px !important; }
+    .swal2-html-container { text-align: left; margin: 15px 0 0 0 !important; }
+    
+    .swal2-input, .swal2-textarea, .swal2-select, .swal2-file {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        margin: 0 0 18px 0 !important;
+        font-size: 0.95rem !important;
+        padding: 12px 16px !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 12px !important;
+        transition: all 0.2s !important;
+        box-shadow: none !important;
+        font-family: inherit !important;
+    }
+    .swal2-input:focus, .swal2-textarea:focus, .swal2-select:focus {
+        border-color: var(--primary) !important;
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.08) !important;
+    }
+    .swal-label {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #64748b;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .swal2-checkbox-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 5px;
+        padding: 14px 18px;
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 1.5px solid #e2e8f0;
+        transition: border-color 0.2s;
+    }
+    .swal2-checkbox-container:hover { border-color: #cbd5e1; }
+    .swal2-checkbox-container input[type="checkbox"] {
+        width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;
+    }
+    .swal2-checkbox-container label {
+        margin: 0; font-weight: 700; color: #1e293b; cursor: pointer; font-size: 0.9rem;
+    }
+</style>

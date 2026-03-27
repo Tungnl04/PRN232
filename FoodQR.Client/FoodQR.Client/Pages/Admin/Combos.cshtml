@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model FoodQR.Client.Pages.Admin.CombosModel
 @{
     Layout = "_Layout";
@@ -31,28 +31,39 @@
 </div>
 
 <!-- Modal for Combo Create/Edit -->
-<div id="combo-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
-    <div style="background: white; padding: 24px; border-radius: 16px; width: 600px; max-height: 90vh; overflow-y: auto;">
-        <h3 id="modal-title" style="margin-top:0;">Add Combo</h3>
+<div id="combo-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background: rgba(15,23,42,0.65); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background: #fff; padding: 32px 36px; border-radius: 20px; width: 620px; max-width: 95%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.18);">
+        <h3 id="modal-title" style="margin: 0 0 24px 0; font-weight: 800; color: #1e293b; font-size: 1.5rem;">Add Combo</h3>
         
         <input type="hidden" id="combo-id" />
-        <label>Name</label><input type="text" id="combo-name" class="swal2-input" style="width:100%;" />
-        <label>Description</label><textarea id="combo-desc" class="swal2-textarea" style="width:100%;"></textarea>
-        <label>Price</label><input type="number" id="combo-price" class="swal2-input" style="width:100%;" />
-        <label>Upload Image</label><input type="file" id="combo-image-file" class="swal2-file" accept="image/*" style="width:100%; margin-bottom: 10px;" />
-        <label>Or Existing Image URL</label><input type="text" id="combo-image" class="swal2-input" style="width:100%;" />
         
-        <label style="cursor: pointer; margin-top: 10px; display: block; font-weight: bold;">
-            <input type="checkbox" id="combo-available" checked /> Is Available
-        </label>
+        <label style="display:block; font-size:0.8rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Name</label>
+        <input type="text" id="combo-name" style="width:100%; box-sizing:border-box; padding:12px 16px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:0.95rem; font-family:inherit; margin-bottom:18px; outline:none;" />
         
-        <hr style="margin: 20px 0;" />
-        <h4>Select Products</h4>
+        <label style="display:block; font-size:0.8rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Description</label>
+        <textarea id="combo-desc" rows="3" style="width:100%; box-sizing:border-box; padding:12px 16px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:0.95rem; font-family:inherit; margin-bottom:18px; outline:none; resize:vertical;"></textarea>
+        
+        <label style="display:block; font-size:0.8rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Price (VND)</label>
+        <input type="number" id="combo-price" style="width:100%; box-sizing:border-box; padding:12px 16px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:0.95rem; font-family:inherit; margin-bottom:18px; outline:none;" />
+        
+        <label style="display:block; font-size:0.8rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Upload Image</label>
+        <input type="file" id="combo-image-file" accept="image/*" style="width:100%; box-sizing:border-box; padding:10px 14px; border:1.5px dashed #cbd5e1; border-radius:12px; font-size:0.9rem; margin-bottom:18px; cursor:pointer; background:#f8fafc;" />
+        
+        <label style="display:block; font-size:0.8rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Or Existing Image URL</label>
+        <input type="text" id="combo-image" placeholder="https://..." style="width:100%; box-sizing:border-box; padding:12px 16px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:0.95rem; font-family:inherit; margin-bottom:18px; outline:none;" />
+        
+        <div style="display:flex; align-items:center; gap:12px; padding:14px 18px; background:#f8fafc; border-radius:12px; border:1.5px solid #e2e8f0; margin-bottom:8px;">
+            <input type="checkbox" id="combo-available" checked style="width:18px; height:18px; accent-color:#ef4444; cursor:pointer; margin:0;" />
+            <label for="combo-available" style="margin:0; font-weight:700; color:#1e293b; cursor:pointer; font-size:0.9rem;">Is Available</label>
+        </div>
+        
+        <hr style="margin: 22px 0; border: none; border-top: 2px dashed #e2e8f0;" />
+        <h4 style="font-weight:800; color:#1e293b; font-size:1.0rem; text-transform:uppercase; letter-spacing:0.5px; margin: 0 0 14px 0;">Select Products</h4>
         <div id="product-selection-list" style="display:flex; flex-direction:column; gap:8px;"></div>
         
-        <div style="margin-top:24px; text-align:right;">
-            <button onclick="closeModal()" style="padding:10px 20px; background:#ccc; border:none; border-radius:8px; cursor:pointer; margin-right:10px; font-weight: bold;">Cancel</button>
-            <button onclick="saveCombo()" style="padding:10px 20px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Save Combo</button>
+        <div style="margin-top:28px; display:flex; gap:12px; justify-content:flex-end;">
+            <button onclick="closeModal()" style="padding:12px 24px; background:#f1f5f9; color:#475569; border:none; border-radius:12px; cursor:pointer; font-weight:700; font-size:0.95rem;">Cancel</button>
+            <button onclick="saveCombo()" style="padding:12px 28px; background:#ef4444; color:white; border:none; border-radius:12px; cursor:pointer; font-weight:800; font-size:0.95rem; box-shadow:0 4px 15px rgba(239,68,68,0.35);">Save Combo</button>
         </div>
     </div>
 </div>
@@ -60,8 +71,15 @@
 @section Scripts {
     <script>
         const apiBaseUrl = "@(ViewData["ApiBaseUrl"])" || (window.location.hostname.includes('localhost') ? "https://localhost:7197/api" : "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api");
+        const baseUrl = apiBaseUrl.replace('/api', '');
         let combos = [];
         let allProducts = [];
+
+        function getImageUrl(url) {
+            if (!url) return 'https://placehold.co/100x100?text=Combo';
+            if (url.startsWith('http')) return url;
+            return baseUrl + url;
+        }
 
         async function init() {
             allProducts = await apiClient.getProducts();
@@ -81,9 +99,9 @@
             const body = document.getElementById('combo-table-body');
             body.innerHTML = combos.map(c => `
                 <tr>
-                    <td><img src="${c.imageUrl || 'https://placehold.co/100x100?text=Combo'}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;"></td>
+                    <td><img src="${getImageUrl(c.imageUrl)}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;"></td>
                     <td class="font-bold">${c.name}</td>
-                    <td>${(c.price || 0).toLocaleString('vi-VN')} đ</td>
+                    <td>${(c.price || 0).toLocaleString('vi-VN')} Ä‘</td>
                     <td style="font-size: 0.8rem; color:#666;">
                         ${c.comboItems.map(i => `<div>- ${i.product ? i.product.name : 'Unknown'} (x${i.quantity})</div>`).join('')}
                     </td>
@@ -248,4 +266,16 @@
 
         window.addEventListener('DOMContentLoaded', init);
     </script>
+
 }
+
+<style>
+    .swal2-input, .swal2-textarea, .swal2-select, .swal2-file {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        margin: 5px 0 15px 0 !important;
+        font-size: 0.9rem !important;
+    }
+    .swal2-popup { width: 500px !important; }
+    .swal2-html-container { text-align: left; }
+</style>
