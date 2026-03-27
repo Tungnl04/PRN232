@@ -128,7 +128,7 @@ namespace FoodQR.API.Application.Services
 
                     // Inventory check & deduct
                     if (product.Inventory.HasValue && product.Inventory.Value < itemDto.Quantity)
-                        continue; // Skip if not enough stock
+                        throw new ArgumentException($"Sản phẩm '{product.Name}' chỉ còn {product.Inventory.Value} phần.");
 
                     if (product.Inventory.HasValue)
                     {
@@ -157,8 +157,6 @@ namespace FoodQR.API.Application.Services
 
                     if (combo == null || combo.Available == false) continue;
 
-                    // Deduct inventory for child products
-                    bool canFulfillCombo = true;
                     foreach (var comboItem in combo.ComboItems)
                     {
                         var product = comboItem.Product;
@@ -166,12 +164,9 @@ namespace FoodQR.API.Application.Services
                         
                         if (product.Inventory.HasValue && product.Inventory.Value < requiredQty)
                         {
-                            canFulfillCombo = false;
-                            break;
+                            throw new ArgumentException($"Sản phẩm '{product.Name}' trong combo '{combo.Name}' không đủ số lượng. Cần: {requiredQty}, Còn: {product.Inventory.Value}.");
                         }
                     }
-
-                    if (!canFulfillCombo) continue; // Skip if any product in combo is out of stock
 
                     foreach (var comboItem in combo.ComboItems)
                     {

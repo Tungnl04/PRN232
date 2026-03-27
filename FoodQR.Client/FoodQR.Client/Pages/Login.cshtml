@@ -90,7 +90,9 @@
                         }
                     });
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Đăng nhập thất bại', text: 'Tên đăng nhập hoặc mật khẩu không chính xác' });
+                    const err = await response.json().catch(() => ({}));
+                    const message = err.error || err.Error || 'Tên đăng nhập hoặc mật khẩu không chính xác';
+                    Swal.fire({ icon: 'error', title: 'Đăng nhập thất bại', text: message });
                     btnText.innerText = "Đăng nhập";
                     btn.disabled = false;
                 }

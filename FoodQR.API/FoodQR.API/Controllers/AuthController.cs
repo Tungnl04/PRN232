@@ -32,9 +32,11 @@ namespace FoodQR.API.Controllers
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Username == loginDto.Username && u.Active == true);
 
-            // Use BCrypt to verify password_hash
-            if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash)) 
-                return Unauthorized("Invalid credentials");
+            if (user == null)
+                return Unauthorized(new { Error = "Tài khoản không tồn tại!" });
+
+            if (!BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
+                return Unauthorized(new { Error = "Sai mật khẩu, vui lòng thử lại!" });
 
             var token = GenerateJwtToken(user);
 

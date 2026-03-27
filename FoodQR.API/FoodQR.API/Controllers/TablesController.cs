@@ -114,6 +114,12 @@ namespace FoodQR.API.Controllers
             if (table == null) return NotFound();
 
             table.Status = status.ToLower();
+            
+            if (table.Status == TableStatus.Available || table.Status == TableStatus.Cleaning)
+            {
+                table.QrCodeToken = Guid.NewGuid().ToString("N");
+            }
+
             await _context.SaveChangesAsync();
             return NoContent();
         }
