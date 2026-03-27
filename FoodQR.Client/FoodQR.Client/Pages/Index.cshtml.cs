@@ -13,8 +13,18 @@ namespace FoodQR.Client.Pages
         public IndexModel(IHttpClientFactory httpClientFactory, IConfiguration config, ILogger<IndexModel> logger)
         {
             _httpClientFactory = httpClientFactory;
-            _apiBaseUrl = config["ApiSettings:BaseUrl"] ?? "https://localhost:7197/api";
             _logger = logger;
+            
+            var baseUrl = config["ApiSettings:BaseUrl"];
+            // SEC-FIX: Nếu là placeholder thì dùng link production thật
+            if (string.IsNullOrEmpty(baseUrl) || baseUrl.Contains("YOUR_API_DOMAIN"))
+            {
+                _apiBaseUrl = "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api";
+            }
+            else
+            {
+                _apiBaseUrl = baseUrl;
+            }
         }
 
         public List<CategoryDto> Categories { get; set; } = new();

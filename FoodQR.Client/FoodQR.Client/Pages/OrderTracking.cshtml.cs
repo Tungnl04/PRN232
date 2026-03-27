@@ -12,7 +12,15 @@ namespace FoodQR.Client.Pages
         public OrderTrackingModel(IHttpClientFactory httpClientFactory, IConfiguration config)
         {
             _httpClientFactory = httpClientFactory;
-            _apiBaseUrl = config["ApiSettings:BaseUrl"] ?? "https://localhost:7197/api";
+            var baseUrl = config["ApiSettings:BaseUrl"];
+            if (string.IsNullOrEmpty(baseUrl) || baseUrl.Contains("YOUR_API_DOMAIN"))
+            {
+                _apiBaseUrl = "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api";
+            }
+            else
+            {
+                _apiBaseUrl = baseUrl;
+            }
         }
 
         public int OrderId { get; set; }
