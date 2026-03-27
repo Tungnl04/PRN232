@@ -1,0 +1,206 @@
+@page
+@model FoodQR.Client.Pages.Admin.ActivityLogsModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Lịch sử hoạt động";
+}
+
+<div class="card" style="border-radius: 20px; padding: 30px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h3 style="font-weight: 800; margin: 0; font-size: 1.3rem;"><i class="fa-solid fa-clock-rotate-left" style="color: var(--primary); margin-right: 8px;"></i>Lịch sử hoạt động</h3>
+            <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 4px;">Theo dõi mọi thao tác trong hệ thống</p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" id="search-input" placeholder="🔍 Tìm kiếm..." oninput="filterLogs()" 
+                style="padding: 10px 18px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 0.85rem; font-weight: 600; outline: none; min-width: 200px; transition: all 0.2s;" />
+            <select id="action-filter" onchange="filterLogs()" 
+                style="padding: 10px 18px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 0.85rem; font-weight: 600; outline: none; background: white; cursor: pointer;">
+                <option value="">Tất cả hành động</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="logs-timeline" style="position: relative;">
+        <div id="loading-state" style="text-align: center; padding: 60px 20px;">
+            <div style="width: 40px; height: 40px; border: 3px solid #f1f5f9; border-top: 3px solid var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 15px;"></div>
+            <p style="color: #94a3b8; font-weight: 600;">Đang tải lịch sử...</p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let allLogs = [];
+
+    async function init() {
+        try {
+            allLogs = await apiClient.getActivityLogs();
+            buildActionFilter();
+            renderLogs(allLogs);
+        } catch (e) {
+            console.error('Error loading activity logs', e);
+            document.getElementById('logs-timeline').innerHTML = `
+                <div style="text-align: center; padding: 60px 20px;">
+                    <i class="fa-solid fa-exclamation-triangle" style="font-size: 2.5rem; color: #fbbf24; margin-bottom: 15px;"></i>
+                    <p style="color: #64748b; font-weight: 600;">Không thể tải dữ liệu. Vui lòng thử lại.</p>
+                </div>`;
+        }
+    }
+
+    function buildActionFilter() {
+        const actions = [...new Set(allLogs.map(l => l.action))].sort();
+        const select = document.getElementById('action-filter');
+        actions.forEach(a => {
+            const opt = document.createElement('option');
+            opt.value = a;
+            opt.textContent = getActionLabel(a);
+            select.appendChild(opt);
+        });
+    }
+
+    function filterLogs() {
+        const search = document.getElementById('search-input').value.toLowerCase();
+        const actionFilter = document.getElementById('action-filter').value;
+        
+        let filtered = allLogs;
+        if (actionFilter) filtered = filtered.filter(l => l.action === actionFilter);
+        if (search) filtered = filtered.filter(l => 
+            (l.description || '').toLowerCase().includes(search) || 
+            (l.userName || '').toLowerCase().includes(search) ||
+            (l.action || '').toLowerCase().includes(search)
+        );
+        renderLogs(filtered);
+    }
+
+    function getActionLabel(action) {
+        const labels = {
+            'create_order': '🛒 Tạo đơn hàng',
+            'add_items': '➕ Thêm món',
+            'cancel_item': '❌ Hủy món',
+            'cancel_order': '🚫 Hủy đơn',
+            'switch_table': '🔄 Đổi bàn',
+            'merge_order': '🔗 Gộp đơn',
+            'payment_success': '💰 Thanh toán',
+            'vnpay_payment': '💳 VNPay',
+            'vnpay_callback': '📲 VNPay Callback',
+            'vnpay_ipn': '🔔 VNPay IPN',
+            'cash_payment': '💵 Thanh toán tiền mặt',
+            'update_item_status': '📋 Cập nhật món',
+        };
+        return labels[action] || `📌 ${action}`;
+    }
+
+    function getActionColor(action) {
+        const colors = {
+            'create_order': { bg: '#e8f5e9', text: '#2e7d32', icon: 'fa-cart-plus' },
+            'add_items': { bg: '#e3f2fd', text: '#1565c0', icon: 'fa-plus-circle' },
+            'cancel_item': { bg: '#ffebee', text: '#c62828', icon: 'fa-xmark' },
+            'cancel_order': { bg: '#fce4ec', text: '#ad1457', icon: 'fa-ban' },
+            'switch_table': { bg: '#e8eaf6', text: '#283593', icon: 'fa-exchange-alt' },
+            'merge_order': { bg: '#f3e5f5', text: '#6a1b9a', icon: 'fa-object-group' },
+            'payment_success': { bg: '#e8f5e9', text: '#2e7d32', icon: 'fa-check-circle' },
+            'vnpay_payment': { bg: '#fff3e0', text: '#e65100', icon: 'fa-credit-card' },
+            'vnpay_callback': { bg: '#fff3e0', text: '#ef6c00', icon: 'fa-arrow-right' },
+            'vnpay_ipn': { bg: '#fff8e1', text: '#f57f17', icon: 'fa-bell' },
+            'cash_payment': { bg: '#e0f2f1', text: '#00695c', icon: 'fa-money-bill-wave' },
+            'update_item_status': { bg: '#ede7f6', text: '#4527a0', icon: 'fa-arrows-rotate' },
+        };
+        return colors[action] || { bg: '#f1f5f9', text: '#475569', icon: 'fa-circle-info' };
+    }
+
+    function formatTime(dateStr) {
+        if (!dateStr) return 'N/A';
+        const d = new Date(dateStr);
+        const now = new Date();
+        const diff = (now - d) / 1000;
+
+        if (diff < 60) return 'Vừa xong';
+        if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
+        
+        return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) 
+             + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function renderLogs(logs) {
+        const container = document.getElementById('logs-timeline');
+
+        if (!logs || logs.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 60px 20px;">
+                    <i class="fa-solid fa-inbox" style="font-size: 3rem; color: #cbd5e1; margin-bottom: 15px;"></i>
+                    <p style="color: #94a3b8; font-weight: 700; font-size: 1rem;">Chưa có hoạt động nào được ghi nhận</p>
+                </div>`;
+            return;
+        }
+
+        // Group by date
+        const grouped = {};
+        logs.forEach(l => {
+            const dateKey = l.createdAt ? new Date(l.createdAt).toLocaleDateString('vi-VN') : 'Không rõ';
+            if (!grouped[dateKey]) grouped[dateKey] = [];
+            grouped[dateKey].push(l);
+        });
+
+        let html = '';
+        for (const [date, items] of Object.entries(grouped)) {
+            html += `
+                <div style="margin-bottom: 30px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                        <div style="width: 10px; height: 10px; background: var(--primary); border-radius: 50%; box-shadow: 0 0 0 4px rgba(255,107,0,0.15);"></div>
+                        <span style="font-weight: 800; color: #1e293b; font-size: 0.95rem;">${date}</span>
+                        <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600; background: #f1f5f9; padding: 3px 10px; border-radius: 20px;">${items.length} hoạt động</span>
+                    </div>
+                    <div style="margin-left: 4px; border-left: 2px solid #f1f5f9; padding-left: 25px;">`;
+
+            items.forEach(log => {
+                const c = getActionColor(log.action);
+                html += `
+                        <div style="display: flex; align-items: flex-start; gap: 14px; padding: 14px 18px; margin-bottom: 10px; background: ${c.bg}22; border-radius: 14px; border: 1px solid ${c.bg}; transition: all 0.2s;" onmouseenter="this.style.transform='translateX(4px)'" onmouseleave="this.style.transform='translateX(0)'">
+                            <div style="width: 38px; height: 38px; background: ${c.bg}; color: ${c.text}; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; flex-shrink: 0;">
+                                <i class="fa-solid ${c.icon}"></i>
+                            </div>
+                            <div style="flex-grow: 1; min-width: 0;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                    <span style="font-weight: 800; color: ${c.text}; font-size: 0.8rem; background: ${c.bg}; padding: 3px 10px; border-radius: 8px;">${getActionLabel(log.action)}</span>
+                                    <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 600; white-space: nowrap;">${formatTime(log.createdAt)}</span>
+                                </div>
+                                <p style="font-size: 0.85rem; color: #334155; margin-top: 6px; font-weight: 500; word-break: break-word;">${log.description || 'Không có mô tả'}</p>
+                                <div style="margin-top: 5px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fa-solid fa-user" style="font-size: 0.65rem; color: #94a3b8;"></i>
+                                    <span style="font-size: 0.75rem; color: #64748b; font-weight: 700;">${log.userName || 'System'}</span>
+                                </div>
+                            </div>
+                        </div>`;
+            });
+
+            html += `
+                    </div>
+                </div>`;
+        }
+
+        container.innerHTML = html;
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+</script>
+}
+
+<style>
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    #search-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.08);
+    }
+    #action-filter:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.08);
+    }
+
+    @@media (max-width: 768px) {
+        #search-input { min-width: 100% !important; }
+    }
+</style>

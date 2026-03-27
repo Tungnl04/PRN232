@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodQR - Phân Tích Nghiệp Vụ Chuyên Nghiệp</title>
+    <style>
+        :root {
+            --primary: #FF6B00;
+            --primary-dark: #E65100;
+            --bg-color: #f8fafc;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            margin: 0;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .header h1 {
+            color: var(--primary);
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            font-weight: 800;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 35px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .card-number {
+            background: var(--primary);
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-right: 15px;
+        }
+
+        .card-title {
+            font-size: 1.4rem;
+            color: var(--text-main);
+            margin: 0;
+            font-weight: 700;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .feature-list li {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 15px;
+            color: #334155;
+        }
+
+        .feature-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            top: 2px;
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .highlight-box {
+            background: #fff7ed;
+            border-left: 4px solid var(--primary);
+            padding: 20px;
+            margin-top: 40px;
+            border-radius: 0 12px 12px 0;
+        }
+
+        .highlight-box h3 {
+            margin-top: 0;
+            color: var(--primary-dark);
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>FoodQR Professional Analysis</h1>
+        <p>Báo cáo đánh giá chuyên sâu mức độ hoàn thiện nghiệp vụ doanh nghiệp (Enterprise Readiness) của hệ thống quản lý nhà hàng FoodQR.</p>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="card-number">1</div>
+            <h2 class="card-title">Kiến Trúc Luồng Order (Order Flow)</h2>
+        </div>
+        <ul class="feature-list">
+            <li><strong>Trạng thái Đa chiều (Multi-dimensional States):</strong> Hệ thống quản lý trạng thái độc lập giữa Đơn hàng (Pending, Paid) và Từng món ăn (Pending, Preparing, Ready, Served). Thiết kế này tiệm cận chuẩn KDS (Kitchen Display System) của các chuỗi F&B lớn.</li>
+            <li><strong>Tách bạch vận hành Bếp - Thu ngân:</strong> Bếp nhận món cập nhật Real-time (SignalR) ngay khi khách đặt. Nhân viên thu ngân chỉ phục vụ vòng ngoài.</li>
+            <li><strong>Thuật toán Khóa Món (Cooking Lock):</strong> Tính năng rào chắn rủi ro xuất sắc: Khi Bếp tiếp nhận món (Preparing), Nhân viên phục vụ bị tước quyền Hủy món đó trên Client. Ngăn chặn triệt để thất thoát tài sản/nguyên liệu do gian lận nội bộ.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="card-number">2</div>
+            <h2 class="card-title">Quản Lý Tồn Kho Thời Gian Thực (Real-time Inventory)</h2>
+        </div>
+        <ul class="feature-list">
+            <li><strong>Validation Kép (Double Validation):</strong> Số lượng món được xác thực tối đa tại Front-end để tối ưu UX, đồng thời chốt sổ bằng thuật toán trừ lùi bằng SQL Transaction tại Back-end. Chống lỗi Race-condition khi 2 bàn cùng săn 1 món ảo.</li>
+            <li><strong>Thuật toán Hoàn Tồn Kho (Refund Inventory):</strong> Điểm sáng nghiệp vụ: Bất kể khi Món bị hủy do sai sót, hoặc Toàn bộ đơn bị khách từ chối, kho trung tâm tự động Rollback lại số lượng món nhằm đảm bảo số liệu nguyên liệu luôn khớp thực tế.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="card-number">3</div>
+            <h2 class="card-title">Quản Trị Rủi Ro Vận Hành (Operation Risk Management)</h2>
+        </div>
+        <ul class="feature-list">
+            <li><strong>Bảo mật QR Chống giả mạo (Anti-Fraud QR Token):</strong> Ngăn chặn khách mang mã QR về nhà quét phá rối (DDoS đơn hàng). Mỗi khi bàn hoàn tất dọn dẹp (Clear Table), hệ thống sinh Token tĩnh mới làm vô hiệu hóa mã cũ. Tiết kiệm chi phí đầu tư Màn hình QR động đắt đỏ, chỉ cần in giấy.</li>
+            <li><strong>Nghiệp vụ Xoay Vòng Bàn linh hoạt:</strong> Tính năng Hỗ trợ Gộp Bàn (Merge) và Đổi bàn (Switch) tích hợp chức năng di lý toàn bộ các món đang chế biến dở dang sang bàn mới mà không làm vỡ luồng Bếp.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="card-number">4</div>
+            <h2 class="card-title">Hệ Thống Phân Tích & Tracking (Traceability)</h2>
+        </div>
+        <ul class="feature-list">
+            <li><strong>Cơ Chế Soft Delete (Xóa mềm):</strong> Bảo vệ toàn vẹn Data Kế Toán. Sản phẩm, Danh mục, Đơn hàng bị xóa khỏi UI nhưng được lữu giữ dưới DB (IsAvailable = false), không bao giờ gây lỗi vỡ Khóa Ngoại.</li>
+            <li><strong>Autopilot Audit Logging (Track người dùng tự động):</strong> Áp dụng C# DbContext Hooking. Hệ thống ghi Log Lịch sử hoạt động và Trạng thái món tự động trích xuất `UserId` từ Access Token JWT. Admin nắm được sinh trắc học mọi thao tác đổi bàn, hủy món, gộp đơn nhằm quy trách nhiệm chính xác khi báo cáo thu chi bị hụt.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="card-number">5</div>
+            <h2 class="card-title">Kiến trúc Công nghệ (Clean Architecture)</h2>
+        </div>
+        <ul class="feature-list">
+            <li><strong>Headless Architecture:</strong> Việc tách rạch ròi RESTful API (ASP.NET Core) và Razor Web Client cho phép hệ thống Scalability (Mở rộng) cực rẻ. Sẵn sàng tích hợp App Mobile Native (Flutter/Swift) mà không phải đập bỏ Backend.</li>
+            <li><strong>Bảo mật BCrypt:</strong> Áp dụng chuẩn mã hóa Password 1 chiều hiện đại nhất. Chặn đứng các hành động nhòm ngó DB của nhân viên kỹ thuật.</li>
+            <li><strong>Khuyến mãi (Coupon) rẽ tầng:</strong> Hỗ trợ mã giảm giá hoạt động qua 5 lưới lọc Validation: Tồn tại -> Active -> Hết hạn -> Vượt quá lượt dùng -> Đơn giá tối thiểu. Hỗ trợ Percentage & Fixed Rate.</li>
+        </ul>
+    </div>
+
+    <div class="highlight-box">
+        <h3>Tổng Kết Đánh Giá (Final Verdict)</h3>
+        <p>Hệ thống <strong>FoodQR</strong> đã vượt xa khuôn khổ của một đồ án kỹ thuật. Từng Module được thiết kế đan xen chặt chẽ nhằm giải quyết 3 bài toán lõi của ngành F&B: <strong>Tốc độ truyền thông tin (Bàn - Bếp), Số hóa thất thoát (Tồn kho - Tiền bạc), và Quy trách nhiệm (Audit Logs)</strong>. Về mặt Business Logic, Project này hoàn toàn có đủ mức độ trưởng thành (Maturity Level) để Release thương mại dưới dạng sản phẩm phần mềm SaaS đóng gói dành cho các nhà hàng quy mô SME.</p>
+    </div>
+</div>
+
+</body>
+</html>

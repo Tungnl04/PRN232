@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model FoodQR.Client.Pages.Admin.CombosModel
 @{
     Layout = "_Layout";
@@ -101,7 +101,7 @@
                 <tr>
                     <td><img src="${getImageUrl(c.imageUrl)}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;"></td>
                     <td class="font-bold">${c.name}</td>
-                    <td>${(c.price || 0).toLocaleString('vi-VN')} Ä‘</td>
+                    <td class="currency-amount">${apiClient.formatVnd(c.price || 0)}</td>
                     <td style="font-size: 0.8rem; color:#666;">
                         ${c.comboItems.map(i => `<div>- ${i.product ? i.product.name : 'Unknown'} (x${i.quantity})</div>`).join('')}
                     </td>
@@ -245,8 +245,8 @@
 
         async function deleteCombo(id) {
             const { isConfirmed } = await Swal.fire({
-                title: 'Are you sure?', text: "Permanently delete this combo?", icon: 'warning',
-                showCancelButton: true, confirmButtonColor: '#ff4d4d', confirmButtonText: 'Yes, delete it!'
+                title: 'Ngừng bán Combo?', text: "Combo sẽ được đưa vào kho lưu trữ (Xóa mềm).", icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#ff4d4d', confirmButtonText: 'Có, ngừng bán!'
             });
 
             if (isConfirmed) {

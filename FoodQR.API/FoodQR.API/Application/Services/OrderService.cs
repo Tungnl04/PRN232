@@ -20,6 +20,140 @@ namespace FoodQR.API.Application.Services
             _hubContext = hubContext;
         }
 
+        private static bool IsPercentCoupon(string? discountType)
+            => string.Equals(discountType, "percent", StringComparison.OrdinalIgnoreCase);
+
+        private static bool IsFixedCoupon(string? discountType)
+            => string.Equals(discountType, "fixed", StringComparison.OrdinalIgnoreCase);
+
+        private static decimal CalculateDiscountAmount(Coupon? coupon, decimal subtotal)
+        {
+            if (coupon == null) return 0m;
+            if (subtotal <= 0) return 0m;
+            if (subtotal < coupon.MinOrderAmount) return 0m;
+
+            decimal discount = 0m;
+            if (IsPercentCoupon(coupon.DiscountType))
+            {
+                var percent = coupon.DiscountValue;
+                if (percent < 0) percent = 0;
+                if (percent > 100) percent = 100;
+                discount = subtotal * (percent / 100m);
+            }
+            else if (IsFixedCoupon(coupon.DiscountType))
+            {
+                discount = coupon.DiscountValue;
+            }
+
+            if (discount < 0) discount = 0m;
+            if (discount > subtotal) discount = subtotal;
+            return decimal.Round(discount, 0, MidpointRounding.AwayFromZero);
+        }
+
+        private async Task ReleaseCouponUsageAsync(int? couponId)
+        {
+            if (!couponId.HasValue) return;
+            var coupon = await _context.Coupons.FindAsync(couponId.Value);
+            if (coupon == null) return;
+            if (coupon.UsedCount > 0) coupon.UsedCount--;
+        }
+
+        private async Task RecalculateOrderFinancialsAsync(Order order)
+        {
+            var persistedSubtotal = await _context.OrderItems
+                .Where(oi => oi.OrderId == order.Id && oi.Status != OrderItemStatus.Cancelled)
+                .SumAsync(oi => oi.UnitPrice * (oi.Quantity ?? 1));
+
+            // Đồng bộ với ChangeTracker để xử lý các trường hợp:
+            // - Cancel món (Status đổi sang Cancelled) nhưng chưa SaveChanges
+            // - Gộp bàn (OrderId đổi) nhưng chưa SaveChanges
+            // - Thêm món (Added) nhưng chưa SaveChanges
+            var trackedDelta = 0m;
+            foreach (var e in _context.ChangeTracker.Entries<OrderItem>())
+            {
+                if (e.State != EntityState.Added && e.State != EntityState.Modified && e.State != EntityState.Deleted)
+                    continue;
+
+                var currentOrderId = e.Entity.OrderId;
+                var currentStatus = e.Entity.Status ?? "";
+                var currentUnitPrice = e.Entity.UnitPrice;
+                var currentQty = e.Entity.Quantity ?? 1;
+
+                var originalOrderIdObj = e.Property("OrderId").OriginalValue;
+                var originalOrderId = originalOrderIdObj is int oid ? oid : currentOrderId;
+
+                var originalStatusObj = e.Property("Status").OriginalValue;
+                var originalStatus = (originalStatusObj as string) ?? currentStatus;
+
+                var originalUnitPriceObj = e.Property("UnitPrice").OriginalValue;
+                var originalUnitPrice = originalUnitPriceObj is decimal oup ? oup : currentUnitPrice;
+
+                var originalQtyObj = e.Property("Quantity").OriginalValue;
+                var originalQty = originalQtyObj is int oq ? oq : (e.Entity.Quantity ?? 1);
+
+                bool currentBelongsToOrder = currentOrderId == order.Id || ReferenceEquals(e.Entity.Order, order);
+                bool originalBelongsToOrder = originalOrderId == order.Id;
+
+                bool currentIncluded = currentBelongsToOrder &&
+                    !string.Equals(currentStatus, OrderItemStatus.Cancelled, StringComparison.OrdinalIgnoreCase);
+                bool originalIncluded = originalBelongsToOrder &&
+                    !string.Equals(originalStatus, OrderItemStatus.Cancelled, StringComparison.OrdinalIgnoreCase);
+
+                decimal currentAmount = currentUnitPrice * currentQty;
+                decimal originalAmount = originalUnitPrice * originalQty;
+
+                // State-aware delta:
+                // Added: chưa tồn tại trong DB => chỉ cộng current
+                // Deleted: đã tồn tại trong DB => chỉ trừ original
+                // Modified: lấy current - original
+                if (e.State == EntityState.Added)
+                {
+                    trackedDelta += currentIncluded ? currentAmount : 0m;
+                }
+                else if (e.State == EntityState.Deleted)
+                {
+                    trackedDelta -= originalIncluded ? originalAmount : 0m;
+                }
+                else
+                {
+                    trackedDelta += (currentIncluded ? currentAmount : 0m) - (originalIncluded ? originalAmount : 0m);
+                }
+            }
+
+            // Added items are not in persistedSubtotal; Modified/Deleted adjustments are applied via trackedDelta
+            // but persistedSubtotal already includes DB values, so trackedDelta corrects it to the current in-memory view.
+            var subtotal = persistedSubtotal + trackedDelta;
+
+            if (order.CouponId.HasValue)
+            {
+                var originalCouponId = order.CouponId;
+                var coupon = order.Coupon ?? await _context.Coupons.FindAsync(order.CouponId.Value);
+                var discount = CalculateDiscountAmount(coupon, subtotal);
+
+                if (discount <= 0)
+                {
+                    // Nếu không còn đạt điều kiện (vd subtotal < min order), tự bỏ coupon khỏi đơn
+                    order.CouponId = null;
+                    order.DiscountAmount = null;
+                    order.TotalAmount = subtotal;
+                    await ReleaseCouponUsageAsync(originalCouponId);
+                }
+                else
+                {
+                    order.DiscountAmount = discount;
+                    order.TotalAmount = subtotal - discount;
+                }
+            }
+            else
+            {
+                order.DiscountAmount = null;
+                order.TotalAmount = subtotal;
+            }
+
+            if (order.TotalAmount < 0) order.TotalAmount = 0;
+            order.UpdatedAt = DateTime.Now;
+        }
+
         public async Task<Order> CreateOrAppendOrderAsync(OrderCreateDto orderDto)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -49,6 +183,12 @@ namespace FoodQR.API.Application.Services
             {
                 order = activeOrder;
 
+                // Nếu bàn đã có coupon, không cho gửi coupon lại khi gọi thêm món.
+                if (order.CouponId.HasValue && orderDto.CouponId.HasValue)
+                {
+                    throw new ArgumentException("Bàn này đã áp mã giảm giá rồi.");
+                }
+
                 // Business Rule: Nếu đơn đang Ready/Served mà gọi thêm → đưa về Pending
                 if (string.Equals(order.Status, OrderStatus.Ready, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(order.Status, OrderStatus.Served, StringComparison.OrdinalIgnoreCase))
@@ -69,7 +209,7 @@ namespace FoodQR.API.Application.Services
                 await _context.ActivityLogs.AddAsync(new ActivityLog
                 {
                     Action = "append_items",
-                    Description = $"Guest appended items to Order {order.OrderCode} at Table {orderDto.TableId}"
+                    Description = $"Khách đã thêm món vào đơn {order.OrderCode} tại bàn {orderDto.TableId}."
                 });
             }
             else
@@ -98,20 +238,19 @@ namespace FoodQR.API.Application.Services
                 {
                     Order = order,
                     NewStatus = OrderStatus.Pending,
-                    Note = "Order initiated"
+                    Note = "Khởi tạo đơn hàng mới"
                 });
 
                 await _context.ActivityLogs.AddAsync(new ActivityLog
                 {
                     Action = "create_order",
-                    Description = $"New order {order.OrderCode} created at Table {orderDto.TableId}"
+                    Description = $"Tạo đơn hàng mới {order.OrderCode} tại bàn {orderDto.TableId}."
                 });
 
 
             }
 
             // 2. Process items + inventory
-            decimal additionalAmount = 0;
             foreach (var itemDto in orderDto.Items)
             {
                 // Normalize: 0 → null (tránh FK constraint error)
@@ -203,23 +342,24 @@ namespace FoodQR.API.Application.Services
                     Note = itemDto.Note
                 };
                 order.OrderItems.Add(orderItem);
-                additionalAmount += unitPrice * itemDto.Quantity;
             }
 
-            order.TotalAmount = (order.TotalAmount ?? 0) + additionalAmount;
-
-            if (orderDto.CouponId.HasValue && !order.CouponId.HasValue)
+            // Nếu tạo mới coupon cho đơn này, gắn coupon trước rồi tính lại tài chính từ item thực tế.
+            var isApplyingNewCoupon = orderDto.CouponId.HasValue && !order.CouponId.HasValue;
+            if (isApplyingNewCoupon)
             {
                 order.CouponId = orderDto.CouponId;
-                order.DiscountAmount = orderDto.DiscountAmount;
-                
-                var coupon = await _context.Coupons.FindAsync(orderDto.CouponId.Value);
-                if (coupon != null) coupon.UsedCount++;
-                
-                order.TotalAmount -= orderDto.DiscountAmount;
+                order.Coupon = await _context.Coupons.FindAsync(orderDto.CouponId!.Value);
             }
 
-            if (order.TotalAmount < 0) order.TotalAmount = 0;
+            await RecalculateOrderFinancialsAsync(order);
+
+            // Chỉ tăng UsedCount khi coupon thực sự còn hợp lệ và được giữ lại sau khi recalc.
+            if (isApplyingNewCoupon && order.CouponId.HasValue)
+            {
+                var coupon = order.Coupon ?? await _context.Coupons.FindAsync(order.CouponId.Value);
+                if (coupon != null) coupon.UsedCount++;
+            }
 
             // 3. Update table status
             table.Status = TableStatus.Taken;
@@ -309,7 +449,7 @@ namespace FoodQR.API.Application.Services
                 Items = order.OrderItems.Select(oi => new OrderItemDetailDto
                 {
                     Id = oi.Id,
-                    Name = oi.Product?.Name ?? oi.Combo?.Name ?? "Unknown",
+                    Name = oi.Product?.Name ?? oi.Combo?.Name ?? "Không xác định",
                     Quantity = oi.Quantity ?? 1,
                     UnitPrice = oi.UnitPrice,
                     Status = oi.Status ?? OrderItemStatus.Pending,
@@ -386,7 +526,7 @@ namespace FoodQR.API.Application.Services
             await _context.ActivityLogs.AddAsync(new ActivityLog
             {
                 Action = "cancel_order",
-                Description = $"Order {order.OrderCode} cancelled. Reason: {reason ?? "N/A"}"
+                Description = $"Đã hủy đơn {order.OrderCode}. Lý do: {reason ?? "Không có"}."
             });
 
             await _context.SaveChangesAsync();
@@ -398,6 +538,7 @@ namespace FoodQR.API.Application.Services
             var item = await _context.OrderItems
                 .Include(oi => oi.Product)
                 .Include(oi => oi.Order)
+                    .ThenInclude(o => o.Coupon)
                 .FirstOrDefaultAsync(oi => oi.Id == orderItemId);
 
             if (item == null) return false;
@@ -413,19 +554,16 @@ namespace FoodQR.API.Application.Services
                 if (item.Product.Inventory > 0) item.Product.IsAvailable = true;
             }
 
-            // Recalculate order total
+            // Recalculate order total + coupon discount after item changes
             if (item.Order != null)
             {
-                var remainingTotal = await _context.OrderItems
-                    .Where(oi => oi.OrderId == item.OrderId && oi.Status != OrderItemStatus.Cancelled)
-                    .SumAsync(oi => oi.UnitPrice * (oi.Quantity ?? 1));
-                item.Order.TotalAmount = remainingTotal;
+                await RecalculateOrderFinancialsAsync(item.Order);
             }
 
             await _context.ActivityLogs.AddAsync(new ActivityLog
             {
                 Action = "cancel_item",
-                Description = $"Item {orderItemId} cancelled. Reason: {reason ?? "N/A"}"
+                Description = $"Đã hủy món '{item.Product?.Name ?? "Món không xác định"}' (mã món: {orderItemId}) trong đơn {(item.Order?.OrderCode ?? "không xác định")}. Lý do: {reason ?? "Không có"}."
             });
 
             await _context.SaveChangesAsync();
@@ -470,7 +608,7 @@ namespace FoodQR.API.Application.Services
             await _context.ActivityLogs.AddAsync(new ActivityLog
             {
                 Action = "switch_table",
-                Description = $"Order {order.OrderCode} switched from Table {(oldTable != null ? oldTable.TableNumber : "None")} to Table {newTable.TableNumber}."
+                Description = $"Đơn {order.OrderCode} đã chuyển từ bàn {(oldTable != null ? oldTable.TableNumber : "không xác định")} sang bàn {newTable.TableNumber}."
             });
 
             await _context.SaveChangesAsync();
@@ -483,11 +621,13 @@ namespace FoodQR.API.Application.Services
 
             var targetOrder = await _context.Orders
                 .Include(o => o.OrderItems)
+                .Include(o => o.Coupon)
                 .Include(o => o.Table)
                 .FirstOrDefaultAsync(o => o.Id == targetOrderId);
 
             var sourceOrder = await _context.Orders
                 .Include(o => o.OrderItems)
+                .Include(o => o.Coupon)
                 .Include(o => o.Table)
                 .FirstOrDefaultAsync(o => o.Id == sourceOrderId);
 
@@ -504,24 +644,35 @@ namespace FoodQR.API.Application.Services
                 targetOrder.OrderItems.Add(item);
             }
 
-            // Cộng tiền và Giảm giá
-            targetOrder.TotalAmount = (targetOrder.TotalAmount ?? 0) + (sourceOrder.TotalAmount ?? 0);
-            
-            decimal combinedDiscount = (targetOrder.DiscountAmount ?? 0) + (sourceOrder.DiscountAmount ?? 0);
-            targetOrder.DiscountAmount = combinedDiscount > 0 ? combinedDiscount : null;
-            
-            // Giữ lại Mã giảm giá: Ưu tiên mã của bàn Target, nếu Target không có thì lấy mã của Source
-            if (targetOrder.CouponId == null && sourceOrder.CouponId != null)
+            // Rule merge coupon:
+            // - Cả 2 đơn đều có coupon => bỏ coupon (đơn gộp không áp coupon)
+            // - Chỉ 1 đơn có coupon => giữ coupon đó, nhưng phải recalc theo tổng bill mới + min order
+            var targetHasCoupon = targetOrder.CouponId.HasValue;
+            var sourceHasCoupon = sourceOrder.CouponId.HasValue;
+
+            if (targetHasCoupon && sourceHasCoupon)
+            {
+                await ReleaseCouponUsageAsync(targetOrder.CouponId);
+                await ReleaseCouponUsageAsync(sourceOrder.CouponId);
+                targetOrder.CouponId = null;
+                targetOrder.Coupon = null;
+                targetOrder.DiscountAmount = null;
+            }
+            else if (!targetHasCoupon && sourceHasCoupon)
             {
                 targetOrder.CouponId = sourceOrder.CouponId;
+                targetOrder.Coupon = sourceOrder.Coupon;
             }
-            
-            targetOrder.UpdatedAt = DateTime.Now;
+
+            // Tính lại tổng tiền/giảm giá dựa trên item thực tế sau khi gộp
+            await RecalculateOrderFinancialsAsync(targetOrder);
 
             // Xử lý Source Order
             string oldStatus = sourceOrder.Status!;
             sourceOrder.Status = OrderStatus.Cancelled;
             sourceOrder.TotalAmount = 0;
+            sourceOrder.DiscountAmount = null;
+            sourceOrder.CouponId = null;
             sourceOrder.UpdatedAt = DateTime.Now;
 
             await _context.OrderStatusHistories.AddAsync(new OrderStatusHistory
@@ -556,7 +707,7 @@ namespace FoodQR.API.Application.Services
             await _context.ActivityLogs.AddAsync(new ActivityLog
             {
                 Action = "merge_order",
-                Description = $"Merged order {sourceOrder.OrderCode} into {targetOrder.OrderCode}"
+                Description = $"Đã gộp đơn {sourceOrder.OrderCode} vào đơn {targetOrder.OrderCode}."
             });
 
             await _context.SaveChangesAsync();

@@ -336,7 +336,28 @@ const apiClient = (function() {
             throw await res.json();
         },
 
+        // ACTIVITY LOGS
+        async getActivityLogs() {
+            const res = await authorizedFetch('/ActivityLogs');
+            return res ? res.json() : [];
+        },
+
         // UTILS
+        /** Định dạng tiền VND (số + ký hiệu ₫) — dùng Intl, tránh lỗi font/encoding với ký tự đ */
+        formatVnd(amount) {
+            const n = Number(amount);
+            if (Number.isNaN(n)) return '0\u00a0₫';
+            try {
+                return new Intl.NumberFormat('vi-VN', {
+                    style: 'currency',
+                    currency: 'VND',
+                    maximumFractionDigits: 0
+                }).format(n);
+            } catch {
+                return Math.round(n).toLocaleString('vi-VN') + '\u00a0\u20AB';
+            }
+        },
+
         isAuthenticated() {
             return !!localStorage.getItem('auth_token');
         },

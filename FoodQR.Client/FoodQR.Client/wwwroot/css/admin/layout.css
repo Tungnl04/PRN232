@@ -22,6 +22,12 @@ body.mgmt-body {
     /* Overriding old flex */
 }
 
+.currency-amount {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+}
+
 /* Sidebar Navigation */
 .sidebar {
     width: var(--sidebar-width); height: 100vh; background: var(--card); position: fixed;

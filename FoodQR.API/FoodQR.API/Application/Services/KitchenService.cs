@@ -14,6 +14,19 @@ namespace FoodQR.API.Application.Services
         private readonly FoodStoreDbContext _context;
         private readonly IHubContext<OrderHub> _hubContext;
 
+        private static string ToVietnameseItemStatus(string? status)
+        {
+            return (status ?? string.Empty).ToLower() switch
+            {
+                OrderItemStatus.Pending => "Chờ chế biến",
+                OrderItemStatus.Preparing => "Đang chế biến",
+                OrderItemStatus.Ready => "Sẵn sàng",
+                OrderItemStatus.Served => "Đã phục vụ",
+                OrderItemStatus.Cancelled => "Đã hủy",
+                _ => status ?? "Không xác định"
+            };
+        }
+
         public KitchenService(FoodStoreDbContext context, IHubContext<OrderHub> hubContext)
         {
             _context = context;
@@ -32,7 +45,7 @@ namespace FoodQR.API.Application.Services
                 {
                     Id = oi.Id,
                     OrderId = oi.OrderId,
-                    DishName = oi.Product != null ? oi.Product.Name : (oi.Combo != null ? oi.Combo.Name : "Unknown"),
+                    DishName = oi.Product != null ? oi.Product.Name : (oi.Combo != null ? oi.Combo.Name : "Không xác định"),
                     Quantity = oi.Quantity ?? 1,
                     Status = oi.Status ?? OrderItemStatus.Pending,
                     OrderCode = oi.Order!.OrderCode,
@@ -74,7 +87,7 @@ namespace FoodQR.API.Application.Services
             await _context.ActivityLogs.AddAsync(new ActivityLog
             {
                 Action = "update_item_status",
-                Description = $"Item {itemId} status changed from {oldItemStatus} to {newStatus}"
+                Description = $"Món '{item.Product?.Name ?? "Không xác định"}' (mã món: {itemId}) chuyển trạng thái từ '{ToVietnameseItemStatus(oldItemStatus)}' sang '{ToVietnameseItemStatus(newStatus)}'."
             });
 
             // State machine: Update parent order status

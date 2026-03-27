@@ -60,7 +60,7 @@
                     <td><img src="${getImageUrl(p.imageUrl)}" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;"></td>
                     <td class="font-bold">${p.name}</td>
                     <td>${cat ? cat.name : '<span class="text-muted">None</span>'}</td>
-                    <td>${(p.price || 0).toLocaleString('vi-VN')} đ</td>
+                    <td class="currency-amount">${apiClient.formatVnd(p.price || 0)}</td>
                     <td>
                         <span style="font-weight: 600; color: ${(p.inventory ?? 0) <= 5 ? '#f44336' : '#4caf50'}">
                             ${p.inventory != null ? p.inventory : '∞'}
@@ -228,8 +228,8 @@
 
         async function deleteProduct(id) {
             const result = await Swal.fire({
-                title: 'Are you sure?',
-                text: "This will permanently delete the product!",
+                title: 'Ngừng bán món ăn này?',
+                text: "Món ăn sẽ bị đưa vào kho lưu trữ (Xóa mềm) để bảo toàn dữ liệu kế toán.",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ff4d4d',
