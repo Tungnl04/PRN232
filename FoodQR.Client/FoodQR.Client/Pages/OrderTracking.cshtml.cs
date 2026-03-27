@@ -30,8 +30,9 @@ namespace FoodQR.Client.Pages
             var client = _httpClientFactory.CreateClient();
 
             // BUG-09 Fix: Use active/{tableId} endpoint which returns items with names pre-loaded
-            // This eliminates N+1 HTTP calls (previously 1 call per item to get product/combo name)
-            var response = await client.GetAsync($"{_apiBaseUrl}/Orders/active/{tableId}");
+            // SEC-06: Pass QR token for anonymous authentication
+            var tokenParam = !string.IsNullOrEmpty(token) ? $"?token={token}" : "";
+            var response = await client.GetAsync($"{_apiBaseUrl}/Orders/active/{tableId}{tokenParam}");
 
             if (response.IsSuccessStatusCode)
             {
