@@ -135,6 +135,15 @@
         const tableId = urlParams.get('tableId');
         const qrToken = urlParams.get('qrToken');
         const tableNumber = urlParams.get('tableNumber');
+        let currentOrder = null;
+        let storeConfig = null;
+
+        // Load store config for tax
+        async function loadStoreConfig() {
+            try {
+                storeConfig = await apiClient.getStoreConfig();
+            } catch (e) { console.error('Lỗi tải config', e); }
+        }
 
         function loadTableQr() {
             document.getElementById('qr-table-label').innerText = `Bàn ${tableNumber || '--'}`;
@@ -180,8 +189,25 @@
                     return;
                 }
                 document.getElementById('order-total-container').style.display = 'block';
+                currentOrder = order;
                 renderOrder(order);
             } catch (err) { console.error(err); }
+        }
+
+        function calculateBill(order) {
+            const subtotal = order.totalAmount || 0;
+            const taxRate = storeConfig?.taxRate || 0.08;
+            const isTaxIncluded = storeConfig?.isTaxIncludedInPrice || false;
+            let taxAmount, total;
+
+            if (isTaxIncluded) {
+                taxAmount = Math.round(subtotal - (subtotal / (1 + taxRate)));
+                total = subtotal;
+            } else {
+                taxAmount = Math.round(subtotal * taxRate);
+                total = subtotal + taxAmount;
+            }
+            return { subtotal, taxRate, taxAmount, total, isTaxIncluded };
         }
 
         function renderOrder(order) {
@@ -196,7 +222,15 @@
             const paymentStatusDiv = document.getElementById('payment-status');
             const sts = order.status.toLowerCase();
             if (sts !== 'paid' && sts !== 'completed' && sts !== 'cancelled') {
-                paymentStatusDiv.innerHTML = `<button onclick="checkoutOrder(${order.id})" style="background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 800; cursor: pointer; font-size: 1rem; box-shadow: 0 4px 0 #cc0000;">Thanh toán Tiền mặt</button>`;
+                paymentStatusDiv.innerHTML = `
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="showBillPopup('cash')" style="background: #10b981; color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 800; cursor: pointer; font-size: 0.9rem; box-shadow: 0 4px 0 #059669; display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-money-bill-wave"></i> Tiền mặt
+                        </button>
+                        <button onclick="showBillPopup('vnpay')" style="background: #2563eb; color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 800; cursor: pointer; font-size: 0.9rem; box-shadow: 0 4px 0 #1d4ed8; display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-qrcode"></i> Chuyển khoản
+                        </button>
+                    </div>`;
             } else {
                 paymentStatusDiv.innerHTML = `<span style="background: #dcfce7; color: #166534; padding: 8px 20px; border-radius: 50px; font-size: 0.9rem; font-weight: 800; text-transform: uppercase;"><i class="fa-solid fa-check-circle"></i> Đã thanh toán</span>`;
             }
@@ -239,6 +273,139 @@
                 (order.totalAmount || 0).toLocaleString('vi-VN') + ' ₫';
         }
 
+        function showBillPopup(paymentMethod) {
+            if (!currentOrder) return;
+            const bill = calculateBill(currentOrder);
+            const storeName = storeConfig?.storeName || 'FoodQR Restaurant';
+
+            let itemsHtml = currentOrder.items.map(i => `
+                <tr>
+                    <td style="padding: 8px 0; font-size: 0.85rem; color: #334155;">${i.name}</td>
+                    <td style="padding: 8px 0; text-align: center; font-weight: 700; color: #64748b; font-size: 0.85rem;">${i.quantity}</td>
+                    <td style="padding: 8px 0; text-align: right; font-weight: 700; font-size: 0.85rem;">${(i.unitPrice * i.quantity).toLocaleString('vi-VN')} ₫</td>
+                </tr>
+            `).join('');
+
+            const billHtml = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h3 style="font-weight: 900; font-size: 1.1rem; margin: 0;">${storeName}</h3>
+                    <p style="color: #94a3b8; font-size: 0.75rem; margin: 4px 0 0;">HÓA ĐƠN THANH TOÁN</p>
+                </div>
+                <div style="border-top: 2px dashed #e2e8f0; border-bottom: 2px dashed #e2e8f0; padding: 5px 0; margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #64748b; font-weight: 600; padding: 5px 0;">
+                        <span>Đơn: #${currentOrder.orderCode}</span>
+                        <span>Bàn ${tableNumber || currentOrder.tableId}</span>
+                    </div>
+                </div>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <th style="text-align: left; padding: 8px 0; font-size: 0.75rem; color: #94a3b8; font-weight: 700;">MÓN</th>
+                            <th style="text-align: center; padding: 8px 0; font-size: 0.75rem; color: #94a3b8; font-weight: 700;">SL</th>
+                            <th style="text-align: right; padding: 8px 0; font-size: 0.75rem; color: #94a3b8; font-weight: 700;">THÀNH TIỀN</th>
+                        </tr>
+                    </thead>
+                    <tbody>${itemsHtml}</tbody>
+                </table>
+                <div style="border-top: 2px dashed #e2e8f0; margin-top: 10px; padding-top: 12px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #64748b; font-size: 0.85rem; font-weight: 600;">Tạm tính</span>
+                        <span style="font-weight: 700; font-size: 0.85rem;">${bill.subtotal.toLocaleString('vi-VN')} ₫</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span style="color: #64748b; font-size: 0.85rem; font-weight: 600;">Thuế VAT (${(bill.taxRate * 100).toFixed(0)}%)${bill.isTaxIncluded ? ' (đã gồm)' : ''}</span>
+                        <span style="font-weight: 700; font-size: 0.85rem; color: #f59e0b;">${bill.isTaxIncluded ? '—' : '+' + bill.taxAmount.toLocaleString('vi-VN') + ' ₫'}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 2px solid #1e293b;">
+                        <span style="font-weight: 900; font-size: 1.1rem;">TỔNG CỘNG</span>
+                        <span style="font-weight: 900; font-size: 1.3rem; color: var(--primary);">${bill.total.toLocaleString('vi-VN')} ₫</span>
+                    </div>
+                </div>
+                <div id="vnpay-qr-section" style="display: none; margin-top: 20px;"></div>
+            `;
+
+            if (paymentMethod === 'cash') {
+                Swal.fire({
+                    title: '',
+                    html: billHtml,
+                    width: 420,
+                    showCancelButton: true,
+                    confirmButtonColor: '#10b981',
+                    confirmButtonText: '<i class="fa-solid fa-check"></i> Đã nhận tiền mặt',
+                    cancelButtonText: 'Hủy',
+                    customClass: { popup: 'bill-popup' }
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        try {
+                            const res = await apiClient.checkoutCash(currentOrder.id);
+                            if (res && res.ok) {
+                                Swal.fire({ icon: 'success', title: 'Thành công', text: 'Đã thanh toán đơn hàng.', timer: 2000 });
+                                loadOrder();
+                            } else {
+                                const err = await res.json();
+                                Swal.fire('Lỗi', err.Error || 'Không thể thanh toán.', 'error');
+                            }
+                        } catch(e) {
+                            Swal.fire('Lỗi', 'Có lỗi kết nối.', 'error');
+                        }
+                    }
+                });
+            } else {
+                // VNPay
+                Swal.fire({
+                    title: '',
+                    html: billHtml + `
+                        <div style="text-align: center; margin-top: 20px;">
+                            <div id="vnpay-loading" style="padding: 20px;">
+                                <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; color: #2563eb;"></i>
+                                <p style="color: #64748b; font-size: 0.85rem; margin-top: 10px; font-weight: 600;">Đang tạo mã thanh toán...</p>
+                            </div>
+                            <div id="vnpay-qr-result" style="display: none;">
+                                <div style="background: #eff6ff; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+                                    <p style="font-size: 0.8rem; color: #1e40af; font-weight: 700; margin: 0 0 10px;">Quét mã QR để thanh toán qua VNPay</p>
+                                    <div id="bill-qr-code" style="display: flex; justify-content: center; padding: 10px; background: white; border-radius: 10px;"></div>
+                                </div>
+                                <a id="vnpay-link" href="#" target="_blank" style="display: inline-block; background: #2563eb; color: white; padding: 10px 25px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 0.85rem;">
+                                    <i class="fa-solid fa-external-link-alt"></i> Mở trang thanh toán
+                                </a>
+                            </div>
+                        </div>
+                    `,
+                    width: 440,
+                    showConfirmButton: false,
+                    showCancelButton: true,
+                    cancelButtonText: 'Đóng',
+                    didOpen: () => createVnPayQr()
+                });
+            }
+        }
+
+        async function createVnPayQr() {
+            try {
+                const res = await apiClient.createVnPayUrl(currentOrder.id);
+                if (!res || !res.ok) {
+                    const err = await res?.json();
+                    document.getElementById('vnpay-loading').innerHTML = `<p style="color: #dc2626; font-weight: 700;"><i class="fa-solid fa-xmark-circle"></i> ${err?.Error || 'Lỗi tạo mã'}</p>`;
+                    return;
+                }
+                const data = await res.json();
+                document.getElementById('vnpay-loading').style.display = 'none';
+                document.getElementById('vnpay-qr-result').style.display = 'block';
+                document.getElementById('vnpay-link').href = data.paymentUrl;
+
+                new QRCode(document.getElementById('bill-qr-code'), {
+                    text: data.paymentUrl,
+                    width: 200,
+                    height: 200,
+                    colorDark: '#1e40af',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            } catch (e) {
+                document.getElementById('vnpay-loading').innerHTML = '<p style="color: #dc2626; font-weight: 700;">Lỗi kết nối</p>';
+            }
+        }
+
         async function serveItem(itemId) {
             const res = await apiClient.updateItemStatus(itemId, 'served');
             if (res && res.ok) loadOrder();
@@ -256,35 +423,10 @@
             loadOrder();
         }
 
-        async function checkoutOrder(orderId) {
-            const { isConfirmed } = await Swal.fire({
-                title: 'Xác nhận thanh toán?',
-                text: 'Thu tiền mặt từ khách hàng cho đơn này?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#10b981',
-                confirmButtonText: 'Đã nhận tiền',
-                cancelButtonText: 'Hủy'
-            });
-
-            if (isConfirmed) {
-                try {
-                    const res = await apiClient.checkoutCash(orderId);
-                    if (res && res.ok) {
-                        Swal.fire({ icon: 'success', title: 'Thành công', text: 'Đã thanh toán đơn hàng.', timer: 2000 });
-                        loadOrder();
-                    } else {
-                        const err = await res.json();
-                        Swal.fire('Lỗi', err.Error || 'Không thể thanh toán.', 'error');
-                    }
-                } catch(e) {
-                    Swal.fire('Lỗi', 'Có lỗi kết nối.', 'error');
-                }
-            }
-        }
-
+        loadStoreConfig();
         loadTableQr();
         loadOrder();
         setInterval(loadOrder, 10000); // Polling update
     </script>
 }
+
