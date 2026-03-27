@@ -46,6 +46,20 @@
 
     <script src="~/js/apiClient.js" asp-append-version="true"></script>
     <script>
+        // Auto-redirect if already logged in
+        if (apiClient.isAuthenticated()) {
+            const user = apiClient.getUser();
+            if (user.mustChangePassword) {
+                window.location.href = '/ChangePassword';
+            } else if (user.role === 'admin') {
+                window.location.href = '/Admin/Index';
+            } else if (user.role === 'staff') {
+                window.location.href = '/Staff/Dashboard';
+            } else if (user.role === 'kitchen') {
+                window.location.href = '/Kitchen/Board';
+            }
+        }
+
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-login');
