@@ -42,6 +42,8 @@ public partial class FoodStoreDbContext : DbContext
 
     public virtual DbSet<StoreConfiguration> StoreConfigurations { get; set; }
 
+    public virtual DbSet<Coupon> Coupons { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         // Connection string is configured via DI in Program.cs
@@ -83,6 +85,9 @@ public partial class FoodStoreDbContext : DbContext
             entity.Property(e => e.Name)
                 .HasMaxLength(100)
                 .HasColumnName("name");
+            entity.Property(e => e.IsAvailable)
+                .HasDefaultValue(true)
+                .HasColumnName("is_available");
         });
 
         modelBuilder.Entity<Combo>(entity =>
@@ -212,6 +217,12 @@ public partial class FoodStoreDbContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("datetime")
                 .HasColumnName("updated_at");
+            
+            // New columns for Coupon System
+            entity.Property(e => e.CouponId).HasColumnName("coupon_id");
+            entity.Property(e => e.DiscountAmount)
+                .HasColumnType("decimal(18, 2)")
+                .HasColumnName("discount_amount");
 
             entity.HasOne(d => d.Customer).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.CustomerId)
@@ -220,6 +231,10 @@ public partial class FoodStoreDbContext : DbContext
             entity.HasOne(d => d.Table).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.TableId)
                 .HasConstraintName("fk_order_table");
+                
+            entity.HasOne(d => d.Coupon).WithMany(p => p.Orders)
+                .HasForeignKey(d => d.CouponId)
+                .HasConstraintName("fk_order_coupon");
         });
 
         modelBuilder.Entity<OrderItem>(entity =>
@@ -407,6 +422,40 @@ public partial class FoodStoreDbContext : DbContext
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime")
                 .HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<Coupon>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.ToTable("coupon");
+
+            entity.HasIndex(e => e.Code).IsUnique();
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Code)
+                .HasMaxLength(20)
+                .HasColumnName("code");
+            entity.Property(e => e.DiscountType)
+                .HasMaxLength(20)
+                .HasDefaultValue("percent")
+                .HasColumnName("discount_type");
+            entity.Property(e => e.DiscountValue)
+                .HasColumnType("decimal(18, 2)")
+                .HasColumnName("discount_value");
+            entity.Property(e => e.MinOrderAmount)
+                .HasColumnType("decimal(18, 2)")
+                .HasColumnName("min_order_amount");
+            entity.Property(e => e.MaxUsage)
+                .HasColumnName("max_usage");
+            entity.Property(e => e.UsedCount)
+                .HasDefaultValue(0)
+                .HasColumnName("used_count");
+            entity.Property(e => e.ExpiryDate)
+                .HasColumnType("datetime2")
+                .HasColumnName("expiry_date");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasColumnName("is_active");
         });
 
         OnModelCreatingPartial(modelBuilder);

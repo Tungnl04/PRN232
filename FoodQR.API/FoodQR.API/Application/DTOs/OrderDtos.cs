@@ -8,6 +8,8 @@ namespace FoodQR.API.Application.DTOs
         public string? Token { get; set; }
         public string? CustomerName { get; set; }
         public string? CustomerEmail { get; set; }
+        public int? CouponId { get; set; }
+        public decimal? DiscountAmount { get; set; }
         public List<OrderItemDto> Items { get; set; } = new();
     }
 

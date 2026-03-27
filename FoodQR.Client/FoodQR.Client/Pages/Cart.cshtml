@@ -38,9 +38,19 @@
         </div>
 
         <div id="cart-footer" style="margin-top: 40px; display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-top: 2px dashed #e2e8f0; margin-bottom: 30px;">
-                <span style="font-weight: 700; color: var(--text-muted); font-size: 1rem;">Tạm tính</span>
-                <span id="total-price" style="font-size: 1.8rem; font-weight: 900; color: var(--primary);">0 ₫</span>
+            <div id="billing-summary" style="padding: 20px 0; border-top: 2px dashed #e2e8f0; margin-bottom: 30px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span style="font-weight: 600; color: var(--text-muted); font-size: 1rem;">Tạm tính</span>
+                    <span id="sub-total-price" style="font-weight: 700; color: var(--text-main);">0 ₫</span>
+                </div>
+                <div id="discount-row" style="display: none; justify-content: space-between; margin-bottom: 10px;">
+                    <span style="font-weight: 600; color: var(--text-muted); font-size: 1rem;">Mã giảm giá</span>
+                    <span id="discount-price" style="font-weight: 700; color: #4caf50;">-0 ₫</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; border-top: 1px solid #f1f5f9; padding-top: 15px;">
+                    <span style="font-weight: 800; color: var(--text-main); font-size: 1.2rem;">Tổng cộng</span>
+                    <span id="final-total-price" style="font-size: 1.8rem; font-weight: 900; color: var(--primary);">0 ₫</span>
+                </div>
             </div>
 
             <div class="card" style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #f0f0f0;">
@@ -56,8 +66,20 @@
                 </div>
             </div>
 
+            <div class="card" style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #f0f0f0; margin-bottom: 25px;">
+                <h3 class="font-bold" style="margin-bottom: 20px; font-size: 1.1rem; color: var(--text-main); display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-tags" style="color: var(--primary);"></i> Mã giảm giá
+                </h3>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="coupon-code" placeholder="Nhập mã giảm giá..."
+                           style="width: 100%; padding: 15px; border-radius: 12px; border: 1.5px solid #e2e8f0; font-family: inherit; font-weight: 600; font-size: 0.95rem; text-transform: uppercase;" />
+                    <button onclick="applyCoupon()" style="padding: 15px 25px; background: #1e293b; color: white; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.2s;">Áp dụng</button>
+                </div>
+                <div id="coupon-message" style="margin-top: 10px; font-size: 0.85rem; font-weight: 600;"></div>
+            </div>
+
             <button onclick="submitOrder()" id="btn-submit"
-                    style="width: 100%; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 16px; font-weight: 900; font-size: 1.1rem; margin-top: 30px; cursor: pointer; transition: all 0.2s; box-shadow: 0 10px 25px rgba(255, 77, 77, 0.3); text-transform: uppercase; letter-spacing: 1px;">
+                    style="width: 100%; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 16px; font-weight: 900; font-size: 1.1rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 10px 25px rgba(255, 77, 77, 0.3); text-transform: uppercase; letter-spacing: 1px;">
                 Xác nhận đặt món <i class="fa-solid fa-paper-plane" style="margin-left:8px"></i>
             </button>
             <p style="text-align: center; font-size: 0.75rem; color: #94a3b8; margin-top: 20px; font-weight: 600;">Món ăn sẽ được chuyển ngay đến bếp sau khi bạn nhấn nút này.</p>
@@ -176,6 +198,35 @@
         }
 
         let cart = JSON.parse(localStorage.getItem('food_cart')) || [];
+        let appliedCoupon = null;
+
+        async function applyCoupon() {
+            const code = document.getElementById('coupon-code').value.trim();
+            const msgEl = document.getElementById('coupon-message');
+            
+            if(!code) {
+                msgEl.innerText = "Vui lòng nhập mã!";
+                msgEl.style.color = "#f44336";
+                return;
+            }
+            
+            const baseTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+            
+            try {
+                const res = await apiClient.validateCoupon(code, baseTotal);
+                appliedCoupon = { code: res.code, discountAmount: res.discountAmount, id: res.couponId };
+                msgEl.innerHTML = `<i class="fa-solid fa-check-circle"></i> Áp dụng thành công! Giảm ${res.discountAmount.toLocaleString('vi-VN')} ₫`;
+                msgEl.style.color = "#4caf50";
+                renderCart();
+            } catch(e) {
+                console.error("Coupon error:", e);
+                appliedCoupon = null;
+                const errText = e.Error || e.error || e.title || e.message || (e.errors ? JSON.stringify(e.errors) : JSON.stringify(e));
+                msgEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${errText || "Lỗi không xác định"}`;
+                msgEl.style.color = "#f43f5e";
+                renderCart();
+            }
+        }
 
         function renderCart() {
             const list   = document.getElementById('cart-items-list');
@@ -221,7 +272,18 @@
                 `;
             }).join('');
 
-            document.getElementById('total-price').innerText = total.toLocaleString('vi-VN') + ' ₫';
+            let finalTotal = total;
+            document.getElementById('sub-total-price').innerText = total.toLocaleString('vi-VN') + ' ₫';
+
+            if(appliedCoupon) {
+                finalTotal = Math.max(0, total - appliedCoupon.discountAmount);
+                document.getElementById('discount-row').style.display = 'flex';
+                document.getElementById('discount-price').innerText = '-' + appliedCoupon.discountAmount.toLocaleString('vi-VN') + ' ₫';
+            } else {
+                document.getElementById('discount-row').style.display = 'none';
+            }
+            
+            document.getElementById('final-total-price').innerText = finalTotal.toLocaleString('vi-VN') + ' ₫';
         }
 
         function updateQty(index, delta) {
@@ -273,6 +335,8 @@
                 customerEmail: "",
                 tableId:       tableId,
                 token:         token,
+                couponId:      appliedCoupon ? appliedCoupon.id : null,
+                discountAmount: appliedCoupon ? appliedCoupon.discountAmount : null,
                 items: cart.map(item => ({
                     productId: item.isCombo ? null : item.id,
                     comboId:   item.isCombo ? item.id : null,

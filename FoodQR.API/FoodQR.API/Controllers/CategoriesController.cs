@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FoodQR.API.Controllers
 {
+    using Microsoft.AspNetCore.OData.Query;
     [Route("api/[controller]")]
     [ApiController]
     public class CategoriesController : ControllerBase
@@ -17,11 +18,12 @@ namespace FoodQR.API.Controllers
             _context = context;
         }
 
+        [EnableQuery]
         [AllowAnonymous]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
+        public IQueryable<Category> GetCategories()
         {
-            return await _context.Categories.ToListAsync();
+            return _context.Categories.Where(c => c.IsAvailable != false);
         }
 
         [AllowAnonymous]
@@ -65,10 +67,10 @@ namespace FoodQR.API.Controllers
             if (category == null) return NotFound();
 
             // Check if there are products using this category
-            var hasProducts = await _context.Products.AnyAsync(p => p.CategoryId == id);
-            if (hasProducts) return BadRequest(new { Title = "Cannot delete category that contains products!" });
+            var hasProducts = await _context.Products.AnyAsync(p => p.CategoryId == id && p.IsAvailable == true);
+            if (hasProducts) return BadRequest(new { Title = "Cannot delete category that contains active products!" });
 
-            _context.Categories.Remove(category);
+            category.IsAvailable = false;
             await _context.SaveChangesAsync();
             return NoContent();
         }
