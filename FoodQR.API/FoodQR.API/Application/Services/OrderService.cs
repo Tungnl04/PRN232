@@ -22,6 +22,9 @@ namespace FoodQR.API.Application.Services
 
         public async Task<Order> CreateOrAppendOrderAsync(OrderCreateDto orderDto)
         {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
             // Validate Token
             var table = await _context.OrderTables.FindAsync(orderDto.TableId);
             if (table == null)
@@ -220,6 +223,7 @@ namespace FoodQR.API.Application.Services
             table.Status = TableStatus.Taken;
 
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             // === SignalR Broadcast ===
             var orderPayload = new { orderId = order.Id, orderCode = order.OrderCode, tableId = orderDto.TableId };
@@ -227,6 +231,12 @@ namespace FoodQR.API.Application.Services
             await _hubContext.Clients.Group("staff").SendAsync("NewOrderReceived", orderPayload);
 
             return order;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task<Order?> GetOrderByIdAsync(int id)

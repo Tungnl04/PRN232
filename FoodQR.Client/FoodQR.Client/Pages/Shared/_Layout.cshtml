@@ -120,8 +120,12 @@
 
             if (tableId <= 0) return;
 
+            // Lấy token để truyền vào API (SEC-06)
+            const qrToken = new URLSearchParams(window.location.search).get('token') || localStorage.getItem('food_qr_token') || '';
+
             try {
-                const response = await fetch(`${apiBase}/Orders/active/${tableId}`);
+                const tokenParam = qrToken ? `?token=${encodeURIComponent(qrToken)}` : '';
+                const response = await fetch(`${apiBase}/Orders/active/${tableId}${tokenParam}`);
                 if (!response.ok) {
                     bar.classList.remove('active');
                     return;

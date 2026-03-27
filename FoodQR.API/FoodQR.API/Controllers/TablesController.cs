@@ -1,5 +1,6 @@
-﻿using FoodQR.API.Application.DTOs;
+using FoodQR.API.Application.DTOs;
 using FoodQR.API.Core.Entities;
+using FoodQR.API.Core.Enums;
 using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,13 +24,14 @@ namespace FoodQR.API.Controllers
         public async Task<ActionResult<IEnumerable<TableResponseDto>>> GetTables()
         {
             var tables = await _context.OrderTables.ToListAsync();
+            bool isStaffOrAdmin = User.IsInRole("staff") || User.IsInRole("admin");
             return tables.Select(t => new TableResponseDto
             {
                 Id = t.Id,
                 TableNumber = t.TableNumber,
                 Capacity = t.Capacity,
                 Status = t.Status,
-                QrCodeToken = t.QrCodeToken,
+                QrCodeToken = isStaffOrAdmin ? t.QrCodeToken : null, // SEC-04: Ẩn token khỏi public
                 Location = t.Location
             }).ToList();
         }
@@ -103,10 +105,15 @@ namespace FoodQR.API.Controllers
         [HttpPatch("{id}/status")]
         public async Task<IActionResult> UpdateTableStatus(int id, [FromBody] string status)
         {
+            // SEC-07: Validate status phải thuộc TableStatus enum
+            var validStatuses = new[] { TableStatus.Available, TableStatus.Taken, TableStatus.Reserved, TableStatus.Cleaning };
+            if (!validStatuses.Contains(status?.ToLower()))
+                return BadRequest(new { Error = $"Status '{status}' không hợp lệ. Chỉ chấp nhận: {string.Join(", ", validStatuses)}" });
+
             var table = await _context.OrderTables.FindAsync(id);
             if (table == null) return NotFound();
 
-            table.Status = status;
+            table.Status = status.ToLower();
             await _context.SaveChangesAsync();
             return NoContent();
         }

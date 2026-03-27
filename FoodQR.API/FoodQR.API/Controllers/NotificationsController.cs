@@ -33,7 +33,7 @@ namespace FoodQR.API.Controllers
             return await query.OrderByDescending(n => n.CreatedAt).Take(20).ToListAsync();
         }
 
-        [AllowAnonymous]
+        [Authorize(Roles = "staff,admin,kitchen")]
         [HttpPost]
         public async Task<IActionResult> CreateNotification([FromBody] Notification notification)
         {

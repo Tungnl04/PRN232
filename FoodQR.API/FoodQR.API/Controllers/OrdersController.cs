@@ -55,8 +55,19 @@ namespace FoodQR.API.Controllers
 
         [AllowAnonymous]
         [HttpGet("active/{tableId}")]
-        public async Task<ActionResult<OrderDetailDto>> GetActiveOrderByTable(int tableId)
+        public async Task<ActionResult<OrderDetailDto>> GetActiveOrderByTable(int tableId, [FromQuery] string? token)
         {
+            // SEC-06: Validate QR token nếu không phải staff/admin
+            if (!User.Identity?.IsAuthenticated ?? true)
+            {
+                if (string.IsNullOrEmpty(token))
+                    return Unauthorized(new { Error = "Cần token QR để xem đơn hàng." });
+
+                var table = await _context.OrderTables.FindAsync(tableId);
+                if (table == null || table.QrCodeToken != token)
+                    return Unauthorized(new { Error = "Token QR không hợp lệ." });
+            }
+
             var order = await _context.Orders
                 .Include(o => o.Customer)
                 .Include(o => o.Table)
@@ -188,7 +199,7 @@ namespace FoodQR.API.Controllers
             return Ok(new { Message = "Đơn hàng đã được hủy." });
         }
 
-        [AllowAnonymous]
+        [Authorize(Roles = "staff,admin")]
         [HttpDelete("items/{itemId}")]
         public async Task<IActionResult> CancelOrderItem(int itemId, [FromQuery] string? reason)
         {

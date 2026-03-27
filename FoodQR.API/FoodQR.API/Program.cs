@@ -20,7 +20,11 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowClient", policy =>
     {
-        policy.SetIsOriginAllowed(origin => true) // Cho phép mọi origin (kể cả IIS Express port khác)
+        policy.WithOrigins(
+                  "https://localhost:7209",
+                  "http://localhost:5209",
+                  "https://foodqr-client-g7ceckene4ftataj.southeastasia-01.azurewebsites.net"
+              )
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials(); // needed for SignalR

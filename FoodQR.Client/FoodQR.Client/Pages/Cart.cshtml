@@ -148,7 +148,9 @@
         async function fetchActiveOrder() {
             if (tableId <= 0) return;
             try {
-                const res = await fetch(`${apiBaseUrl}/Orders/active/${tableId}`);
+                const qrToken = new URLSearchParams(window.location.search).get('token') || '';
+                const tokenParam = qrToken ? `?token=${encodeURIComponent(qrToken)}` : '';
+                const res = await fetch(`${apiBaseUrl}/Orders/active/${tableId}${tokenParam}`);
                 if (!res.ok) return;
 
                 const activeOrder = await res.json();

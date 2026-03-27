@@ -111,8 +111,9 @@ const apiClient = (function() {
             return res && res.ok ? res.json() : null;
         },
         // ORDERS
-        async getActiveOrder(tableId) {
-            const res = await authorizedFetch(`/Orders/active/${tableId}`);
+        async getActiveOrder(tableId, token) {
+            const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+            const res = await authorizedFetch(`/Orders/active/${tableId}${tokenParam}`);
             if (res && res.ok) return res.json();
             return null;
         },
