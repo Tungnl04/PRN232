@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodQR - Software Requirements Specification (SRS)</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f5f5f5;color:#1a1a2e;line-height:1.7;padding:20px}
+.container{max-width:1100px;margin:auto;background:#fff;padding:40px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+h1{text-align:center;color:#0f3460;font-size:26px;margin-bottom:5px}
+h2{color:#16213e;border-bottom:3px solid #e94560;padding-bottom:8px;margin:30px 0 15px;font-size:20px}
+h3{color:#0f3460;margin:18px 0 10px;font-size:17px}
+.subtitle{text-align:center;color:#666;margin-bottom:25px;font-size:13px}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+th{background:#16213e;color:#fff;padding:8px 10px;text-align:left}
+td{padding:7px 10px;border-bottom:1px solid #eee}
+tr:hover td{background:#f0f4ff}
+.tag-green{background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:4px;font-weight:600;font-size:12px}
+.tag-yellow{background:#fff8e1;color:#e65100;padding:2px 8px;border-radius:4px;font-weight:600;font-size:12px}
+code{background:#f0f0f0;padding:2px 6px;border-radius:4px;font-size:12px;color:#c7254e}
+.mermaid{margin:15px 0;text-align:center}
+@media print{body{padding:0;background:#fff}.container{box-shadow:none;padding:20px}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Software Requirements Specification (SRS)</h1>
+<p class="subtitle">Project: FoodQR - QR Code-Based Restaurant Order Management System | PRN232 | Date: March 27, 2026</p>
+
+<!-- TABLE OF CONTENTS -->
+<h2>Table of Contents</h2>
+<table>
+<tr><td><strong>1.</strong></td><td>Introduction</td></tr>
+<tr><td><strong>2.</strong></td><td>System Overview</td></tr>
+<tr><td><strong>3.</strong></td><td>Context Diagram (UML)</td></tr>
+<tr><td><strong>4.</strong></td><td>Functional Requirements (FR)</td></tr>
+<tr><td><strong>5.</strong></td><td>Non-Functional Requirements (NFR)</td></tr>
+<tr><td><strong>6.</strong></td><td>Use Case Diagrams (UML)</td></tr>
+<tr><td><strong>7.</strong></td><td>Business Rules</td></tr>
+<tr><td><strong>8.</strong></td><td>Entity-Relationship Diagram (ERD)</td></tr>
+<tr><td><strong>9.</strong></td><td>System Architecture (Component Diagram)</td></tr>
+<tr><td><strong>10.</strong></td><td>Sequence Diagrams (UML)</td></tr>
+<tr><td><strong>11.</strong></td><td>State Machine Diagrams (UML)</td></tr>
+<tr><td><strong>12.</strong></td><td>Activity Diagrams (UML)</td></tr>
+</table>
+
+<!-- 1. INTRODUCTION -->
+<h2>1. Introduction</h2>
+<h3>1.1 Purpose</h3>
+<p>FoodQR is a restaurant order management system powered by QR Code technology. Customers scan a QR code at their table to view the menu, place orders, track order status in real-time, and pay online via VNPay. The system supports waitstaff, kitchen staff, and administrators in managing day-to-day restaurant operations with real-time communication.</p>
+
+<h3>1.2 Scope</h3>
+<table>
+<tr><th>Component</th><th>Details</th></tr>
+<tr><td>Platform</td><td>Web Application (Responsive)</td></tr>
+<tr><td>Backend</td><td>ASP.NET Core Web API (.NET 8)</td></tr>
+<tr><td>Frontend</td><td>ASP.NET Razor Pages (.NET 8)</td></tr>
+<tr><td>Database</td><td>SQL Server + Entity Framework Core</td></tr>
+<tr><td>Real-time</td><td>SignalR (WebSocket)</td></tr>
+<tr><td>Payment</td><td>VNPay Sandbox (HMACSHA512)</td></tr>
+<tr><td>Security</td><td>JWT Bearer Token + BCrypt Password Hashing</td></tr>
+</table>
+
+<h3>1.3 Actors</h3>
+<table>
+<tr><th>Actor</th><th>Description</th></tr>
+<tr><td>Guest (Customer)</td><td>Scans QR code at the table to view the menu, place orders, track order status, and make payments. No registration required.</td></tr>
+<tr><td>Kitchen (Chef)</td><td>Views the order board, updates the status of each dish (Pending → Preparing → Ready).</td></tr>
+<tr><td>Staff (Waiter)</td><td>Manages tables, views order details, serves dishes, switches tables, cancels orders/items, merges bills, and confirms payments.</td></tr>
+<tr><td>Admin (Manager)</td><td>Manages products, categories, combos, tables, users, coupons, store configuration, and views revenue reports.</td></tr>
+<tr><td>VNPay (External System)</td><td>Online payment gateway. Receives payment URL requests and returns transaction callbacks.</td></tr>
+</table>
+
+<!-- 2. SYSTEM OVERVIEW -->
+<h2>2. System Overview</h2>
+<table>
+<tr><th>Component</th><th>Technology</th><th>Status</th></tr>
+<tr><td>Backend API (11 Controllers)</td><td>ASP.NET Core Web API (.NET 8)</td><td><span class="tag-green">✅ Done</span></td></tr>
+<tr><td>Database (14 Entities)</td><td>SQL Server + EF Core</td><td><span class="tag-green">✅ Done</span></td></tr>
+<tr><td>Authentication & Authorization</td><td>JWT Token + BCrypt + Role-Based (Admin/Staff/Kitchen)</td><td><span class="tag-green">✅ Done</span></td></tr>
+<tr><td>Real-time Notifications</td><td>SignalR (OrderHub)</td><td><span class="tag-green">✅ Done</span></td></tr>
+<tr><td>Online Payment</td><td>VNPay Sandbox</td><td><span class="tag-green">✅ Done</span></td></tr>
+<tr><td>Dashboard Reports</td><td>Chart.js (Revenue, Top Products, Category Sales)</td><td><span class="tag-green">✅ Done</span></td></tr>
+<tr><td>Coupon / Discount Codes</td><td>CRUD + Business Rule Validation</td><td><span class="tag-yellow">🟡 In Progress</span></td></tr>
+</table>
+
+<!-- 3. CONTEXT DIAGRAM (DFD Level 0) -->
+<h2>3. Context Diagram (DFD Level 0)</h2>
+<div class="mermaid">
+flowchart TB
+    Guest["<b>Guest</b><br/>(Customer)"]
+    Kitchen["<b>Kitchen</b><br/>(Chef)"]
+    Staff["<b>Staff</b><br/>(Waiter)"]
+    Admin["<b>Admin</b><br/>(Manager)"]
+    VNPay["<b>VNPay</b><br/>(External Payment Gateway)"]
+
+    FoodQR(("0<br/><b>FoodQR</b><br/>Restaurant<br/>Management<br/>System"))
+
+    Guest -->|"Menu Request, Order Data,<br/>Customer Name, Coupon Code"| FoodQR
+    FoodQR -->|"Menu Display, Order Confirmation,<br/>Order Tracking Status, Payment Result"| Guest
+
+    Kitchen -->|"Status Update<br/>(Preparing, Ready)"| FoodQR
+    FoodQR -->|"New Order Notification,<br/>Order Item List"| Kitchen
+
+    Staff -->|"Serve Confirmation, Cancel Request,<br/>Switch Table, Merge Bill"| FoodQR
+    FoodQR -->|"Table Map, Order Details,<br/>Real-time Notifications"| Staff
+
+    Admin -->|"Product/Category/Combo/User/<br/>Table/Coupon CRUD Data"| FoodQR
+    FoodQR -->|"Revenue Reports, Dashboard Stats,<br/>Activity Logs"| Admin
+
+    VNPay -->|"Payment Callback<br/>(Success/Failure)"| FoodQR
+    FoodQR -->|"Payment URL Request<br/>(HMACSHA512 Signed)"| VNPay
+</div>
+
+<!-- 4. FUNCTIONAL REQUIREMENTS -->
+<h2>4. Functional Requirements (FR)</h2>
+
+<h3>4.1 Guest Module</h3>
+<table>
+<tr><th>ID</th><th>Feature</th><th>Description</th><th>Status</th></tr>
+<tr><td>FR-G01</td><td>Scan QR to View Menu</td><td>Customer scans the QR code on the table. System validates the Token and displays the menu.</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-G02</td><td>Add to Cart</td><td>Select Product/Combo, adjust quantity, add notes per item.</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-G03</td><td>Place Order</td><td>Submit order to API. Backend validates Token, checks Inventory, creates Order + Items.</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-G04</td><td>Append Items</td><td>Re-scan QR to add more items to the currently active bill.</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-G05</td><td>Track Order (Real-time)</td><td>OrderTracking page shows per-item status updates via SignalR.</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-G06</td><td>Pay via VNPay</td><td>Generate VNPay payment URL. Process callback for Success/Failure.</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-G07</td><td>Apply Discount Coupon</td><td>Enter coupon code at Cart. Backend validates 5 conditions. Returns discount amount.</td><td><span class="tag-yellow">🟡</span></td></tr>
+</table>
+
+<h3>4.2 Kitchen Module</h3>
+<table>
+<tr><th>ID</th><th>Feature</th><th>Description</th><th>Status</th></tr>
+<tr><td>FR-K01</td><td>Kitchen Order Board</td><td>Dashboard displays all OrderItems with status Pending or Preparing.</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-K02</td><td>Update Item Status</td><td>Kitchen transitions items: Pending → Preparing → Ready. SignalR notifies Staff.</td><td><span class="tag-green">✅</span></td></tr>
+</table>
+
+<h3>4.3 Staff Module</h3>
+<table>
+<tr><th>ID</th><th>Feature</th><th>Description</th><th>Status</th></tr>
+<tr><td>FR-S01</td><td>Table Dashboard</td><td>Visual table map showing status: Available / Taken / Cleaning.</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-S02</td><td>View Order Details</td><td>List of items, per-item status, total amount, order history.</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-S03</td><td>Serve Dishes</td><td>Mark items as Served when delivered to table (Ready → Served).</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-S04</td><td>Switch Table</td><td>Reassign an order to a different table upon customer request.</td><td><span class="tag-yellow">🟡 UI</span></td></tr>
+<tr><td>FR-S05</td><td>Cancel Order / Item</td><td>Cancel only Pending items. Mandatory reason input. Auto-refund Inventory.</td><td><span class="tag-yellow">🟡 UI</span></td></tr>
+<tr><td>FR-S06</td><td>Merge Bills</td><td>Consolidate bills from Table A into Table B. Table A retains Taken status.</td><td><span class="tag-yellow">🟡</span></td></tr>
+<tr><td>FR-S07</td><td>Confirm Payment</td><td>Staff processes cash payment or initiates VNPay at the counter.</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-S08</td><td>Receive Notifications</td><td>Real-time SignalR notifications: new orders, items ready to serve.</td><td><span class="tag-green">✅</span></td></tr>
+</table>
+
+<h3>4.4 Admin Module</h3>
+<table>
+<tr><th>ID</th><th>Feature</th><th>Description</th><th>Status</th></tr>
+<tr><td>FR-A01</td><td>Manage Products</td><td>CRUD: Name, Price, Image, Inventory, Category, Toggle availability.</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-A02</td><td>Manage Categories</td><td>CRUD: Name, Description.</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-A03</td><td>Manage Combos</td><td>CRUD: Assign multiple Products to a Combo with discounted pricing.</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-A04</td><td>Manage Tables</td><td>CRUD: Table number, Capacity, Location, Status, Generate QR Code.</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-A05</td><td>Manage Users</td><td>Create/Edit/Deactivate Staff/Admin accounts. Force password change on first login.</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-A06</td><td>Revenue Reports</td><td>Chart.js dashboards: Revenue trends, Top products, Category sales distribution.</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-A07</td><td>Store Configuration</td><td>Store name, Tax rate, Tax included/excluded flag, Currency.</td><td><span class="tag-green">✅</span></td></tr>
+<tr><td>FR-A08</td><td>Manage Coupons</td><td>CRUD: Code, Discount type, Value, Min order, Max usage, Expiry date.</td><td><span class="tag-yellow">🟡</span></td></tr>
+</table>
+
+<!-- 5. NON-FUNCTIONAL REQUIREMENTS -->
+<h2>5. Non-Functional Requirements (NFR)</h2>
+<table>
+<tr><th>ID</th><th>Category</th><th>Description</th></tr>
+<tr><td>NFR-01</td><td>Security</td><td>BCrypt + Salt password hashing; JWT Bearer Token with expiration; Role-Based Authorization (Admin, Staff, Kitchen); QR Token auto-regeneration on table cleanup.</td></tr>
+<tr><td>NFR-02</td><td>Performance</td><td>API response time &lt; 500ms. Menu page load &lt; 2s. SignalR push latency &lt; 1s.</td></tr>
+<tr><td>NFR-03</td><td>Availability</td><td>Deployed on Azure App Service. 24/7 uptime. Supports minimum 50 concurrent users.</td></tr>
+<tr><td>NFR-04</td><td>Usability</td><td>Mobile-first for Guest pages (Menu/Cart/Tracking). Desktop-optimized for Admin/Staff dashboards.</td></tr>
+<tr><td>NFR-05</td><td>Data Integrity</td><td>Database Transactions for Order flow. Soft Delete for Products/Categories/Users. ActivityLog tracks all operations.</td></tr>
+<tr><td>NFR-06</td><td>Scalability</td><td>Clean Architecture (Controllers → Services → DbContext). Extensible with OData or GraphQL for Admin APIs.</td></tr>
+</table>
+
+<!-- 6. USE CASE DIAGRAMS -->
+<h2>6. Use Case Diagrams (UML)</h2>
+
+<h3>6.1 Guest & Payment Use Cases</h3>
+<div class="mermaid">
+flowchart LR
+    Guest(("Guest"))
+    VNPay(("VNPay"))
+
+    subgraph UC_System["FoodQR System"]
+        direction TB
+        UC1["UC-G01: Scan QR to View Menu"]
+        UC2["UC-G02: Add Items to Cart"]
+        UC3["UC-G03: Place Order"]
+        UC4["UC-G04: Append Additional Items"]
+        UC5["UC-G05: Track Order Status"]
+        UC6["UC-G06: Pay via VNPay"]
+        UC7["UC-G07: Apply Discount Coupon"]
+        UC8["UC-INT: Validate QR Token"]
+        UC9["UC-INT: Check Inventory"]
+    end
+
+    Guest --- UC1
+    Guest --- UC2
+    Guest --- UC3
+    Guest --- UC4
+    Guest --- UC5
+    Guest --- UC6
+    Guest --- UC7
+    UC6 --- VNPay
+
+    UC1 -.->|"include"| UC8
+    UC3 -.->|"include"| UC8
+    UC3 -.->|"include"| UC9
+    UC4 -.->|"extend"| UC3
+</div>
+
+<h3>6.2 Kitchen & Staff Use Cases</h3>
+<div class="mermaid">
+flowchart LR
+    Kitchen(("Kitchen"))
+    Staff(("Staff"))
+
+    subgraph UC_System2["FoodQR System"]
+        direction TB
+        UC_K1["UC-K01: View Kitchen Order Board"]
+        UC_K2["UC-K02: Update Item Status"]
+        UC_S1["UC-S01: View Table Dashboard"]
+        UC_S2["UC-S02: View Order Details"]
+        UC_S3["UC-S03: Serve Dishes"]
+        UC_S4["UC-S04: Switch Table"]
+        UC_S5["UC-S05: Cancel Order / Item"]
+        UC_S6["UC-S06: Merge Bills"]
+        UC_S7["UC-S07: Confirm Payment"]
+        UC_S8["UC-S08: Receive Notifications"]
+        UC_INT1["UC-INT: Verify Pending Status"]
+        UC_INT2["UC-INT: Refund Inventory"]
+    end
+
+    Kitchen --- UC_K1
+    Kitchen --- UC_K2
+
+    Staff --- UC_S1
+    Staff --- UC_S2
+    Staff --- UC_S3
+    Staff --- UC_S4
+    Staff --- UC_S5
+    Staff --- UC_S6
+    Staff --- UC_S7
+    Staff --- UC_S8
+
+    UC_S5 -.->|"include"| UC_INT1
+    UC_S5 -.->|"include"| UC_INT2
+</div>
+
+<h3>6.3 Admin Use Cases</h3>
+<div class="mermaid">
+flowchart LR
+    Admin(("Admin"))
+
+    subgraph UC_System3["FoodQR System"]
+        direction TB
+        UC_A1["UC-A01: Manage Products (CRUD)"]
+        UC_A2["UC-A02: Manage Categories (CRUD)"]
+        UC_A3["UC-A03: Manage Combos (CRUD)"]
+        UC_A4["UC-A04: Manage Tables & QR Codes"]
+        UC_A5["UC-A05: Manage Users"]
+        UC_A6["UC-A06: View Revenue Reports"]
+        UC_A7["UC-A07: Configure Store Settings"]
+        UC_A8["UC-A08: Manage Discount Coupons"]
+        UC_AUTH["UC-AUTH: Authenticate via JWT"]
+    end
+
+    Admin --- UC_A1
+    Admin --- UC_A2
+    Admin --- UC_A3
+    Admin --- UC_A4
+    Admin --- UC_A5
+    Admin --- UC_A6
+    Admin --- UC_A7
+    Admin --- UC_A8
+
+    UC_A1 -.->|"include"| UC_AUTH
+    UC_A5 -.->|"include"| UC_AUTH
+</div>
+
+<!-- 7. BUSINESS RULES -->
+<h2>7. Business Rules</h2>
+<table>
+<tr><th>ID</th><th>Rule</th><th>Description</th></tr>
+<tr><td>BR-01</td><td>One Table = One Bill</td><td>Each physical table can have at most one active Order at any given time. Subsequent orders are appended to the existing bill.</td></tr>
+<tr><td>BR-02</td><td>QR Token Lifecycle</td><td>Token auto-regenerates (new GUID) when table transitions to Cleaning or Available. Previous QR links are immediately invalidated.</td></tr>
+<tr><td>BR-03</td><td>Cancel Only When Pending</td><td>Items can only be cancelled when their status is Pending. Once the kitchen marks an item as Preparing or Ready, cancellation is blocked.</td></tr>
+<tr><td>BR-04</td><td>Inventory Refund on Cancel</td><td>When an item is cancelled, the product inventory is restored: <code>product.Inventory += item.Quantity</code>. When inventory reaches 0, the product is auto-disabled.</td></tr>
+<tr><td>BR-05</td><td>Anti-Duplicate Payment</td><td>If <code>PaymentStatus = Success</code>, all subsequent payment requests are rejected. Prevents double-charging from page refresh.</td></tr>
+<tr><td>BR-06</td><td>Merge Bill Keeps Table</td><td>When merging Bill A into Bill B, all OrderItems move to B. Bill A is marked as Merged. Table A retains its Taken status (customers still seated).</td></tr>
+<tr><td>BR-07</td><td>Soft Delete Policy</td><td>Products, Categories, and Users are never hard-deleted. Instead, they are deactivated via <code>IsAvailable = false</code> or <code>Active = false</code> to preserve historical data integrity.</td></tr>
+<tr><td>BR-08</td><td>Forced Password Change</td><td>Newly created accounts have <code>MustChangePassword = true</code>. Users must change their default password before accessing the dashboard.</td></tr>
+<tr><td>BR-09</td><td>Host Order Pattern</td><td>When multiple guests scan the same QR code, the first person to submit an order becomes the Host. All subsequent orders are appended to the Host's bill.</td></tr>
+<tr><td>BR-10</td><td>Auto-Disable Out of Stock</td><td>When <code>Inventory &lt;= 0</code>, the system automatically sets <code>IsAvailable = false</code> and notifies the Admin.</td></tr>
+<tr><td>BR-11</td><td>Coupon Validation Pipeline</td><td>Coupons must pass 5 sequential checks: Exists → Is Active → Not Expired → Has Remaining Uses → Order meets minimum amount.</td></tr>
+</table>
+
+<!-- 8. ER DIAGRAM -->
+<h2>8. Entity-Relationship Diagram (ERD)</h2>
+<div class="mermaid">
+erDiagram
+    Category ||--o{ Product : "contains"
+    Product ||--o{ ComboItem : "belongs to"
+    Combo ||--o{ ComboItem : "consists of"
+    Product ||--o{ OrderItem : "ordered as"
+    Combo ||--o{ OrderItem : "ordered as"
+    Customer ||--o{ Order : "places"
+    OrderTable ||--o{ Order : "serves"
+    Order ||--o{ OrderItem : "contains"
+    Order ||--o{ OrderStatusHistory : "logs"
+    Coupon ||--o{ Order : "applied to"
+    User { }
+    Notification { }
+    ActivityLog { }
+    StoreConfiguration { }
+</div>
+
+<h3>8.1 Data Dictionary</h3>
+<table>
+<tr><th>Entity</th><th>Key Attributes</th><th>Description</th></tr>
+<tr><td><strong>Category</strong></td><td>Id (PK), Name, Description</td><td>Product categories (e.g., Appetizer, Main Course, Drinks).</td></tr>
+<tr><td><strong>Product</strong></td><td>Id (PK), Name, Price, ImageUrl, Inventory, CategoryId (FK), IsAvailable</td><td>Individual menu items with stock tracking and availability toggle.</td></tr>
+<tr><td><strong>Combo</strong></td><td>Id (PK), Name, Price, ImageUrl, Available</td><td>Bundled deals containing multiple products at a discounted price.</td></tr>
+<tr><td><strong>ComboItem</strong></td><td>Id (PK), ComboId (FK), ProductId (FK), Quantity</td><td>Junction table linking Products to Combos with quantity.</td></tr>
+<tr><td><strong>Customer</strong></td><td>Id (PK), Name, Email, CreatedAt</td><td>Guest customer created when placing an order. No login required.</td></tr>
+<tr><td><strong>OrderTable</strong></td><td>Id (PK), TableNumber, Capacity, Status, QrCodeToken, Location</td><td>Physical tables. Status: Available / Taken / Cleaning. QR Token regenerates on cleanup.</td></tr>
+<tr><td><strong>Order</strong></td><td>Id (PK), OrderCode (UNIQUE), CustomerId (FK), TableId (FK), TotalAmount, Status, PaymentStatus, PaymentMethod, CouponId (FK), DiscountAmount, CreatedAt, UpdatedAt</td><td>Main order entity tracking lifecycle, payment, and coupon usage.</td></tr>
+<tr><td><strong>OrderItem</strong></td><td>Id (PK), OrderId (FK), ProductId (FK), ComboId (FK), Quantity, UnitPrice, Status, Note</td><td>Individual line items. Status: Pending → Preparing → Ready → Served → Cancelled.</td></tr>
+<tr><td><strong>OrderStatusHistory</strong></td><td>Id (PK), OrderId (FK), OldStatus, NewStatus, Note, CreatedAt</td><td>Audit trail recording every order status transition with optional notes.</td></tr>
+<tr><td><strong>User</strong></td><td>Id (PK), Name, Username (UNIQUE), PasswordHash, Role, Active, MustChangePassword</td><td>Staff/Admin/Kitchen accounts. BCrypt hashed passwords. Soft delete via Active flag.</td></tr>
+<tr><td><strong>Notification</strong></td><td>Id (PK), Message, Type, TargetRole, IsRead, CreatedAt</td><td>Real-time notifications pushed via SignalR to targeted roles.</td></tr>
+<tr><td><strong>ActivityLog</strong></td><td>Id (PK), Action, Description, CreatedAt</td><td>System-wide audit log for all significant operations.</td></tr>
+<tr><td><strong>StoreConfiguration</strong></td><td>Id (PK), StoreName, TaxRate, IsTaxIncludedInPrice, Currency</td><td>Global store settings (tax, currency, branding).</td></tr>
+<tr><td><strong>Coupon</strong></td><td>Id (PK), Code (UNIQUE), DiscountType, DiscountValue, MinOrderAmount, MaxUsage, UsedCount, ExpiryDate, IsActive</td><td>Discount codes validated via 5-step pipeline before application.</td></tr>
+</table>
+
+<!-- 9. SYSTEM ARCHITECTURE -->
+<h2>9. System Architecture</h2>
+<div class="mermaid">
+flowchart TB
+    UI["Presentation Layer<br/>(Razor Pages: Guest, Staff, Kitchen, Admin)"]
+    API["API Layer<br/>(12 ASP.NET Core Controllers)"]
+    SVC["Service Layer<br/>(OrderService, KitchenService, PaymentService)"]
+    DB[("SQL Server<br/>FoodStoreDbContext")]
+    Hub["SignalR Hub<br/>(Real-time)"]
+
+    UI --> API
+    API --> SVC
+    SVC --> DB
+    SVC --> Hub
+    Hub -.->|"Push Notifications"| UI
+</div>
+
+<!-- 10. SEQUENCE DIAGRAMS -->
+<h2>10. Sequence Diagrams (UML)</h2>
+
+<h3>10.1 UC-G03: Place Order</h3>
+<div class="mermaid">
+sequenceDiagram
+    actor Guest as Guest
+    participant FE as Frontend (Cart.cshtml)
+    participant API as OrdersController
+    participant SVC as OrderService
+    participant DB as FoodStoreDbContext
+    participant Hub as SignalR Hub
+
+    Guest->>FE: 1. Click Place Order
+    FE->>API: 2. POST /api/Orders
+    API->>SVC: 3. CreateOrAppendOrderAsync(dto)
+    SVC->>DB: 4. SELECT Table WHERE Id = dto.TableId
+    DB-->>SVC: 5. Return Table entity
+    SVC->>SVC: 6. Validate QrCodeToken
+    alt Invalid Token
+        SVC-->>API: 401 Unauthorized
+        API-->>FE: QR Token expired or invalid
+    end
+    SVC->>DB: 7. SELECT Active Order on this Table
+    alt Active Order Exists
+        SVC->>SVC: 8. Append Items to existing Order
+    else No Active Order
+        SVC->>DB: 9. INSERT Customer
+        SVC->>DB: 10. INSERT Order (Status=Pending)
+    end
+    loop For Each OrderItem
+        SVC->>DB: 11. SELECT Product and Check Inventory
+        SVC->>DB: 12. Deduct Inventory
+        SVC->>DB: 13. INSERT OrderItem
+    end
+    SVC->>DB: 14. UPDATE Order.TotalAmount
+    SVC->>DB: 15. SaveChangesAsync (Transaction)
+    SVC->>Hub: 16. SendAsync NewOrder
+    Hub-->>FE: 17. SignalR notifies Staff and Kitchen
+    SVC-->>API: 18. Return Order
+    API-->>FE: 19. 200 OK + OrderCode
+    FE-->>Guest: 20. Redirect to Order Tracking
+</div>
+
+<h3>10.2 UC-G06: VNPay Payment</h3>
+<div class="mermaid">
+sequenceDiagram
+    actor Guest as Guest
+    participant FE as Frontend
+    participant API as PaymentsController
+    participant SVC as PaymentService
+    participant DB as Database
+    participant VNPay as VNPay Gateway
+
+    Guest->>FE: 1. Click Pay via VNPay
+    FE->>API: 2. POST /api/Payments/vnpay/orderId
+    API->>SVC: 3. CreateVnPayUrlAsync(orderId)
+    SVC->>DB: 4. SELECT Order + StoreConfig
+    SVC->>SVC: 5. Calculate TotalWithTax
+    SVC->>VNPay: 6. Generate URL with HMACSHA512
+    SVC-->>API: 7. Return PaymentURL
+    API-->>FE: 8. Return URL
+    FE->>VNPay: 9. Redirect User to VNPay
+    Guest->>VNPay: 10. Enter banking credentials
+    VNPay->>API: 11. GET /api/Payments/vnpay-return
+    API->>SVC: 12. VnPayReturnAsync(query)
+    SVC->>SVC: 13. ValidateSignature with HMACSHA512
+    alt Valid Signature AND ResponseCode 00
+        SVC->>DB: 14. Order.Status = Paid
+        SVC->>DB: 15. Table.Status = Cleaning
+        SVC->>DB: 16. INSERT Notification
+    else Payment Failed
+        SVC->>DB: 17. PaymentStatus = Failed
+    end
+    SVC-->>FE: 18. Redirect to Payment Result page
+</div>
+
+<!-- 11. STATE MACHINE DIAGRAMS -->
+<h2>11. State Machine Diagrams (UML)</h2>
+
+<h3>11.1 Order Status Lifecycle</h3>
+<div class="mermaid">
+stateDiagram-v2
+    [*] --> Pending : Customer places order
+    Pending --> Processing : Kitchen accepts order
+    Pending --> Cancelled : Staff cancels with reason
+    Processing --> Preparing : Kitchen starts cooking
+    Preparing --> Ready : Cooking complete
+    Ready --> Served : Staff delivers to table
+    Served --> Paid : Payment successful
+    Served --> Merged : Bill merged to another table
+    Served --> Pending : Customer orders more items
+    Ready --> Pending : Customer orders more items
+    Paid --> [*]
+    Cancelled --> [*]
+    Merged --> [*]
+
+    note right of Pending : Cancellation ALLOWED
+    note right of Preparing : Cancellation BLOCKED
+    note right of Merged : Physical table remains Taken
+</div>
+
+<h3>11.2 Table Status Lifecycle</h3>
+<div class="mermaid">
+stateDiagram-v2
+    [*] --> Available : Table is free
+    Available --> Taken : Customer scans QR and places order
+    Taken --> Cleaning : Payment completed
+    Cleaning --> Available : Staff finishes cleanup
+    Taken --> Taken : Bill merged but source table keeps status
+
+    note right of Cleaning : QR Token auto-regenerated
+    note right of Available : QR Token auto-regenerated
+</div>
+
+<!-- 12. ACTIVITY DIAGRAM -->
+<h2>12. Activity Diagram (UML)</h2>
+
+<h3>12.1 End-to-End Order Placement Flow</h3>
+<div class="mermaid">
+flowchart TD
+    Start(("Start")) --> A1["Customer scans QR at table"]
+    A1 --> A2{"Is QR Token valid?"}
+    A2 -->|No| A3["Display error: QR expired"]
+    A3 --> End1(("End"))
+    A2 -->|Yes| A4["Display Menu"]
+    A4 --> A5["Customer selects items and adds to cart"]
+    A5 --> A6{"Apply discount coupon?"}
+    A6 -->|Yes| A7["Validate coupon via 5-step pipeline"]
+    A7 --> A8{"Coupon valid?"}
+    A8 -->|No| A9["Display coupon error message"]
+    A9 --> A5
+    A8 -->|Yes| A10["Calculate discounted total"]
+    A6 -->|No| A10
+    A10 --> A11["Customer clicks Place Order"]
+    A11 --> A12{"Does table have an active bill?"}
+    A12 -->|Yes| A13["Append items to existing bill"]
+    A12 -->|No| A14["Create new Customer + Order"]
+    A13 --> A15
+    A14 --> A15
+    A15["Check inventory for each item"]
+    A15 --> A16{"Sufficient stock?"}
+    A16 -->|No| A17["Skip out-of-stock items"]
+    A16 -->|Yes| A18["Deduct inventory and create OrderItem"]
+    A17 --> A18
+    A18 --> A19["Calculate TotalAmount"]
+    A19 --> A20["Notify Kitchen via SignalR"]
+    A20 --> A21["Redirect to Order Tracking page"]
+    A21 --> End2(("End"))
+</div>
+
+<br>
+<p style="text-align:center;color:#999;"><em>Software Requirements Specification - FoodQR Restaurant Management System | Version 2.0 (UML-Compliant) | March 27, 2026</em></p>
+
+</div>
+
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+</script>
+</body>
+</html>
