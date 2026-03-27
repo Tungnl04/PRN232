@@ -7,6 +7,7 @@ DELETE FROM [order_status_history];
 DELETE FROM [notification];
 DELETE FROM [order_item];
 DELETE FROM [order];
+DELETE FROM [coupon];
 DELETE FROM [combo_item];
 DELETE FROM [combo];
 DELETE FROM [product];
@@ -159,7 +160,15 @@ INSERT INTO [user] (id, name, username, password_hash, role, active, must_change
 (3, N'Kitchen User', 'kitchen', '$2a$11$Y8iC0D.lCaFFEcGstxcJoOGe1z/Pl3fOQQjeZp4mcLBQBvmoK0BbK', 'kitchen', 1, 0);
 SET IDENTITY_INSERT [user] OFF;
 
--- 8. INSERT STORE CONFIGURATION (Default: 8% VAT)
+-- 8. INSERT COUPONS
+SET IDENTITY_INSERT [coupon] ON;
+INSERT INTO [coupon] (id, code, discount_type, discount_value, min_order_amount, max_usage, used_count, expiry_date, is_active) VALUES 
+(1, 'GIAM20K', 'fixed', 20000, 100000, 100, 0, '2026-12-31 23:59:59', 1),
+(2, 'SALESOC10', 'percent', 10, 50000, 50, 0, '2026-12-31 23:59:59', 1),
+(3, 'VIP50K', 'fixed', 50000, 200000, 10, 0, '2026-05-30 23:59:59', 1);
+SET IDENTITY_INSERT [coupon] OFF;
+GO
+-- 9. INSERT STORE CONFIGURATION (Default: 8% VAT)
 DELETE FROM [store_configuration];
 SET IDENTITY_INSERT [store_configuration] ON;
 INSERT INTO [store_configuration] (id, store_name, tax_rate, is_tax_included_in_price, currency)

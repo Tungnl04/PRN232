@@ -195,7 +195,10 @@
         }
 
         function calculateBill(order) {
+            const preDiscountTotal = (order.items || []).reduce((acc, i) => acc + (i.unitPrice * i.quantity), 0);
             const subtotal = order.totalAmount || 0;
+            const discountAmount = preDiscountTotal > subtotal ? (preDiscountTotal - subtotal) : 0;
+            
             const taxRate = storeConfig?.taxRate || 0.08;
             const isTaxIncluded = storeConfig?.isTaxIncludedInPrice || false;
             let taxAmount, total;
@@ -207,7 +210,7 @@
                 taxAmount = Math.round(subtotal * taxRate);
                 total = subtotal + taxAmount;
             }
-            return { subtotal, taxRate, taxAmount, total, isTaxIncluded };
+            return { preDiscountTotal, discountAmount, subtotal, taxRate, taxAmount, total, isTaxIncluded };
         }
 
         function renderOrder(order) {
@@ -229,6 +232,9 @@
                         </button>
                         <button onclick="showBillPopup('vnpay')" style="background: #2563eb; color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 800; cursor: pointer; font-size: 0.9rem; box-shadow: 0 4px 0 #1d4ed8; display: flex; align-items: center; gap: 6px;">
                             <i class="fa-solid fa-qrcode"></i> Chuyển khoản
+                        </button>
+                        <button onclick="showMergeOptions()" style="background: #f59e0b; color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 800; cursor: pointer; font-size: 0.9rem; box-shadow: 0 4px 0 #d97706; display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-object-group"></i> Gộp đơn
                         </button>
                     </div>`;
             } else {
@@ -308,6 +314,16 @@
                     <tbody>${itemsHtml}</tbody>
                 </table>
                 <div style="border-top: 2px dashed #e2e8f0; margin-top: 10px; padding-top: 12px;">
+                    ${bill.discountAmount > 0 ? `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="color: #64748b; font-size: 0.85rem; font-weight: 600;">Tổng tiền món</span>
+                            <span style="font-weight: 700; font-size: 0.85rem;">${bill.preDiscountTotal.toLocaleString('vi-VN')} ₫</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="color: #10b981; font-size: 0.85rem; font-weight: 800;"><i class="fa-solid fa-tag"></i> Giảm giá</span>
+                            <span style="font-weight: 800; font-size: 0.85rem; color: #10b981;">-${bill.discountAmount.toLocaleString('vi-VN')} ₫</span>
+                        </div>
+                    ` : ''}
                     <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
                         <span style="color: #64748b; font-size: 0.85rem; font-weight: 600;">Tạm tính</span>
                         <span style="font-weight: 700; font-size: 0.85rem;">${bill.subtotal.toLocaleString('vi-VN')} ₫</span>
@@ -421,6 +437,69 @@
                 await apiClient.updateItemStatus(id, 'served');
             }
             loadOrder();
+        }
+
+        async function showMergeOptions() {
+            try {
+                Swal.showLoading();
+                const res = await fetch(`${apiBase}/Tables`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+                });
+                const tables = await res.json();
+                
+                const activeTables = tables.filter(t => t.status.toLowerCase() === 'taken' && t.id != tableId);
+                
+                if (activeTables.length === 0) {
+                    Swal.fire('Thông báo', 'Không có bàn nào khác đang hoạt động để gộp.', 'info');
+                    return;
+                }
+
+                let optionsHtml = activeTables.map(t => `<option value="${t.id}">Bàn ${t.tableNumber}</option>`).join('');
+                Swal.close();
+                
+                const { value: sourceTableId, isConfirmed } = await Swal.fire({
+                    title: 'Gộp đơn từ bàn khác',
+                    html: `
+                        <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 10px;">Chọn bàn muốn gộp hóa đơn <b>vào bàn này</b> (Bàn ${tableNumber}). Bàn được chọn sẽ trở thành bàn trống.</p>
+                        <select id="swal-merge-table" class="swal2-input" style="width:100%">
+                            ${optionsHtml}
+                        </select>
+                    `,
+                    showCancelButton: true,
+                    confirmButtonColor: '#f59e0b',
+                    confirmButtonText: 'Gộp hóa đơn',
+                    cancelButtonText: 'Hủy',
+                    preConfirm: () => {
+                        return document.getElementById('swal-merge-table').value;
+                    }
+                });
+
+                if (isConfirmed && sourceTableId) {
+                    // Get active order of source table to get sourceOrderId
+                    Swal.showLoading();
+                    const sRes = await fetch(`${apiBase}/Orders/active/${sourceTableId}`, {
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+                    });
+                    if (!sRes.ok) {
+                        Swal.fire('Lỗi', 'Bàn được chọn không có đơn hàng hợp lệ để gộp.', 'error');
+                        return;
+                    }
+                    const sourceOrder = await sRes.json();
+                    
+                    const mergeRes = await apiClient.mergeOrder(currentOrder.id, sourceOrder.id);
+                    if (mergeRes && mergeRes.ok) {
+                        Swal.fire('Thành công', 'Đã gộp đơn hàng. Các món ăn đã được chuyển sang bàn này.', 'success');
+                        loadOrder();
+                    } else {
+                        const err = await mergeRes.json();
+                        Swal.fire('Lỗi', err.Error || 'Không thể gộp.', 'error');
+                    }
+                }
+            } catch (e) {
+                console.error("Lỗi Gộp Bill Detailed:", e);
+                const errText = e.Error || e.error || e.message || (e.errors ? JSON.stringify(e.errors) : JSON.stringify(e));
+                Swal.fire('Lỗi Gộp Bill', errText || 'Có lỗi xảy ra khi gộp bill.', 'error');
+            }
         }
 
         loadStoreConfig();

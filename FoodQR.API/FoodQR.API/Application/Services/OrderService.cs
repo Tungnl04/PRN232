@@ -219,6 +219,19 @@ namespace FoodQR.API.Application.Services
 
             order.TotalAmount = (order.TotalAmount ?? 0) + additionalAmount;
 
+            if (orderDto.CouponId.HasValue && !order.CouponId.HasValue)
+            {
+                order.CouponId = orderDto.CouponId;
+                order.DiscountAmount = orderDto.DiscountAmount;
+                
+                var coupon = await _context.Coupons.FindAsync(orderDto.CouponId.Value);
+                if (coupon != null) coupon.UsedCount++;
+                
+                order.TotalAmount -= orderDto.DiscountAmount;
+            }
+
+            if (order.TotalAmount < 0) order.TotalAmount = 0;
+
             // 3. Update table status
             table.Status = TableStatus.Taken;
 
@@ -252,6 +265,7 @@ namespace FoodQR.API.Application.Services
         {
             var order = await _context.Orders
                 .Include(o => o.Table)
+                .Include(o => o.Coupon)
                 .Include(o => o.OrderItems).ThenInclude(oi => oi.Product)
                 .Include(o => o.OrderItems).ThenInclude(oi => oi.Combo)
                 .Where(o => o.TableId == tableId &&
@@ -269,6 +283,9 @@ namespace FoodQR.API.Application.Services
                 Status = order.Status,
                 PaymentStatus = order.PaymentStatus,
                 TotalAmount = order.TotalAmount ?? 0,
+                CouponId = order.CouponId,
+                CouponCode = order.Coupon?.Code,
+                DiscountAmount = order.DiscountAmount,
                 Items = order.OrderItems.Select(oi => new OrderItemDetailDto
                 {
                     Id = oi.Id,
@@ -439,6 +456,93 @@ namespace FoodQR.API.Application.Services
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<bool> MergeOrderAsync(int targetOrderId, int sourceOrderId)
+        {
+            if (targetOrderId == sourceOrderId) return false;
+
+            var targetOrder = await _context.Orders
+                .Include(o => o.OrderItems)
+                .Include(o => o.Table)
+                .FirstOrDefaultAsync(o => o.Id == targetOrderId);
+
+            var sourceOrder = await _context.Orders
+                .Include(o => o.OrderItems)
+                .Include(o => o.Table)
+                .FirstOrDefaultAsync(o => o.Id == sourceOrderId);
+
+            if (targetOrder == null || sourceOrder == null) return false;
+
+            string[] activeStatuses = { OrderStatus.Pending, OrderStatus.Processing, OrderStatus.Ready, OrderStatus.Served };
+            if (!activeStatuses.Contains(targetOrder.Status?.ToLower()) || !activeStatuses.Contains(sourceOrder.Status?.ToLower()))
+                return false;
+
+            // Chuyển toàn bộ Item từ Source sang Target
+            foreach (var item in sourceOrder.OrderItems.ToList())
+            {
+                item.OrderId = targetOrderId;
+                targetOrder.OrderItems.Add(item);
+            }
+
+            // Cộng tiền và Giảm giá
+            targetOrder.TotalAmount = (targetOrder.TotalAmount ?? 0) + (sourceOrder.TotalAmount ?? 0);
+            
+            decimal combinedDiscount = (targetOrder.DiscountAmount ?? 0) + (sourceOrder.DiscountAmount ?? 0);
+            targetOrder.DiscountAmount = combinedDiscount > 0 ? combinedDiscount : null;
+            
+            // Giữ lại Mã giảm giá: Ưu tiên mã của bàn Target, nếu Target không có thì lấy mã của Source
+            if (targetOrder.CouponId == null && sourceOrder.CouponId != null)
+            {
+                targetOrder.CouponId = sourceOrder.CouponId;
+            }
+            
+            targetOrder.UpdatedAt = DateTime.Now;
+
+            // Xử lý Source Order
+            string oldStatus = sourceOrder.Status!;
+            sourceOrder.Status = OrderStatus.Cancelled;
+            sourceOrder.TotalAmount = 0;
+            sourceOrder.UpdatedAt = DateTime.Now;
+
+            await _context.OrderStatusHistories.AddAsync(new OrderStatusHistory
+            {
+                Order = sourceOrder,
+                OldStatus = oldStatus,
+                NewStatus = OrderStatus.Cancelled,
+                Note = $"Đã gộp vào đơn {targetOrder.OrderCode}"
+            });
+
+            // Ghi log vào Target
+            await _context.OrderStatusHistories.AddAsync(new OrderStatusHistory
+            {
+                Order = targetOrder,
+                NewStatus = targetOrder.Status,
+                Note = $"Đã gộp từ đơn {sourceOrder.OrderCode}"
+            });
+
+            // Xử lý Table của Source
+            if (sourceOrder.Table != null)
+            {
+                bool hasOtherActiveOrders = await _context.Orders.AnyAsync(o =>
+                    o.TableId == sourceOrder.Table.Id && o.Id != sourceOrder.Id &&
+                    activeStatuses.Contains(o.Status!.ToLower()));
+                
+                if (!hasOtherActiveOrders)
+                {
+                    sourceOrder.Table.Status = TableStatus.Available;
+                }
+            }
+
+            await _context.ActivityLogs.AddAsync(new ActivityLog
+            {
+                Action = "merge_order",
+                Description = $"Merged order {sourceOrder.OrderCode} into {targetOrder.OrderCode}"
+            });
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<List<Order>> GetOrdersAsync(int limit = 10)
         {
             return await _context.Orders

@@ -30,6 +30,9 @@
             <a href="/Admin/Combos" class="nav-item @(ViewContext.RouteData.Values["page"]?.ToString().Contains("Combos") == true ? "active" : "")">
                 <i class="fa-solid fa-boxes-stacked"></i><span>Combo</span>
             </a>
+            <a href="/Admin/Coupons" class="nav-item @(ViewContext.RouteData.Values["page"]?.ToString().Contains("Coupons") == true ? "active" : "")">
+                <i class="fa-solid fa-tags"></i><span>Mã giảm giá</span>
+            </a>
             <a href="/Admin/Tables" class="nav-item @(ViewContext.RouteData.Values["page"]?.ToString().Contains("Tables") == true ? "active" : "")">
                 <i class="fa-solid fa-border-all"></i><span>Quản lý Bàn</span>
             </a>

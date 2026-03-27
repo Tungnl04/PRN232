@@ -3,6 +3,7 @@ using FoodQR.API.Core.Entities;
 using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 using Microsoft.EntityFrameworkCore;
 
 namespace FoodQR.API.Controllers
@@ -18,9 +19,10 @@ namespace FoodQR.API.Controllers
             _context = context;
         }
 
+        [EnableQuery]
         [AllowAnonymous]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProductResponseDto>>> GetProducts(int? categoryId, bool? onlyAvailable)
+        public IQueryable<ProductResponseDto> GetProducts(int? categoryId, bool? onlyAvailable)
         {
             IQueryable<Product> query = _context.Products.Include(p => p.Category);
             
@@ -34,8 +36,7 @@ namespace FoodQR.API.Controllers
                 query = query.Where(p => p.CategoryId == categoryId);
             }
 
-            var products = await query.ToListAsync();
-            return products.Select(p => new ProductResponseDto
+            return query.Select(p => new ProductResponseDto
             {
                 Id = p.Id,
                 Name = p.Name,
@@ -44,9 +45,9 @@ namespace FoodQR.API.Controllers
                 ImageUrl = p.ImageUrl,
                 Inventory = p.Inventory,
                 CategoryId = p.CategoryId,
-                CategoryName = p.Category?.Name,
+                CategoryName = p.Category.Name,
                 IsAvailable = p.IsAvailable
-            }).ToList();
+            });
         }
 
         [AllowAnonymous]
@@ -94,7 +95,7 @@ namespace FoodQR.API.Controllers
         {
             var product = await _context.Products.FindAsync(id);
             if (product == null) return NotFound();
-            _context.Products.Remove(product);
+            product.IsAvailable = false;
             await _context.SaveChangesAsync();
             return NoContent();
         }

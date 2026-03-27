@@ -71,6 +71,7 @@ namespace FoodQR.API.Controllers
             var order = await _context.Orders
                 .Include(o => o.Customer)
                 .Include(o => o.Table)
+                .Include(o => o.Coupon)
                 .Include(o => o.OrderItems)
                     .ThenInclude(oi => oi.Product)
                 .Include(o => o.OrderItems)
@@ -91,6 +92,9 @@ namespace FoodQR.API.Controllers
                 Status = order.Status,
                 PaymentStatus = order.PaymentStatus,
                 TotalAmount = order.TotalAmount ?? 0,
+                CouponId = order.CouponId,
+                CouponCode = order.Coupon?.Code,
+                DiscountAmount = order.DiscountAmount,
                 Items = order.OrderItems.Select(oi => new OrderItemDetailDto
                 {
                     Id = oi.Id,
@@ -188,6 +192,15 @@ namespace FoodQR.API.Controllers
             var result = await _orderService.SwitchTableAsync(id, newTableId);
             if (!result) return BadRequest(new { Error = "Không thể chuyển bàn. Bàn mới không trống hoặc đơn hàng không hợp lệ." });
             return Ok(new { Message = "Chuyển bàn thành công." });
+        }
+
+        [Authorize(Roles = "staff,admin")]
+        [HttpPost("{targetId}/merge-from/{sourceId}")]
+        public async Task<IActionResult> MergeOrders(int targetId, int sourceId)
+        {
+            var result = await _orderService.MergeOrderAsync(targetId, sourceId);
+            if (!result) return BadRequest(new { Error = "Không thể gộp hóa đơn. Vui lòng kiểm tra lại trạng thái của cả 2 đơn." });
+            return Ok(new { Message = "Gộp hóa đơn thành công." });
         }
 
         [Authorize(Roles = "staff,admin")]

@@ -1,0 +1,218 @@
+@page
+@model FoodQR.Client.Pages.Admin.CouponsModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Quản lý Mã Giảm Giá";
+}
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h3 style="font-weight: 800; margin: 0;">Danh sách Mã</h3>
+        <button onclick="openCreateModal()" class="btn btn-primary" style="background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer;">
+            <i class="fa-solid fa-plus"></i> Tạo mã
+        </button>
+    </div>
+
+    <table class="mgmt-table">
+        <thead>
+            <tr>
+                <th>Mã (Code)</th>
+                <th>Mức giảm</th>
+                <th>Tối thiểu</th>
+                <th>Giới hạn lượt</th>
+                <th>Đã dùng</th>
+                <th>Hết hạn</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody id="coupon-table-body">
+            <!-- Rendered via JS -->
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        let coupons = [];
+
+        async function init() {
+            await loadCoupons();
+        }
+
+        async function loadCoupons() {
+            try {
+                coupons = await apiClient.getCoupons();
+                const body = document.getElementById('coupon-table-body');
+                if (!coupons || coupons.length === 0) {
+                    body.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px; color:#888;">Chưa có mã giảm giá nào</td></tr>';
+                    return;
+                }
+                body.innerHTML = coupons.map(c => {
+                    let discountText = c.discountType === 'Percent' ? `${c.discountValue}%` : `${c.discountValue.toLocaleString('vi-VN')} đ`;
+                    let statusHtml = '';
+                    if (!c.isActive) statusHtml = '<span class="status-badge" style="background:#ffebee; color:#f44336; padding:4px 10px; border-radius:12px; font-size:0.7rem;">Ngừng hoạt động</span>';
+                    else if (c.expiryDate && new Date(c.expiryDate) < new Date()) statusHtml = '<span class="status-badge" style="background:#fff3e0; color:#ef6c00; padding:4px 10px; border-radius:12px; font-size:0.7rem;">Đã hết hạn</span>';
+                    else if (c.maxUsage && c.usedCount >= c.maxUsage) statusHtml = '<span class="status-badge" style="background:#e0e0e0; color:#616161; padding:4px 10px; border-radius:12px; font-size:0.7rem;">Hết lượt</span>';
+                    else statusHtml = '<span class="status-badge" style="background:#e8f5e9; color:#4caf50; padding:4px 10px; border-radius:12px; font-size:0.7rem;">Hoạt động</span>';
+
+                    return `
+                    <tr>
+                        <td class="font-bold" style="color:var(--primary)">${c.code}</td>
+                        <td class="font-bold">${discountText}</td>
+                        <td>${c.minOrderAmount.toLocaleString('vi-VN')} đ</td>
+                        <td>${c.maxUsage ? c.maxUsage : 'Không giới hạn'}</td>
+                        <td>${c.usedCount}</td>
+                        <td>${c.expiryDate ? new Date(c.expiryDate).toLocaleDateString() : 'Không'}</td>
+                        <td>${statusHtml}</td>
+                        <td>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn-icon" onclick="openEditModal(${c.id})" title="Sửa"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button class="btn-icon danger" onclick="deleteCoupon(${c.id})" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `}).join('');
+            } catch (error) {
+                console.error("Load coupons error", error);
+            }
+        }
+
+        async function openCreateModal() {
+            const { value: formValues } = await Swal.fire({
+                title: 'Tạo mã giảm giá',
+                html: `
+                    <div style="text-align: left; font-size: 0.9em;">
+                        <label>Mã Coupon (Code)</label>
+                        <input id="swal-code" class="swal2-input" style="text-transform:uppercase" placeholder="VD: TET50K">
+                        
+                        <label>Loại giảm giá</label>
+                        <select id="swal-type" class="swal2-input">
+                            <option value="Percent">Phần trăm (%)</option>
+                            <option value="Fixed">Số tiền cứng (VNĐ)</option>
+                        </select>
+                        
+                        <label>Giá trị giảm</label>
+                        <input id="swal-value" type="number" class="swal2-input" placeholder="VD: 50 (nếu chọn %), hoặc 50000">
+                        
+                        <label>Đơn tối thiểu bắt buộc</label>
+                        <input id="swal-min" type="number" class="swal2-input" value="0">
+                        
+                        <label>Giới hạn số lần dùng (Bỏ trống nếu vô hạn)</label>
+                        <input id="swal-max" type="number" class="swal2-input" placeholder="VD: 100">
+                        
+                        <label>Ngày hết hạn</label>
+                        <input id="swal-expiry" type="date" class="swal2-input">
+                        
+                        <div style="margin-top:15px">
+                            <input type="checkbox" id="swal-active" checked> <label for="swal-active">Kích hoạt</label>
+                        </div>
+                    </div>
+                `,
+                focusConfirm: false,
+                preConfirm: () => {
+                    return {
+                        code: document.getElementById('swal-code').value,
+                        discountType: document.getElementById('swal-type').value,
+                        discountValue: parseFloat(document.getElementById('swal-value').value) || 0,
+                        minOrderAmount: parseFloat(document.getElementById('swal-min').value) || 0,
+                        maxUsage: document.getElementById('swal-max').value ? parseInt(document.getElementById('swal-max').value) : null,
+                        expiryDate: document.getElementById('swal-expiry').value ? new Date(document.getElementById('swal-expiry').value).toISOString() : null,
+                        isActive: document.getElementById('swal-active').checked
+                    }
+                }
+            });
+
+            if (formValues && formValues.code) {
+                const res = await apiClient.createCoupon(formValues);
+                if (res && res.ok) {
+                    Swal.fire('Thành công', 'Đã tạo mã.', 'success');
+                    loadCoupons();
+                } else {
+                    const err = await res.json();
+                    Swal.fire('Lỗi', err.title || 'Lỗi tạo mã', 'error');
+                }
+            }
+        }
+
+        async function openEditModal(id) {
+            const p = coupons.find(x => x.id === id);
+            
+            const { value: formValues } = await Swal.fire({
+                title: 'Sửa mã giảm giá',
+                html: `
+                    <div style="text-align: left; font-size: 0.9em;">
+                        <label>Mã Coupon</label>
+                        <input id="swal-code" class="swal2-input" style="text-transform:uppercase" value="${p.code}">
+                        
+                        <label>Loại giảm giá</label>
+                        <select id="swal-type" class="swal2-input">
+                            <option value="Percent" ${p.discountType==='Percent'?'selected':''}>Phần trăm (%)</option>
+                            <option value="Fixed" ${p.discountType==='Fixed'?'selected':''}>Số tiền cứng (VNĐ)</option>
+                        </select>
+                        
+                        <label>Giá trị giảm</label>
+                        <input id="swal-value" type="number" class="swal2-input" value="${p.discountValue}">
+                        
+                        <label>Đơn tối thiểu bắt buộc</label>
+                        <input id="swal-min" type="number" class="swal2-input" value="${p.minOrderAmount}">
+                        
+                        <label>Giới hạn số lần dùng</label>
+                        <input id="swal-max" type="number" class="swal2-input" value="${p.maxUsage || ''}">
+                        
+                        <label>Ngày hết hạn</label>
+                        <input id="swal-expiry" type="date" class="swal2-input" value="${p.expiryDate ? p.expiryDate.split('T')[0] : ''}">
+                        
+                        <div style="margin-top:15px">
+                            <input type="checkbox" id="swal-active" ${p.isActive ? 'checked':''}> <label for="swal-active">Kích hoạt</label>
+                        </div>
+                    </div>
+                `,
+                focusConfirm: false,
+                preConfirm: () => {
+                    return {
+                        id: p.id,
+                        code: document.getElementById('swal-code').value,
+                        discountType: document.getElementById('swal-type').value,
+                        discountValue: parseFloat(document.getElementById('swal-value').value) || 0,
+                        minOrderAmount: parseFloat(document.getElementById('swal-min').value) || 0,
+                        maxUsage: document.getElementById('swal-max').value ? parseInt(document.getElementById('swal-max').value) : null,
+                        expiryDate: document.getElementById('swal-expiry').value ? new Date(document.getElementById('swal-expiry').value).toISOString() : null,
+                        isActive: document.getElementById('swal-active').checked
+                    }
+                }
+            });
+
+            if (formValues && formValues.code) {
+                const res = await apiClient.updateCoupon(id, formValues);
+                if (res && res.ok) {
+                    Swal.fire('Thành công!', 'Đã lưu thay đổi.', 'success');
+                    loadCoupons();
+                } else {
+                    Swal.fire('Lỗi', 'Lỗi lưu mã', 'error');
+                }
+            }
+        }
+
+        async function deleteCoupon(id) {
+            const result = await Swal.fire({
+                title: 'Hủy mã giảm giá?',
+                text: "Mã sẽ bị vô hiệu hóa!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff4d4d',
+                confirmButtonText: 'Có, hủy mã!'
+            });
+
+            if (result.isConfirmed) {
+                const res = await apiClient.deleteCoupon(id);
+                if (res && res.ok) {
+                    Swal.fire('Đã hủy!', 'Mã bị ngừng hoạt động.', 'success');
+                    loadCoupons();
+                }
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+}

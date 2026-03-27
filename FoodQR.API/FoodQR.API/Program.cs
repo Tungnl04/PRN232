@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.OData;
 using FoodQR.API.Application.Services;
 using FoodQR.API.Core.Interfaces;
 using FoodQR.API.Infrastructure.Persistence;
@@ -14,7 +15,8 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-    });
+    })
+    .AddOData(opt => opt.Select().Filter().OrderBy().Count().SetMaxTop(100));
 
 builder.Services.AddCors(options =>
 {
@@ -94,6 +96,8 @@ app.UseMiddleware<FoodQR.API.Application.Middleware.ExceptionHandlingMiddleware>
 
 
 app.UseCors("AllowClient");
+
+app.UseStaticFiles();
 
 app.UseHttpsRedirection();
 

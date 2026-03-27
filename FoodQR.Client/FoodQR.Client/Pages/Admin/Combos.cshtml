@@ -39,7 +39,8 @@
         <label>Name</label><input type="text" id="combo-name" class="swal2-input" style="width:100%;" />
         <label>Description</label><textarea id="combo-desc" class="swal2-textarea" style="width:100%;"></textarea>
         <label>Price</label><input type="number" id="combo-price" class="swal2-input" style="width:100%;" />
-        <label>Image URL</label><input type="text" id="combo-image" class="swal2-input" style="width:100%;" />
+        <label>Upload Image</label><input type="file" id="combo-image-file" class="swal2-file" accept="image/*" style="width:100%; margin-bottom: 10px;" />
+        <label>Or Existing Image URL</label><input type="text" id="combo-image" class="swal2-input" style="width:100%;" />
         
         <label style="cursor: pointer; margin-top: 10px; display: block; font-weight: bold;">
             <input type="checkbox" id="combo-available" checked /> Is Available
@@ -135,6 +136,7 @@
             document.getElementById('combo-name').value = '';
             document.getElementById('combo-desc').value = '';
             document.getElementById('combo-price').value = 0;
+            document.getElementById('combo-image-file').value = '';
             document.getElementById('combo-image').value = '';
             document.getElementById('combo-available').checked = true;
             
@@ -149,6 +151,7 @@
             document.getElementById('combo-name').value = c.name;
             document.getElementById('combo-desc').value = c.description || '';
             document.getElementById('combo-price').value = c.price;
+            document.getElementById('combo-image-file').value = '';
             document.getElementById('combo-image').value = c.imageUrl || '';
             document.getElementById('combo-available').checked = c.isAvailable;
             
@@ -175,11 +178,24 @@
                 return;
             }
 
+            Swal.showLoading();
+            let finalImageUrl = document.getElementById('combo-image').value;
+            const fileInput = document.getElementById('combo-image-file');
+            if (fileInput.files.length > 0) {
+                const uploadedUrl = await apiClient.uploadImage(fileInput.files[0]);
+                if (uploadedUrl) {
+                    finalImageUrl = uploadedUrl;
+                } else {
+                    Swal.fire('Error', 'Failed to upload image.', 'error');
+                    return;
+                }
+            }
+
             const payload = {
                 name: document.getElementById('combo-name').value,
                 description: document.getElementById('combo-desc').value,
                 price: parseFloat(document.getElementById('combo-price').value) || 0,
-                imageUrl: document.getElementById('combo-image').value,
+                imageUrl: finalImageUrl,
                 available: document.getElementById('combo-available').checked,
                 items: items
             };

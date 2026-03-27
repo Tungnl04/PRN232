@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Báo cáo Phân công Task FoodQR - Sprint Cuối (Full)</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f4f7f6; }
+        .container { max-width: 900px; margin: auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #ff6b35; padding-bottom: 10px; }
+        h2 { color: #ff6b35; margin-top: 30px; }
+        h3 { margin-top: 25px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        .dev-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: bold; color: white; display: inline-block; margin-bottom: 10px;}
+        .dev2 { background-color: #e67e22; }
+        .dev3 { background-color: #8e44ad; }
+        .tag-logic { background: #e3f2fd; color: #1565c0; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px;}
+        .tag-urgent { background: #ffebee; color: #c62828; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px;}
+        ul { padding-left: 20px; }
+        li { margin-bottom: 8px; }
+        code { background: #f1f2f6; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; color: #c0392b; }
+        pre { background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; }
+        .task-box { background-color: #fff; border: 1px solid #e0e0e0; border-left: 4px solid #9e9e9e; padding: 15px; margin: 15px 0; border-radius: 4px; }
+        .task-box.feat { border-left-color: #3498db; }
+        .task-box.sec { border-left-color: #e74c3c; }
+        .task-box.new-feat { border-left-color: #ff9800; }
+        .defense-box { background-color: #e8f5e9; border-left: 4px solid #4caf50; padding: 15px; margin: 15px 0; border-radius: 0 8px 8px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Báo cáo Phân Công Task Sprint Cuối (Phiên bản Full)</h1>
+        <p><em>Dự án: FoodQR | Ngày cập nhật: 27/03/2026 | Bao gồm Task cũ + Task mới</em></p>
+
+        <hr>
+
+        <h2>I. Phân công Công việc Chi tiết</h2>
+
+        <!-- ===== DEV 2 ===== -->
+        <h3><span class="dev-badge dev2">Dev 2</span> Order Flow, Bảo mật & Validation</h3>
+
+        <div class="task-box feat">
+            <strong>Task 1: Hoàn thiện UI Chuyển bàn (Staff)</strong> <span class="tag-logic">Tính năng cũ</span>
+            <ul>
+                <li>Backend API <code>[HttpPatch] {id}/table/{newTableId}</code> đã hoàn thành.</li>
+                <li>Frontend: Thêm hàm <code>switchTable</code> trong <code>apiClient.js</code>. Tạo nút "Chuyển bàn" trong <code>OrderDetails.cshtml</code>. SweetAlert hiện danh sách bàn <code>Available</code>.</li>
+            </ul>
+        </div>
+
+        <div class="task-box feat">
+            <strong>Task 2: UI Hủy đơn / Hủy món (Staff)</strong> <span class="tag-logic">Tính năng cũ</span>
+            <ul>
+                <li>Backend API <code>[HttpDelete] Orders/items/{itemId}</code> đã hoàn thành (Có hoàn trả Inventory).</li>
+                <li>Chỉ render nút Hủy khi <code>OrderItemStatus = Pending</code>. Nếu bếp đã nhận (<code>Preparing</code>), ẩn nút Hủy.</li>
+                <li>Bắt buộc nhập lý do hủy (Reason) trước khi xác nhận.</li>
+            </ul>
+        </div>
+
+        <div class="task-box feat">
+            <strong>Task 3: Bảo mật QR Code (Regenerate Token)</strong> <span class="tag-logic">Tính năng cũ</span>
+            <ul>
+                <li>Trong <code>TablesController.cs</code> → <code>UpdateTableStatus</code>: Khi trạng thái bàn chuyển sang <code>Cleaning</code> / <code>Available</code>, tự sinh: <code>table.QrCodeToken = Guid.NewGuid().ToString("N");</code></li>
+            </ul>
+        </div>
+
+        <div class="task-box sec">
+            <strong>Task 4: Vá Validation Quantity Hóa Đơn</strong> <span class="tag-urgent">TASK MỚI 🚨</span>
+            <ul>
+                <li>Lỗ hổng: Khách gửi <code>Quantity = -50</code> → Tiền bị trừ ngược.</li>
+                <li>Fix: Bổ sung <code>[Range(1, 100, ErrorMessage="Số lượng phải lớn hơn 0")]</code> vào <code>OrderItemDto.Quantity</code>.</li>
+                <li>Bổ sung <code>[Required]</code> vào <code>LoginDto.Username</code> và <code>LoginDto.Password</code>.</li>
+            </ul>
+        </div>
+
+        <div class="task-box sec">
+            <strong>Task 5: Tách lỗi Đăng nhập rõ ràng (Auth)</strong> <span class="tag-urgent">TASK MỚI</span>
+            <ul>
+                <li>Trong <code>AuthController.cs</code>: Nếu <code>user == null</code> → "Tài khoản không tồn tại!". Nếu <code>!BCrypt.Verify</code> → "Sai mật khẩu, vui lòng thử lại!".</li>
+            </ul>
+        </div>
+
+        <!-- ===== DEV 3 ===== -->
+        <h3><span class="dev-badge dev3">Dev 3</span> Admin Dashboard, Nghiệp vụ Chéo & Quản lý Mã Giảm Giá</h3>
+
+        <div class="task-box feat">
+            <strong>Task 6: Nghiệp vụ Gộp Bàn / Gộp Bill</strong> <span class="tag-logic">Tính năng cũ</span>
+            <ul>
+                <li>Khách bàn A nhờ bàn B trả tiền hộ. Bàn A <strong>vẫn đang ngồi</strong>.</li>
+                <li>Chuyển <code>OrderItems</code> từ A sang B. Cộng dồn <code>TotalAmount</code>. Bill A → <code>Merged</code>. <b>BÀN A GIỮ NGUYÊN <code>Taken</code></b>.</li>
+                <li>API: <code>[HttpPost("{targetOrderId}/merge-from/{sourceOrderId}")]</code></li>
+                <li>UI Staff: Thêm nút "Gộp bill vào bàn khác" trên màn hình OrderDetails.</li>
+            </ul>
+        </div>
+
+        <div class="task-box sec">
+            <strong>Task 7: Fix Xóa Mềm Products/Categories</strong> <span class="tag-logic">Tính năng cũ</span>
+            <ul>
+                <li>Trong <code>ProductsController</code> và <code>CategoriesController</code>: Thay <code>_context.Remove()</code> bằng <code>product.IsAvailable = false;</code></li>
+            </ul>
+        </div>
+
+        <div class="task-box new-feat">
+            <strong>Task 8: Nâng cấp UI Admin (File Upload, Modal)</strong> <span class="tag-urgent">TASK MỚI</span>
+            <ul>
+                <li><strong>Upload Ảnh:</strong> Viết API <code>[HttpPost("upload")]</code> nhận <code>IFormFile</code>, lưu vào <code>wwwroot/uploads</code>. Frontend thay input URL thành <code>&lt;input type="file"&gt;</code>.</li>
+                <li>Thay form Categories từ SweetAlert prompt sang Modal HTML chuẩn.</li>
+                <li>Gắn Loading/Spinner vào nút Save, chống Double-click.</li>
+            </ul>
+        </div>
+
+        <div class="task-box sec">
+            <strong>Task 9: Vá Validation DB Toàn Diện</strong> <span class="tag-urgent">TASK MỚI 🚨</span>
+            <ul>
+                <li>Mở <code>ComboCreateDto</code>, <code>Product</code>, <code>Category</code>. Đắp <code>[Required]</code> cho Name, <code>[Range(0, 50000000)]</code> cho Price, <code>[Range(0, int.MaxValue)]</code> cho Inventory.</li>
+            </ul>
+        </div>
+
+        <div class="task-box new-feat">
+            <strong>★ Task 10: Quản lý Mã Giảm Giá (Coupon System)</strong> <span class="tag-urgent">TASK MỚI ★</span>
+            <p style="font-size:0.9rem; color:#555; margin-top:5px;">Tính năng Marketing thực tế nhà hàng. Thầy giáo đánh giá cao nếu Có.</p>
+            <ul>
+                <li><strong>Bước 1 - Tạo Entity mới <code>Coupon.cs</code>:</strong>
+                    <pre>
+public class Coupon {
+    public int Id { get; set; }
+    [Required] public string Code { get; set; }    // VD: "GIAM20K"
+    public string DiscountType { get; set; }        // "percent" hoặc "fixed"
+    [Range(0, 10000000)] public decimal DiscountValue { get; set; }  // 20 (%) hoặc 50000 (đ)
+    public decimal? MinOrderAmount { get; set; }    // Đơn tối thiểu
+    public int MaxUsage { get; set; }               // Số lần dùng tối đa
+    public int UsedCount { get; set; } = 0;
+    public DateTime ExpiryDate { get; set; }
+    public bool IsActive { get; set; } = true;
+}</pre>
+                </li>
+                <li><strong>Bước 2 - Tạo <code>CouponsController.cs</code>:</strong>
+                    <br>- <code>[HttpGet]</code> Lấy danh sách (Admin).
+                    <br>- <code>[HttpPost]</code> Tạo mã mới (Admin).
+                    <br>- <code>[HttpPut]</code> Sửa mã (Admin).
+                    <br>- <code>[HttpDelete]</code> Tắt mã (Soft Delete → <code>IsActive = false</code>).
+                    <br>- <code>[HttpPost("validate")]</code> Khách gửi lên mã + tổng tiền → API kiểm tra hợp lệ → Trả về số tiền được giảm.
+                </li>
+                <li><strong>Bước 3 - Validate mã (Business Rules):</strong>
+                    <br>- Mã không tồn tại → "Mã giảm giá không hợp lệ"
+                    <br>- Mã hết hạn (<code>ExpiryDate &lt; Now</code>) → "Mã đã hết hạn"
+                    <br>- Mã dùng hết lượt (<code>UsedCount >= MaxUsage</code>) → "Mã đã hết lượt sử dụng"
+                    <br>- Đơn chưa đủ tối thiểu → "Đơn hàng phải từ X đồng trở lên"
+                    <br>- ✅ Hợp lệ → Trả giá trị giảm, Frontend hiện: "Giảm 20% (-60.000đ)"
+                </li>
+                <li><strong>Bước 4 - UI Admin:</strong> Trang <code>Admin/Coupons.cshtml</code>bảng quản lý (Tạo/Sửa/Ẩn mã).</li>
+                <li><strong>Bước 5 - UI Khách:</strong> Trong <code>Cart.cshtml</code>, thêm ô "Nhập mã giảm giá" + nút "Áp dụng". Khi hợp lệ, hiển thị dòng trừ tiền trên bill.</li>
+                <li><strong>Bước 6 - Khi thanh toán:</strong> Lưu <code>CouponId</code> vào <code>Order</code>, tăng <code>UsedCount</code> lên 1. Thêm cột <code>DiscountAmount</code> vào Entity <code>Order</code> để lưu số tiền đã giảm.</li>
+            </ul>
+        </div>
+
+        <hr>
+
+        <h2>II. Cẩm Nang Bảo vệ Đồ án (Cho Leader)</h2>
+        <div class="defense-box"><strong>🛡️ Data Annotation:</strong> Chống đặt món số lượng âm, Admin nhập giá sai → API trả về 400 Bad Request rõ ràng.</div>
+        <div class="defense-box"><strong>🛡️ Concurrency Đặt Hàng:</strong> Nhiều khách quét 1 QR cùng lúc → Tự động Append vào Bill của Host (người đầu tiên).</div>
+        <div class="defense-box"><strong>🛡️ Gộp Bill & Bàn Vật Lý:</strong> Bill gộp xong, bàn gốc vẫn Taken. Chỉ Available khi nhân viên dọn bàn.</div>
+        <div class="defense-box"><strong>🛡️ JWT + BCrypt + Ép Đổi Pass:</strong> Mã hóa tối tân, ép đổi mật khẩu mặc định ngay lần đầu đăng nhập.</div>
+        <div class="defense-box"><strong>🛡️ Mã Giảm Giá Thông Minh:</strong> Validate chặt chẽ 5 điều kiện (Tồn tại, Hạn sử dụng, Lượt dùng, Đơn tối thiểu, Trạng thái) trước khi áp. Chống trùng lặp, chống lạm dụng.</div>
+
+        <p style="text-align:center; color:#999; margin-top:30px;"><em>Tổng cộng: 10 Tasks | Dev 2: 5 Tasks | Dev 3: 5 Tasks | Bản chốt sổ Sprint Cuối Cùng</em></p>
+    </div>
+</body>
+</html>
