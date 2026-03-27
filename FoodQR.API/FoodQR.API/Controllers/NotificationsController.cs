@@ -56,6 +56,40 @@ namespace FoodQR.API.Controllers
             return Ok(new { id = notification.Id });
         }
 
+        [AllowAnonymous]
+        [HttpPost("call-staff")]
+        public async Task<IActionResult> CallStaff([FromBody] Notification notification)
+        {
+            // Specifically for customer calling staff.
+            notification.IsRead = false;
+            notification.CreatedAt = DateTime.Now;
+            notification.Type = "call_staff";
+            notification.TargetRole = "staff"; // Ensure it targets staff
+            _context.Notifications.Add(notification);
+            await _context.SaveChangesAsync();
+
+            await _hubContext.Clients.Group("staff").SendAsync("NewNotification", new
+            {
+                id = notification.Id,
+                message = notification.Message,
+                type = notification.Type,
+                targetRole = notification.TargetRole,
+                createdAt = notification.CreatedAt
+            });
+
+            // Also send to admin if they are listening to the same
+            await _hubContext.Clients.Group("admin").SendAsync("NewNotification", new
+            {
+                id = notification.Id,
+                message = notification.Message,
+                type = notification.Type,
+                targetRole = notification.TargetRole,
+                createdAt = notification.CreatedAt
+            });
+
+            return Ok(new { id = notification.Id });
+        }
+
         [Authorize]
         [HttpPatch("{id}/read")]
         public async Task<IActionResult> MarkAsRead(int id)
