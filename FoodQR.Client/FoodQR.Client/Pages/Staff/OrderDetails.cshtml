@@ -23,6 +23,11 @@
             <div id="payment-status"></div>
         </div>
 
+        <div id="order-actions" style="margin-bottom: 20px; display: none; gap: 10px;">
+            <button onclick="promptSwitchTable()" class="btn-action" style="background:#3b82f6; color:white; padding:8px 16px; border-radius:8px; border:none; font-weight:700; cursor:pointer;"><i class="fa-solid fa-exchange-alt"></i> Chuyển bàn</button>
+            <button id="btn-cancel-order" onclick="promptCancelOrder()" class="btn-action" style="background:#ef4444; color:white; padding:8px 16px; border-radius:8px; border:none; font-weight:700; cursor:pointer;"><i class="fa-solid fa-ban"></i> Hủy đơn</button>
+        </div>
+
         <div id="batch-serve-bar" style="display: none; margin-bottom: 15px;">
             <button id="btn-serve-all" onclick="serveAll()" class="btn-serve" style="width: 100%; padding: 14px; font-size: 0.95rem; border-radius: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;">
                 <i class="fa-solid fa-check-double"></i> GIAO TẤT CẢ
@@ -224,6 +229,18 @@
 
             const paymentStatusDiv = document.getElementById('payment-status');
             const sts = order.status.toLowerCase();
+            
+            const actionDiv = document.getElementById('order-actions');
+            if (sts === 'pending' || sts === 'processing') {
+                actionDiv.style.display = 'flex';
+                document.getElementById('btn-cancel-order').style.display = 'block';
+            } else if (sts !== 'cancelled' && sts !== 'rejected' && sts !== 'paid') {
+                actionDiv.style.display = 'flex';
+                document.getElementById('btn-cancel-order').style.display = 'none';
+            } else {
+                actionDiv.style.display = 'none';
+            }
+
             if (sts !== 'paid' && sts !== 'completed' && sts !== 'cancelled') {
                 paymentStatusDiv.innerHTML = `
                     <div style="display: flex; gap: 10px;">
@@ -261,6 +278,9 @@
                         ${itemSts === 'ready' ? `
                             <button class="btn-serve" onclick="serveItem(${i.id})">GIAO MÓN</button>
                         ` : ''}
+                        ${itemSts === 'pending' ? `
+                            <button class="btn-cancel-item" onclick="promptCancelItem(${i.id})" style="background:#ef4444; color:white; border:none; padding:6px 10px; border-radius:8px; font-weight:800; font-size:0.75rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i> Hủy</button>
+                        ` : ''}
                     </div>
                 `;
             }).join('');
@@ -284,7 +304,9 @@
             const bill = calculateBill(currentOrder);
             const storeName = storeConfig?.storeName || 'FoodQR Restaurant';
 
-            let itemsHtml = currentOrder.items.map(i => `
+            let validItems = currentOrder.items.filter(i => i.status.toLowerCase() !== 'cancelled' && i.status.toLowerCase() !== 'rejected');
+            
+            let itemsHtml = validItems.map(i => `
                 <tr>
                     <td style="padding: 8px 0; font-size: 0.85rem; color: #334155;">${i.name}</td>
                     <td style="padding: 8px 0; text-align: center; font-weight: 700; color: #64748b; font-size: 0.85rem;">${i.quantity}</td>
@@ -500,6 +522,90 @@
                 const errText = e.Error || e.error || e.message || (e.errors ? JSON.stringify(e.errors) : JSON.stringify(e));
                 Swal.fire('Lỗi Gộp Bill', errText || 'Có lỗi xảy ra khi gộp bill.', 'error');
             }
+        async function promptSwitchTable() {
+            if (!currentOrder) return;
+            const res = await apiClient.getTables();
+            const availableTables = res.filter(t => t.status === 'available' && t.qrCodeToken);
+            
+            if (availableTables.length === 0) {
+                Swal.fire('Thông báo', 'Không có bàn trống hợp lệ (có mã QR) nào để chuyển.', 'info');
+                return;
+            }
+            
+            const optionsHtml = availableTables.map(t => `<option value="${t.id}">Bàn ${t.tableNumber} (Sức chứa: ${t.capacity})</option>`).join('');
+            
+            Swal.fire({
+                title: 'Chuyển bàn',
+                html: `<select id="sw-table-select" class="swal2-input">${optionsHtml}</select>`,
+                showCancelButton: true,
+                confirmButtonText: 'Chuyển',
+                cancelButtonText: 'Hủy'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const newTableId = document.getElementById('sw-table-select').value;
+                    const switchRes = await apiClient.switchTable(currentOrder.id, newTableId);
+                    if (switchRes && switchRes.ok) {
+                        Swal.fire('Thành công', 'Đã chuyển bàn.', 'success');
+                        window.location.href = '/Staff/Dashboard';
+                    } else {
+                        const err = await switchRes.json();
+                        Swal.fire('Lỗi', err.Error || 'Không thể chuyển bàn', 'error');
+                    }
+                }
+            });
+        }
+
+        async function promptCancelOrder() {
+            if (!currentOrder) return;
+            Swal.fire({
+                title: 'Lý do hủy đơn',
+                input: 'text',
+                inputPlaceholder: 'Nhập lý do hủy...',
+                showCancelButton: true,
+                confirmButtonText: 'Xác nhận Hủy',
+                cancelButtonText: 'Đóng',
+                preConfirm: (reason) => {
+                    if (!reason) Swal.showValidationMessage('Vui lòng nhập lý do hủy');
+                    return reason;
+                }
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const res = await apiClient.cancelOrder(currentOrder.id, result.value);
+                    if (res && res.ok) {
+                        Swal.fire('Thành công', 'Đơn hàng đã bị hủy.', 'success');
+                        window.location.href = '/Staff/Dashboard';
+                    } else {
+                        const err = await res.json();
+                        Swal.fire('Lỗi', err.Error || 'Không thể hủy đơn', 'error');
+                    }
+                }
+            });
+        }
+
+        async function promptCancelItem(itemId) {
+            Swal.fire({
+                title: 'Lý do hủy món',
+                input: 'text',
+                inputPlaceholder: 'Nhập lý do hủy...',
+                showCancelButton: true,
+                confirmButtonText: 'Xác nhận Hủy',
+                cancelButtonText: 'Đóng',
+                preConfirm: (reason) => {
+                    if (!reason) Swal.showValidationMessage('Vui lòng nhập lý do hủy');
+                    return reason;
+                }
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const res = await apiClient.cancelOrderItem(itemId, result.value);
+                    if (res && res.ok) {
+                        Swal.fire('Thành công', 'Đã hủy món.', 'success');
+                        loadOrder();
+                    } else {
+                        const err = await res.json();
+                        Swal.fire('Lỗi', err.Error || 'Không thể hủy món', 'error');
+                    }
+                }
+            });
         }
 
         loadStoreConfig();
