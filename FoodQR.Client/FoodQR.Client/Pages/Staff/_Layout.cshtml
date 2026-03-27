@@ -86,12 +86,12 @@
             .withAutomaticReconnect().build();
 
         connection.on('NewOrderReceived', (data) => {
-            addNotification(Math.floor(Math.random() * 1000000) * -1, `Đơn mới từ Bàn ${data.tableId}`, `Vừa nhận đơn hàng ${data.orderCode}`);
             if (window.onNewOrder) window.onNewOrder(data);
         });
 
         connection.on('NewNotification', (data) => {
-            addNotification(data.id, 'Yêu cầu hỗ trợ', data.message);
+            const title = data.title || (data.type === 'new_order' ? 'Đơn mới' : 'Yêu cầu hỗ trợ');
+            addNotification(data.id, title, data.message);
         });
 
         connection.start().then(() => connection.invoke('JoinGroup', 'staff')).catch(console.error);

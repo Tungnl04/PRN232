@@ -107,13 +107,7 @@ namespace FoodQR.API.Application.Services
                     Description = $"New order {order.OrderCode} created at Table {orderDto.TableId}"
                 });
 
-                await _context.Notifications.AddAsync(new Notification
-                {
-                    Message = $"🔔 Bàn {orderDto.TableId} vừa đặt món mới! Đơn: {order.OrderCode}",
-                    Type = "new_order",
-                    TargetRole = AppRoles.Staff,
-                    CreatedAt = DateTime.Now
-                });
+
             }
 
             // 2. Process items + inventory
@@ -222,6 +216,22 @@ namespace FoodQR.API.Application.Services
             // 3. Update table status
             table.Status = TableStatus.Taken;
 
+            var staffNotif = new Notification
+            {
+                Message = $"🔔 Bàn {orderDto.TableId} vừa đặt món mới! Đơn: {order.OrderCode}",
+                Type = "new_order",
+                TargetRole = "staff",
+                CreatedAt = DateTime.Now
+            };
+            var kitchenNotif = new Notification
+            {
+                Message = $"🔔 Bàn {orderDto.TableId} vừa đặt món mới! Đơn: {order.OrderCode}",
+                Type = "new_order",
+                TargetRole = "kitchen",
+                CreatedAt = DateTime.Now
+            };
+            _context.Notifications.AddRange(staffNotif, kitchenNotif);
+
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
@@ -229,6 +239,21 @@ namespace FoodQR.API.Application.Services
             var orderPayload = new { orderId = order.Id, orderCode = order.OrderCode, tableId = orderDto.TableId };
             await _hubContext.Clients.Group("kitchen").SendAsync("NewOrderReceived", orderPayload);
             await _hubContext.Clients.Group("staff").SendAsync("NewOrderReceived", orderPayload);
+
+            await _hubContext.Clients.Group("staff").SendAsync("NewNotification", new
+            {
+                id = staffNotif.Id,
+                message = staffNotif.Message,
+                type = staffNotif.Type,
+                title = $"Đơn mới từ Bàn {orderDto.TableId}"
+            });
+            await _hubContext.Clients.Group("kitchen").SendAsync("NewNotification", new
+            {
+                id = kitchenNotif.Id,
+                message = kitchenNotif.Message,
+                type = kitchenNotif.Type,
+                title = $"Đơn mới từ Bàn {orderDto.TableId}"
+            });
 
             return order;
             }

@@ -77,16 +77,6 @@ namespace FoodQR.API.Controllers
                 createdAt = notification.CreatedAt
             });
 
-            // Also send to admin if they are listening to the same
-            await _hubContext.Clients.Group("admin").SendAsync("NewNotification", new
-            {
-                id = notification.Id,
-                message = notification.Message,
-                type = notification.Type,
-                targetRole = notification.TargetRole,
-                createdAt = notification.CreatedAt
-            });
-
             return Ok(new { id = notification.Id });
         }
 
