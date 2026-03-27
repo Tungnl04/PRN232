@@ -49,12 +49,15 @@ namespace FoodQR.Client.Pages
                     Categories = JsonSerializer.Deserialize<List<CategoryDto>>(catJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
                 }
 
-                // Fetch Products
                 var prodResponse = await client.GetAsync($"{_apiBaseUrl}/Products");
                 if (prodResponse.IsSuccessStatusCode)
                 {
                     var prodJson = await prodResponse.Content.ReadAsStringAsync();
                     Products = JsonSerializer.Deserialize<List<ProductDto>>(prodJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+                }
+                else
+                {
+                    ErrorMessage = $"Lỗi tải Món Ăn: HTTP {(int)prodResponse.StatusCode} ({prodResponse.StatusCode}) - URL: {_apiBaseUrl}/Products";
                 }
 
                 // Fetch Combos
@@ -68,7 +71,7 @@ namespace FoodQR.Client.Pages
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to fetch menu data from API");
-                ErrorMessage = "Không thể tải dữ liệu menu. Vui lòng thử lại sau.";
+                ErrorMessage = $"Lỗi kết nối từ Client Server tới API: {ex.Message} (URL: {_apiBaseUrl}/Products)";
             }
         }
     }
