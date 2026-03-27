@@ -2,6 +2,7 @@ using FoodQR.API.Core.Entities;
 using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 using Microsoft.EntityFrameworkCore;
 
 namespace FoodQR.API.Controllers
@@ -17,6 +18,7 @@ namespace FoodQR.API.Controllers
             _context = context;
         }
 
+        [EnableQuery]
         [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<dynamic>>> GetCombos([FromQuery] bool includeHidden = false)

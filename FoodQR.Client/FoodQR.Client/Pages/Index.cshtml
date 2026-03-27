@@ -65,6 +65,13 @@
 
     <!-- Product Grid -->
     <div id="product-list-container">
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="alert alert-danger" style="background:#fff3f3; color:#d32f2f; padding:20px; border-radius:15px; border-left: 5px solid #d32f2f; margin-bottom: 20px;">
+                <h4 style="margin-top:0"><i class="fa-solid fa-triangle-exclamation"></i> Lỗi Hệ Thống</h4>
+                <p style="margin-bottom:0">@Model.ErrorMessage</p>
+            </div>
+        }
         <h3 class="font-bold" style="font-size: 1.25rem; margin-bottom: 20px;">Thực đơn món lẻ</h3>
         <div id="product-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
             @foreach (var prod in Model.Products)

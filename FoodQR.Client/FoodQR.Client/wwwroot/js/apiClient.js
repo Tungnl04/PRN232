@@ -164,6 +164,12 @@ const apiClient = (function() {
             return res ? res.json() : [];
         },
 
+        async mergeOrder(targetId, sourceId) {
+            return await authorizedFetch(`/Orders/${targetId}/merge-from/${sourceId}`, {
+                method: 'POST'
+            });
+        },
+
         // KITCHEN
         async getKitchenItems() {
             const res = await authorizedFetch('/Kitchen/items');
@@ -263,9 +269,71 @@ const apiClient = (function() {
 
         // STATS
         async getDashboardStats() {
-            // Placeholder: This can be a new endpoint or calculated from current data
-            const res = await authorizedFetch('/Orders/stats/overview');
-            return res ? res.json() : { totalOrders: 0, totalRevenue: 0, activeTables: 0 };
+            const res = await authorizedFetch('/Dashboard/stats');
+            return res ? res.json() : {};
+        },
+
+        // UPLOAD
+        async uploadImage(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const token = localStorage.getItem('auth_token');
+            const headers = {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/Uploads`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    // Append true frontend URL instead of just relative if working locally or Azure
+                    return data.url; 
+                }
+                return null;
+            } catch (e) {
+                console.error('Upload failed', e);
+                return null;
+            }
+        },
+
+        // COUPONS
+        async getCoupons() {
+            const res = await authorizedFetch('/Coupons');
+            return res ? res.json() : [];
+        },
+
+        async createCoupon(coupon) {
+            return await authorizedFetch('/Coupons', {
+                method: 'POST',
+                body: JSON.stringify(coupon)
+            });
+        },
+
+        async updateCoupon(id, coupon) {
+            return await authorizedFetch(`/Coupons/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(coupon)
+            });
+        },
+
+        async deleteCoupon(id) {
+            return await authorizedFetch(`/Coupons/${id}`, {
+                method: 'DELETE'
+            });
+        },
+
+        async validateCoupon(code, orderTotal) {
+            const res = await fetch(`${API_BASE_URL}/Coupons/validate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code, orderTotal })
+            });
+            if (res.ok) return res.json();
+            throw await res.json();
         },
 
         // UTILS

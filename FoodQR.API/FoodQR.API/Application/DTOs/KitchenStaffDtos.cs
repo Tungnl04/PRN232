@@ -23,6 +23,9 @@ namespace FoodQR.API.Application.DTOs
         public decimal TotalAmount { get; set; }
         public string? CustomerName { get; set; }
         public string? CustomerEmail { get; set; }
+        public int? CouponId { get; set; }
+        public string? CouponCode { get; set; }
+        public decimal? DiscountAmount { get; set; }
         public List<OrderItemDetailDto> Items { get; set; } = new();
     }
 }

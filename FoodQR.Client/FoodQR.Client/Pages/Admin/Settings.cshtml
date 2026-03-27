@@ -5,7 +5,7 @@
     ViewData["Title"] = "Cài đặt cửa hàng";
 }
 
-<div style="max-width: 700px;">
+<div style="max-width: 700px; margin: 0 auto;">
     <div class="card-mgmt" style="padding: 35px;">
         <h3 style="margin: 0 0 8px; font-weight: 900; font-size: 1.3rem; display: flex; align-items: center; gap: 10px;">
             <i class="fa-solid fa-store" style="color: var(--primary);"></i> Thông tin cửa hàng
@@ -16,7 +16,7 @@
             <div>
                 <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 8px;">Tên cửa hàng</label>
                 <input type="text" id="store-name" placeholder="VD: FoodQR Restaurant"
-                       style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 1.5px solid #e2e8f0; font-family: inherit; font-weight: 600; font-size: 0.95rem; outline: none; transition: border-color 0.2s;" />
+                       style="width: 100%; box-sizing: border-box; padding: 14px 16px; border-radius: 12px; border: 1.5px solid #e2e8f0; font-family: inherit; font-weight: 600; font-size: 0.95rem; outline: none; transition: border-color 0.2s;" />
             </div>
 
             <div>
@@ -28,7 +28,7 @@
                 </label>
                 <div style="position: relative;">
                     <input type="number" id="tax-rate" min="0" max="100" step="0.1" placeholder="8"
-                           style="width: 100%; padding: 14px 50px 14px 16px; border-radius: 12px; border: 1.5px solid #e2e8f0; font-family: inherit; font-weight: 700; font-size: 1.1rem; outline: none; transition: border-color 0.2s;" />
+                           style="width: 100%; box-sizing: border-box; padding: 14px 50px 14px 16px; border-radius: 12px; border: 1.5px solid #e2e8f0; font-family: inherit; font-weight: 700; font-size: 1.1rem; outline: none; transition: border-color 0.2s;" />
                     <span style="position: absolute; right: 18px; top: 50%; transform: translateY(-50%); font-weight: 800; color: var(--text-muted); font-size: 1rem;">%</span>
                 </div>
                 <div style="margin-top: 10px; padding: 10px 14px; background: #eff6ff; border-radius: 10px; border-left: 3px solid #3b82f6;">
@@ -54,7 +54,7 @@
             <div>
                 <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 8px;">Đơn vị tiền tệ</label>
                 <select id="currency"
-                        style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 1.5px solid #e2e8f0; font-family: inherit; font-weight: 600; font-size: 0.95rem; outline: none; background: white; cursor: pointer;">
+                        style="width: 100%; box-sizing: border-box; padding: 14px 16px; border-radius: 12px; border: 1.5px solid #e2e8f0; font-family: inherit; font-weight: 600; font-size: 0.95rem; outline: none; background: white; cursor: pointer;">
                     <option value="VND">VND - Việt Nam Đồng</option>
                 </select>
             </div>
