@@ -43,7 +43,7 @@
 
         <div id="order-total-container" style="margin-top: 40px; text-align: right; border-top: 2px dashed #eee; padding-top: 25px;">
             <div style="color: var(--text-muted); font-weight: 600; font-size: 0.9rem; margin-bottom: 5px;">Tổng cộng thanh toán</div>
-            <div id="order-total" style="font-size: 2rem; font-weight: 900; color: var(--primary);">0 ₫</div>
+            <div id="order-total" class="currency-amount" style="font-size: 2rem; font-weight: 900; color: var(--primary);">0&nbsp;₫</div>
         </div>
     </div>
 
@@ -147,6 +147,7 @@
         async function loadStoreConfig() {
             try {
                 storeConfig = await apiClient.getStoreConfig();
+                if (currentOrder) renderOrder(currentOrder);
             } catch (e) { console.error('Lỗi tải config', e); }
         }
 
@@ -200,26 +201,51 @@
         }
 
         function calculateBill(order) {
-            const preDiscountTotal = (order.items || []).reduce((acc, i) => acc + (i.unitPrice * i.quantity), 0);
-            const subtotal = order.totalAmount || 0;
-            const discountAmount = preDiscountTotal > subtotal ? (preDiscountTotal - subtotal) : 0;
-            
+            const validItems = (order.items || []).filter(i => {
+                const s = (i.status || '').toLowerCase();
+                return s !== 'cancelled' && s !== 'rejected';
+            });
+            const preDiscountTotal = validItems.reduce((acc, i) => acc + (i.unitPrice * i.quantity), 0);
+
+            const taRaw = order.totalAmount ?? order.TotalAmount;
+            const taNum = (taRaw !== undefined && taRaw !== null && !Number.isNaN(Number(taRaw))) ? Number(taRaw) : null;
+
+            // Backend: discountAmount + totalAmount sau giảm; ưu tiên API
+            let discountAmount = Number(order.discountAmount ?? order.DiscountAmount) || 0;
+            if (discountAmount <= 0 && taNum !== null && preDiscountTotal > taNum) {
+                discountAmount = Math.round(preDiscountTotal - taNum);
+            }
+
+            // Luôn tính theo danh sách món hiện tại để tránh lệch khi vừa cancel/gộp mà TotalAmount chưa reflect ngay
+            const subtotalAfterDiscount = Math.max(0, preDiscountTotal - discountAmount);
+
+            const couponCode = order.couponCode || order.CouponCode || '';
+
             const taxRate = storeConfig?.taxRate || 0.08;
             const isTaxIncluded = storeConfig?.isTaxIncludedInPrice || false;
             let taxAmount, total;
 
             if (isTaxIncluded) {
-                taxAmount = Math.round(subtotal - (subtotal / (1 + taxRate)));
-                total = subtotal;
+                taxAmount = Math.round(subtotalAfterDiscount - (subtotalAfterDiscount / (1 + taxRate)));
+                total = subtotalAfterDiscount;
             } else {
-                taxAmount = Math.round(subtotal * taxRate);
-                total = subtotal + taxAmount;
+                taxAmount = Math.round(subtotalAfterDiscount * taxRate);
+                total = subtotalAfterDiscount + taxAmount;
             }
-            return { preDiscountTotal, discountAmount, subtotal, taxRate, taxAmount, total, isTaxIncluded };
+            return {
+                preDiscountTotal,
+                discountAmount,
+                subtotal: subtotalAfterDiscount,
+                couponCode,
+                taxRate,
+                taxAmount,
+                total,
+                isTaxIncluded
+            };
         }
 
         function renderOrder(order) {
-            document.getElementById('order-id').innerText = order.orderCode || order.id;
+            document.getElementById('order-id').innerText = order.orderCode || order.OrderCode || order.id;
             
             let statusVN = order.status;
             if (statusVN.toLowerCase() === 'pending') statusVN = "Đang chờ";
@@ -295,8 +321,8 @@
                 batchBar.style.display = 'none';
             }
 
-            document.getElementById('order-total').innerText =
-                (order.totalAmount || 0).toLocaleString('vi-VN') + ' ₫';
+            const bill = calculateBill(order);
+            document.getElementById('order-total').innerText = apiClient.formatVnd(bill.total);
         }
 
         function showBillPopup(paymentMethod) {
@@ -310,7 +336,7 @@
                 <tr>
                     <td style="padding: 8px 0; font-size: 0.85rem; color: #334155;">${i.name}</td>
                     <td style="padding: 8px 0; text-align: center; font-weight: 700; color: #64748b; font-size: 0.85rem;">${i.quantity}</td>
-                    <td style="padding: 8px 0; text-align: right; font-weight: 700; font-size: 0.85rem;">${(i.unitPrice * i.quantity).toLocaleString('vi-VN')} ₫</td>
+                    <td style="padding: 8px 0; text-align: right; font-weight: 700; font-size: 0.85rem;" class="currency-amount">${apiClient.formatVnd(i.unitPrice * i.quantity)}</td>
                 </tr>
             `).join('');
 
@@ -339,24 +365,24 @@
                     ${bill.discountAmount > 0 ? `
                         <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
                             <span style="color: #64748b; font-size: 0.85rem; font-weight: 600;">Tổng tiền món</span>
-                            <span style="font-weight: 700; font-size: 0.85rem;">${bill.preDiscountTotal.toLocaleString('vi-VN')} ₫</span>
+                            <span style="font-weight: 700; font-size: 0.85rem;" class="currency-amount">${apiClient.formatVnd(bill.preDiscountTotal)}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                            <span style="color: #10b981; font-size: 0.85rem; font-weight: 800;"><i class="fa-solid fa-tag"></i> Giảm giá</span>
-                            <span style="font-weight: 800; font-size: 0.85rem; color: #10b981;">-${bill.discountAmount.toLocaleString('vi-VN')} ₫</span>
+                            <span style="color: #10b981; font-size: 0.85rem; font-weight: 800;"><i class="fa-solid fa-tag"></i> Giảm giá${bill.couponCode ? ` (${bill.couponCode})` : ''}</span>
+                            <span style="font-weight: 800; font-size: 0.85rem; color: #10b981;" class="currency-amount">-${apiClient.formatVnd(bill.discountAmount)}</span>
                         </div>
                     ` : ''}
                     <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
                         <span style="color: #64748b; font-size: 0.85rem; font-weight: 600;">Tạm tính</span>
-                        <span style="font-weight: 700; font-size: 0.85rem;">${bill.subtotal.toLocaleString('vi-VN')} ₫</span>
+                        <span style="font-weight: 700; font-size: 0.85rem;" class="currency-amount">${apiClient.formatVnd(bill.subtotal)}</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                         <span style="color: #64748b; font-size: 0.85rem; font-weight: 600;">Thuế VAT (${(bill.taxRate * 100).toFixed(0)}%)${bill.isTaxIncluded ? ' (đã gồm)' : ''}</span>
-                        <span style="font-weight: 700; font-size: 0.85rem; color: #f59e0b;">${bill.isTaxIncluded ? '—' : '+' + bill.taxAmount.toLocaleString('vi-VN') + ' ₫'}</span>
+                        <span style="font-weight: 700; font-size: 0.85rem; color: #f59e0b;" class="currency-amount">${bill.isTaxIncluded ? '—' : '+' + apiClient.formatVnd(bill.taxAmount)}</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 2px solid #1e293b;">
                         <span style="font-weight: 900; font-size: 1.1rem;">TỔNG CỘNG</span>
-                        <span style="font-weight: 900; font-size: 1.3rem; color: var(--primary);">${bill.total.toLocaleString('vi-VN')} ₫</span>
+                        <span style="font-weight: 900; font-size: 1.3rem; color: var(--primary);" class="currency-amount">${apiClient.formatVnd(bill.total)}</span>
                     </div>
                 </div>
                 <div id="vnpay-qr-section" style="display: none; margin-top: 20px;"></div>
@@ -510,7 +536,11 @@
                     
                     const mergeRes = await apiClient.mergeOrder(currentOrder.id, sourceOrder.id);
                     if (mergeRes && mergeRes.ok) {
-                        Swal.fire('Thành công', 'Đã gộp đơn hàng. Các món ăn đã được chuyển sang bàn này.', 'success');
+                        const mergeData = await mergeRes.json();
+                        const mergeMessage = mergeData?.CouponDroppedOnMerge
+                            ? 'Đã gộp đơn hàng. Cả 2 bàn đều có coupon nên coupon đã được tự động bỏ.'
+                            : 'Đã gộp đơn hàng. Các món ăn đã được chuyển sang bàn này.';
+                        Swal.fire('Thành công', mergeMessage, mergeData?.CouponDroppedOnMerge ? 'warning' : 'success');
                         loadOrder();
                     } else {
                         const err = await mergeRes.json();
@@ -522,6 +552,8 @@
                 const errText = e.Error || e.error || e.message || (e.errors ? JSON.stringify(e.errors) : JSON.stringify(e));
                 Swal.fire('Lỗi Gộp Bill', errText || 'Có lỗi xảy ra khi gộp bill.', 'error');
             }
+        }
+
         async function promptSwitchTable() {
             if (!currentOrder) return;
             const res = await apiClient.getTables();

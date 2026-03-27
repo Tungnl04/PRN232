@@ -32,6 +32,12 @@ body {
     overflow-x: hidden;
 }
 
+.currency-amount {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+}
+
 header {
     position: sticky;
     top: 10px;

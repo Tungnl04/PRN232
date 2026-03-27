@@ -90,7 +90,7 @@
 <div class="summary-grid">
     <div class="summary-item">
         <div class="label">Tổng doanh thu</div>
-        <div class="value" id="total-revenue">0 ₫</div>
+        <div class="value currency-amount" id="total-revenue">0&nbsp;₫</div>
     </div>
     <div class="summary-item">
         <div class="label">Tổng đơn hàng</div>
@@ -98,7 +98,7 @@
     </div>
     <div class="summary-item">
         <div class="label">Giá trị TB đơn</div>
-        <div class="value" id="avg-order">0 ₫</div>
+        <div class="value currency-amount" id="avg-order">0&nbsp;₫</div>
     </div>
 </div>
 
@@ -193,10 +193,10 @@
         }
 
         function updateSummaries(data) {
-            document.getElementById('total-revenue').innerText = (data.totalRevenue || 0).toLocaleString('vi-VN') + ' ₫';
+            document.getElementById('total-revenue').innerText = apiClient.formatVnd(data.totalRevenue || 0);
             document.getElementById('total-orders').innerText = data.totalOrders || 0;
             const avg = data.totalOrders > 0 ? (data.totalRevenue / data.totalOrders) : 0;
-            document.getElementById('avg-order').innerText = Math.round(avg).toLocaleString('vi-VN') + ' ₫';
+            document.getElementById('avg-order').innerText = apiClient.formatVnd(Math.round(avg));
         }
 
         function updateTable(list) {
@@ -215,7 +215,7 @@
                     <tr>
                         <td class="font-bold">${new Date(d.date).toLocaleDateString('vi-VN')}</td>
                         <td style="text-align: center;">${d.orderCount || 0}</td>
-                        <td class="font-bold" style="text-align: right;">${(d.revenue || 0).toLocaleString('vi-VN')} ₫</td>
+                        <td class="font-bold currency-amount" style="text-align: right;">${apiClient.formatVnd(d.revenue || 0)}</td>
                         <td style="${growthClass}; font-weight:700; text-align: right;">${growth > 0 ? '+' : ''}${growth}%</td>
                     </tr>
                 `;

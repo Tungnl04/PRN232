@@ -34,7 +34,8 @@
     border: none; 
     padding: 12px; 
     border-radius: 12px; 
-    font-weight: 800; 
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-weight: 700; 
     font-size: 0.85rem; 
     cursor: pointer; 
     transition: all 0.2s;
@@ -42,6 +43,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
+    -webkit-font-smoothing: antialiased;
 }
 
 .btn-primary { background: var(--primary); color: white; }

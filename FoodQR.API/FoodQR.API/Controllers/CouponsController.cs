@@ -22,6 +22,44 @@ namespace FoodQR.API.Controllers
             _context = context;
         }
 
+        private static bool IsFixedType(string? discountType)
+            => string.Equals(discountType, "fixed", StringComparison.OrdinalIgnoreCase);
+
+        private static bool IsPercentType(string? discountType)
+            => string.Equals(discountType, "percent", StringComparison.OrdinalIgnoreCase);
+
+        private static string NormalizeDiscountType(string? discountType)
+        {
+            if (IsFixedType(discountType)) return "Fixed";
+            if (IsPercentType(discountType)) return "Percent";
+            return string.Empty;
+        }
+
+        private static string? ValidateCouponInput(Coupon coupon)
+        {
+            if (string.IsNullOrWhiteSpace(coupon.Code))
+                return "Mã coupon không được để trống.";
+
+            var normalizedType = NormalizeDiscountType(coupon.DiscountType);
+            if (string.IsNullOrEmpty(normalizedType))
+                return "Loại giảm giá không hợp lệ. Chỉ chấp nhận Percent hoặc Fixed.";
+
+            if (coupon.DiscountValue < 0)
+                return "Giá trị giảm không được âm.";
+
+            if (coupon.MinOrderAmount < 0)
+                return "Đơn tối thiểu không được âm.";
+
+            if (coupon.MaxUsage.HasValue && coupon.MaxUsage.Value <= 0)
+                return "Giới hạn số lượt dùng phải lớn hơn 0.";
+
+            if (normalizedType == "Percent" && coupon.DiscountValue > 100)
+                return "Mã giảm theo phần trăm chỉ được từ 0 đến 100.";
+
+            coupon.DiscountType = normalizedType;
+            return null;
+        }
+
         [EnableQuery]
         [Authorize(Roles = "admin,staff")]
         [HttpGet]
@@ -45,11 +83,14 @@ namespace FoodQR.API.Controllers
         {
             // Auto capitalize code
             coupon.Code = coupon.Code.ToUpperInvariant().Trim();
+            var validationError = ValidateCouponInput(coupon);
+            if (!string.IsNullOrEmpty(validationError))
+                return BadRequest(new { Title = validationError });
             
             // Check duplicate
             if (await _context.Coupons.AnyAsync(c => c.Code == coupon.Code))
             {
-                return BadRequest(new { Title = "Coupon code already exists!" });
+                return BadRequest(new { Title = "Mã coupon đã tồn tại." });
             }
 
             _context.Coupons.Add(coupon);
@@ -64,6 +105,9 @@ namespace FoodQR.API.Controllers
             if (id != coupon.Id) return BadRequest();
             
             coupon.Code = coupon.Code.ToUpperInvariant().Trim();
+            var validationError = ValidateCouponInput(coupon);
+            if (!string.IsNullOrEmpty(validationError))
+                return BadRequest(new { Title = validationError });
             _context.Entry(coupon).State = EntityState.Modified;
             await _context.SaveChangesAsync();
             return NoContent();
@@ -94,25 +138,31 @@ namespace FoodQR.API.Controllers
             var code = request.Code.ToUpperInvariant().Trim();
             var coupon = await _context.Coupons.FirstOrDefaultAsync(c => c.Code == code && c.IsActive);
 
-            if (coupon == null) return BadRequest(new { Error = "Invalid or inactive coupon code." });
+            if (coupon == null) return BadRequest(new { Error = "Mã coupon không hợp lệ hoặc đã ngừng hoạt động." });
             
             if (coupon.ExpiryDate.HasValue && coupon.ExpiryDate.Value < DateTime.UtcNow)
-                return BadRequest(new { Error = "Coupon has expired." });
+                return BadRequest(new { Error = "Mã coupon đã hết hạn." });
 
             if (coupon.MaxUsage.HasValue && coupon.UsedCount >= coupon.MaxUsage.Value)
-                return BadRequest(new { Error = "Coupon usage limit reached." });
+                return BadRequest(new { Error = "Mã coupon đã hết lượt sử dụng." });
 
             if (request.OrderTotal < coupon.MinOrderAmount)
-                return BadRequest(new { Error = $"Minimum order amount of {coupon.MinOrderAmount:N0} required." });
+                return BadRequest(new { Error = $"Đơn hàng cần tối thiểu {coupon.MinOrderAmount:N0} để áp mã." });
 
             decimal discount = 0;
-            if (string.Equals(coupon.DiscountType, "fixed", StringComparison.OrdinalIgnoreCase) || string.Equals(coupon.DiscountType, "Fixed", StringComparison.OrdinalIgnoreCase))
+            if (IsFixedType(coupon.DiscountType))
             {
                 discount = coupon.DiscountValue;
             }
-            else if (string.Equals(coupon.DiscountType, "percent", StringComparison.OrdinalIgnoreCase) || string.Equals(coupon.DiscountType, "Percent", StringComparison.OrdinalIgnoreCase))
+            else if (IsPercentType(coupon.DiscountType))
             {
+                if (coupon.DiscountValue > 100)
+                    return BadRequest(new { Error = "Mã giảm theo phần trăm không hợp lệ (vượt quá 100%)." });
                 discount = request.OrderTotal * (coupon.DiscountValue / 100m);
+            }
+            else
+            {
+                return BadRequest(new { Error = "Loại mã giảm không hợp lệ." });
             }
 
             // Optional cap if we wanted max_discount field, ignoring for now

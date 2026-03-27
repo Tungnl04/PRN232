@@ -35,6 +35,8 @@
 @section Scripts {
     <script>
         let coupons = [];
+        const isPercentType = (type) => String(type || '').trim().toLowerCase() === 'percent';
+        const isFixedType = (type) => String(type || '').trim().toLowerCase() === 'fixed';
 
         async function init() {
             await loadCoupons();
@@ -49,7 +51,7 @@
                     return;
                 }
                 body.innerHTML = coupons.map(c => {
-                    let discountText = c.discountType === 'Percent' ? `${c.discountValue}%` : `${c.discountValue.toLocaleString('vi-VN')} đ`;
+                    let discountText = isPercentType(c.discountType) ? `${c.discountValue}%` : apiClient.formatVnd(c.discountValue);
                     let statusHtml = '';
                     if (!c.isActive) statusHtml = '<span class="status-badge" style="background:#ffebee; color:#f44336; padding:4px 10px; border-radius:12px; font-size:0.7rem;">Ngừng hoạt động</span>';
                     else if (c.expiryDate && new Date(c.expiryDate) < new Date()) statusHtml = '<span class="status-badge" style="background:#fff3e0; color:#ef6c00; padding:4px 10px; border-radius:12px; font-size:0.7rem;">Đã hết hạn</span>';
@@ -60,7 +62,7 @@
                     <tr>
                         <td class="font-bold" style="color:var(--primary)">${c.code}</td>
                         <td class="font-bold">${discountText}</td>
-                        <td>${c.minOrderAmount.toLocaleString('vi-VN')} đ</td>
+                        <td class="currency-amount">${apiClient.formatVnd(c.minOrderAmount)}</td>
                         <td>${c.maxUsage ? c.maxUsage : 'Không giới hạn'}</td>
                         <td>${c.usedCount}</td>
                         <td>${c.expiryDate ? new Date(c.expiryDate).toLocaleDateString() : 'Không'}</td>
@@ -160,8 +162,8 @@
                             <div style="flex: 1;">
                                 <label class="swal-label">Loại giảm giá</label>
                                 <select id="swal-type" class="swal2-select">
-                                    <option value="Percent" ${p.discountType==='Percent'?'selected':''}>Phần trăm (%)</option>
-                                    <option value="Fixed" ${p.discountType==='Fixed'?'selected':''}>Số tiền cứng</option>
+                                    <option value="Percent" ${isPercentType(p.discountType)?'selected':''}>Phần trăm (%)</option>
+                                    <option value="Fixed" ${isFixedType(p.discountType)?'selected':''}>Số tiền cứng</option>
                                 </select>
                             </div>
                             <div style="flex: 1;">

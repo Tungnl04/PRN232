@@ -48,6 +48,9 @@
             <a href="/Admin/Settings" class="nav-item @(ViewContext.RouteData.Values["page"]?.ToString().Contains("Settings") == true ? "active" : "")">
                 <i class="fa-solid fa-gear"></i><span>Cài đặt</span>
             </a>
+            <a href="/Admin/ActivityLogs" class="nav-item @(ViewContext.RouteData.Values["page"]?.ToString().Contains("ActivityLogs") == true ? "active" : "")">
+                <i class="fa-solid fa-clock-rotate-left"></i><span>Lịch sử HĐ</span>
+            </a>
         </nav>
 
         <div class="logout-section">
@@ -121,7 +124,7 @@
         async function loadNotificationHistory() {
             try {
                 const token = sessionStorage.getItem('auth_token') || localStorage.getItem('auth_token');
-                const res = await fetch(`${apiBase}/Notifications`, {
+                const res = await fetch(`${apiBase}/Notifications?role=admin`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {

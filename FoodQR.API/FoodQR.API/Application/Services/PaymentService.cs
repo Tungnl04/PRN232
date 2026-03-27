@@ -29,7 +29,7 @@ namespace FoodQR.API.Application.Services
             // Validate order status
             var allowedStatuses = new[] { OrderStatus.Ready, OrderStatus.Served };
             if (!allowedStatuses.Contains(order.Status?.ToLower()))
-                return (false, $"Chỉ có thể thanh toán đơn đã ready hoặc served. Trạng thái hiện tại: {order.Status}", null);
+                return (false, $"Chỉ có thể thanh toán đơn ở trạng thái sẵn sàng hoặc đã phục vụ. Trạng thái hiện tại: {order.Status}", null);
 
             if (order.PaymentStatus == PaymentStatus.Success)
                 return (false, "Đơn hàng này đã được thanh toán rồi.", null);
@@ -52,13 +52,13 @@ namespace FoodQR.API.Application.Services
                 await _context.OrderStatusHistories.AddAsync(new OrderStatusHistory
                 {
                     Order = order, OldStatus = oldStatus, NewStatus = OrderStatus.Paid,
-                    Note = $"Payment success via {method}"
+                    Note = $"Thanh toán thành công qua phương thức {method}"
                 });
 
                 await _context.ActivityLogs.AddAsync(new ActivityLog
                 {
                     Action = "payment_success",
-                    Description = $"Order {order.OrderCode} paid via {method}"
+                    Description = $"Đơn {order.OrderCode} đã thanh toán thành công qua phương thức {method}."
                 });
 
                 await _context.Notifications.AddAsync(new Notification
@@ -75,7 +75,7 @@ namespace FoodQR.API.Application.Services
                 await _context.ActivityLogs.AddAsync(new ActivityLog
                 {
                     Action = "payment_failed",
-                    Description = $"Order {order.OrderCode} payment failed via {method}"
+                    Description = $"Thanh toán đơn {order.OrderCode} qua phương thức {method} thất bại."
                 });
             }
 
@@ -90,13 +90,13 @@ namespace FoodQR.API.Application.Services
                 return (false, "Không tìm thấy đơn hàng.");
 
             if (order.PaymentStatus != PaymentStatus.Pending && order.PaymentStatus != PaymentStatus.Failed)
-                return (false, $"Chỉ hết hạn thanh toán pending/failed. Hiện tại: {order.PaymentStatus}");
+                return (false, $"Chỉ có thể hết hạn phiên thanh toán đang chờ hoặc thất bại. Hiện tại: {order.PaymentStatus}");
 
             order.PaymentStatus = PaymentStatus.Expired;
             await _context.ActivityLogs.AddAsync(new ActivityLog
             {
                 Action = "payment_expired",
-                Description = $"Payment for order {order.OrderCode} expired"
+                Description = $"Phiên thanh toán của đơn {order.OrderCode} đã hết hạn."
             });
 
             await _context.SaveChangesAsync();
@@ -170,7 +170,7 @@ namespace FoodQR.API.Application.Services
             await _context.ActivityLogs.AddAsync(new ActivityLog
             {
                 Action = "vnpay_url_created",
-                Description = $"VNPay payment URL created for order {order.OrderCode} - Amount: {totalWithTax:N0} VND"
+                Description = $"Đã tạo liên kết thanh toán VNPay cho đơn {order.OrderCode} - Số tiền: {totalWithTax:N0} VNĐ."
             });
             await _context.SaveChangesAsync();
 
@@ -223,13 +223,13 @@ namespace FoodQR.API.Application.Services
                     Order = order,
                     OldStatus = oldStatus,
                     NewStatus = OrderStatus.Paid,
-                    Note = $"VNPay payment success - Transaction: {vnpTransactionNo}"
+                    Note = $"Thanh toán VNPay thành công - Mã giao dịch: {vnpTransactionNo}"
                 });
 
                 await _context.ActivityLogs.AddAsync(new ActivityLog
                 {
                     Action = "payment_success",
-                    Description = $"Order {order.OrderCode} paid via VNPay - Txn: {vnpTransactionNo}"
+                    Description = $"Đơn {order.OrderCode} đã thanh toán VNPay thành công - Mã giao dịch: {vnpTransactionNo}."
                 });
 
                 await _context.Notifications.AddAsync(new Notification
@@ -256,7 +256,7 @@ namespace FoodQR.API.Application.Services
                 await _context.ActivityLogs.AddAsync(new ActivityLog
                 {
                     Action = "payment_failed",
-                    Description = $"Order {order.OrderCode} VNPay payment failed - Code: {responseCode}"
+                    Description = $"Thanh toán VNPay của đơn {order.OrderCode} thất bại - Mã lỗi: {responseCode}."
                 });
             }
 

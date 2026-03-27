@@ -11,7 +11,7 @@
     <div class="stat-card">
         <div class="stat-icon" style="background: #e9edfe; color: #4318ff;"><i class="fa-solid fa-bolt"></i></div>
         <div class="stat-info">
-            <div class="value" id="stat-today-revenue">0 ₫</div>
+            <div class="value currency-amount" id="stat-today-revenue">0&nbsp;₫</div>
             <div class="label">Doanh thu hôm nay</div>
         </div>
     </div>
@@ -94,7 +94,7 @@
             try {
                 // 1. Load Summary Stats
                 const stats = await apiClient.getDashboardStats();
-                document.getElementById('stat-today-revenue').innerText = (stats.todayRevenue || 0).toLocaleString('vi-VN') + ' ₫';
+                document.getElementById('stat-today-revenue').innerText = apiClient.formatVnd(stats.todayRevenue || 0);
                 document.getElementById('stat-today-orders').innerText = stats.todayOrders || 0;
                 document.getElementById('stat-available-tables').innerText = stats.availableTables || 0;
 
@@ -112,7 +112,7 @@
                             <td class="font-bold" style="color: var(--text-main)">#${o.orderCode}</td>
                             <td><span style="background:#f4f7fe; padding:4px 10px; border-radius:8px; font-weight:600;">Table ${o.table?.tableNumber || o.tableId}</span></td>
                             <td>${o.customer?.name || "Anonymous"}</td>
-                            <td class="font-bold">${(o.totalAmount || 0).toLocaleString('vi-VN')} ₫</td>
+                            <td class="font-bold currency-amount">${apiClient.formatVnd(o.totalAmount || 0)}</td>
                             <td><span class="badge-status badge-${(o.status || 'pending').toLowerCase()}">${o.status || 'Pending'}</span></td>
                             <td style="color: var(--text-muted); font-size: 0.8rem;">${new Date(o.createdAt).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</td>
                         </tr>

@@ -1,19 +1,60 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
 using FoodQR.API.Core.Entities;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace FoodQR.API.Infrastructure.Persistence;
 
 public partial class FoodStoreDbContext : DbContext
 {
+    private readonly IHttpContextAccessor? _httpContextAccessor;
+
     public FoodStoreDbContext()
     {
     }
 
-    public FoodStoreDbContext(DbContextOptions<FoodStoreDbContext> options)
+    public FoodStoreDbContext(DbContextOptions<FoodStoreDbContext> options, IHttpContextAccessor? httpContextAccessor = null)
         : base(options)
     {
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        int? userId = null;
+        if (_httpContextAccessor?.HttpContext?.User?.Identity?.IsAuthenticated == true)
+        {
+            var claim = _httpContextAccessor.HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            if (claim != null && int.TryParse(claim.Value, out int uid))
+            {
+                userId = uid;
+            }
+        }
+
+        foreach (var entry in ChangeTracker.Entries())
+        {
+            if (entry.Entity is ActivityLog activityLog && entry.State == EntityState.Added)
+            {
+                if (activityLog.UserId == null) 
+                {
+                    activityLog.UserId = userId;
+                }
+            }
+            else if (entry.Entity is OrderStatusHistory history && entry.State == EntityState.Added)
+            {
+                if (history.ChangedBy == null)
+                {
+                    history.ChangedBy = userId;
+                }
+            }
+        }
+
+        return await base.SaveChangesAsync(cancellationToken);
     }
 
     public virtual DbSet<ActivityLog> ActivityLogs { get; set; }

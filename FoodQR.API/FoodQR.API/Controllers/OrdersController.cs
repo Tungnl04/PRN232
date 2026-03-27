@@ -109,7 +109,7 @@ namespace FoodQR.API.Controllers
                 Items = order.OrderItems.Select(oi => new OrderItemDetailDto
                 {
                     Id = oi.Id,
-                    Name = oi.Product?.Name ?? oi.Combo?.Name ?? "Unknown",
+                    Name = oi.Product?.Name ?? oi.Combo?.Name ?? "Không xác định",
                     Quantity = oi.Quantity ?? 1,
                     UnitPrice = oi.UnitPrice,
                     Status = oi.Status ?? "pending",
@@ -209,9 +209,25 @@ namespace FoodQR.API.Controllers
         [HttpPost("{targetId}/merge-from/{sourceId}")]
         public async Task<IActionResult> MergeOrders(int targetId, int sourceId)
         {
+            var orderCoupons = await _context.Orders
+                .Where(o => o.Id == targetId || o.Id == sourceId)
+                .Select(o => new { o.Id, o.CouponId })
+                .ToListAsync();
+
+            var targetCouponId = orderCoupons.FirstOrDefault(x => x.Id == targetId)?.CouponId;
+            var sourceCouponId = orderCoupons.FirstOrDefault(x => x.Id == sourceId)?.CouponId;
+            var couponDroppedOnMerge = targetCouponId.HasValue && sourceCouponId.HasValue;
+
             var result = await _orderService.MergeOrderAsync(targetId, sourceId);
             if (!result) return BadRequest(new { Error = "Không thể gộp hóa đơn. Vui lòng kiểm tra lại trạng thái của cả 2 đơn." });
-            return Ok(new { Message = "Gộp hóa đơn thành công." });
+            return Ok(new
+            {
+                Message = "Gộp hóa đơn thành công.",
+                CouponDroppedOnMerge = couponDroppedOnMerge,
+                Notice = couponDroppedOnMerge
+                    ? "Cả 2 bàn đều có coupon nên sau khi gộp, coupon đã được tự động bỏ."
+                    : null
+            });
         }
 
         [Authorize(Roles = "staff,admin")]
