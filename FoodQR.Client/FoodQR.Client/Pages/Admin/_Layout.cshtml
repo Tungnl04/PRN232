@@ -101,7 +101,8 @@
         document.getElementById('user-display-name').innerText = user.name || 'Admin';
         document.getElementById('user-initial').innerText = (user.name || 'A')[0].toUpperCase();
 
-        const apiBase = "@(Configuration["ApiSettings:BaseUrl"])" || (window.location.hostname.includes('localhost') ? "https://localhost:7197/api" : "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api");
+        const configBase = "@(Configuration["ApiSettings:BaseUrl"])";
+        const apiBase = (configBase && !configBase.includes("YOUR_API_DOMAIN")) ? configBase : (window.location.hostname.includes('localhost') ? "https://localhost:7197/api" : "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api");
         const connection = new signalR.HubConnectionBuilder()
             .withUrl(apiBase.replace('/api', '') + '/hubs/order')
             .withAutomaticReconnect().build();

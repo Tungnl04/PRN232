@@ -17,7 +17,15 @@ namespace FoodQR.Client.Pages
         public void OnGet(int? tableId)
         {
             TableId = tableId ?? 0;
-            ViewData["ApiBaseUrl"] = _config["ApiSettings:BaseUrl"] ?? "https://localhost:7197/api";
+            var baseUrl = _config["ApiSettings:BaseUrl"];
+            if (string.IsNullOrEmpty(baseUrl) || baseUrl.Contains("YOUR_API_DOMAIN"))
+            {
+                ViewData["ApiBaseUrl"] = "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api";
+            }
+            else
+            {
+                ViewData["ApiBaseUrl"] = baseUrl;
+            }
         }
     }
 }
