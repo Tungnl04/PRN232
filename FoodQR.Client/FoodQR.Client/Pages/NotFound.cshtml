@@ -1,0 +1,190 @@
+@page "/NotFound"
+@{
+    Layout = null;
+    ViewData["Title"] = "Không tìm thấy trang";
+    Response.StatusCode = 404;
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>404 - Không tìm thấy trang</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Floating particles */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 77, 77, 0.08);
+            animation: float 15s infinite ease-in-out;
+        }
+        .particle:nth-child(1) { width: 300px; height: 300px; top: -100px; left: -100px; animation-delay: 0s; }
+        .particle:nth-child(2) { width: 200px; height: 200px; bottom: -80px; right: -60px; animation-delay: -5s; background: rgba(99, 102, 241, 0.06); }
+        .particle:nth-child(3) { width: 150px; height: 150px; top: 30%; right: 10%; animation-delay: -10s; background: rgba(245, 158, 11, 0.06); }
+
+        @@keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+            33% { transform: translateY(-30px) rotate(120deg) scale(1.05); }
+            66% { transform: translateY(20px) rotate(240deg) scale(0.95); }
+        }
+
+        .container {
+            text-align: center;
+            z-index: 10;
+            padding: 40px 30px;
+            max-width: 520px;
+            animation: fadeUp 0.8s ease-out;
+        }
+
+        @@keyframes fadeUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .error-code {
+            font-size: 10rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #ff4d4d, #f59e0b, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            margin-bottom: 10px;
+            letter-spacing: -5px;
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @@keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.85; }
+        }
+
+        .icon-plate {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+            font-size: 2.5rem;
+            animation: wobble 2s ease-in-out infinite;
+        }
+
+        @@keyframes wobble {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-8deg); }
+            75% { transform: rotate(8deg); }
+        }
+
+        h1 {
+            color: #f1f5f9;
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+
+        p {
+            color: #94a3b8;
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 35px;
+            font-weight: 500;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border-radius: 14px;
+            text-decoration: none;
+            font-weight: 800;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff4d4d, #f43f5e);
+            color: white;
+            box-shadow: 0 8px 25px rgba(255, 77, 77, 0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(255, 77, 77, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateY(-2px);
+        }
+
+        .footer-text {
+            margin-top: 50px;
+            font-size: 0.8rem;
+            color: #475569;
+            font-weight: 600;
+        }
+        .footer-text span { color: #ff4d4d; }
+    </style>
+</head>
+<body>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+
+    <div class="container">
+        <div class="error-code">404</div>
+
+        <div class="icon-plate">🍽️</div>
+
+        <h1>Oops! Trang không tồn tại</h1>
+        <p>Có vẻ như món bạn tìm đã hết hoặc chưa có trong thực đơn. Hãy quay lại và thử lại nhé!</p>
+
+        <div class="btn-group">
+            <a href="/" class="btn btn-primary">
+                <i class="fa-solid fa-house"></i> Về Trang chủ
+            </a>
+            <a href="javascript:history.back()" class="btn btn-secondary">
+                <i class="fa-solid fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+
+        <div class="footer-text">
+            <span>FOOD</span>STORE QR — Hệ thống gọi món thông minh
+        </div>
+    </div>
+</body>
+</html>

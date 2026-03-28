@@ -161,6 +161,10 @@ namespace FoodQR.API.Application.Services
             await _hubContext.Clients.Group("kitchen").SendAsync("ItemStatusChanged", payload);
             await _hubContext.Clients.Group("staff").SendAsync("ItemStatusChanged", payload);
 
+            // Customer cũng nhận per-item updates để cập nhật OrderTracking realtime
+            if (tableId.HasValue)
+                await _hubContext.Clients.Group($"table_{tableId}").SendAsync("ItemStatusChanged", payload);
+
             // Customer chỉ nhận thông báo khi ORDER chuyển trạng thái, KHÔNG phải từng món:
             // 1) Đơn BẮT ĐẦU chế biến (lần đầu tiên)
             if (order != null && justStartedProcessing && tableId.HasValue)

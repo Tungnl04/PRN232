@@ -185,10 +185,30 @@
             link.click();
         }
 
+        let waitingForPayment = false;
+
         async function loadOrder() {
             try {
                 const order = await apiClient.getActiveOrder(tableId);
                 if (!order) {
+                    // Nếu trước đó có đơn mà giờ không có → vừa thanh toán xong
+                    if (currentOrder && waitingForPayment) {
+                        waitingForPayment = false;
+                        Swal.close();
+                        Swal.fire({
+                            icon: 'success',
+                            title: '🎉 Thanh toán thành công!',
+                            html: '<p style="font-size:0.95rem; color:#64748b; font-weight:600;">Đơn hàng đã được thanh toán. Bàn chuyển sang trạng thái chờ dọn.</p>',
+                            confirmButtonColor: '#10b981',
+                            confirmButtonText: 'Quay lại Sơ đồ bàn',
+                            allowOutsideClick: false
+                        }).then(() => {
+                            window.location.href = '/Staff/Dashboard';
+                        });
+                        currentOrder = null;
+                        return;
+                    }
+                    currentOrder = null;
                     document.getElementById('items-list').innerHTML =
                         '<div style="text-align:center; padding: 60px; color: #94a3b8;"><i class="fa-solid fa-mug-hot fa-3x" style="margin-bottom:20px; opacity:0.3"></i><p style="font-weight:700">Hiện không có đơn hàng nào cho bàn này.</p></div>';
                     document.getElementById('order-total-container').style.display = 'none';
@@ -416,6 +436,8 @@
                 });
             } else {
                 // VNPay
+                waitingForPayment = true;
+                startFastPolling();
                 Swal.fire({
                     title: '',
                     html: billHtml + `
@@ -439,7 +461,8 @@
                     showConfirmButton: false,
                     showCancelButton: true,
                     cancelButtonText: 'Đóng',
-                    didOpen: () => createVnPayQr()
+                    didOpen: () => createVnPayQr(),
+                    didClose: () => { stopFastPolling(); }
                 });
             }
         }
@@ -640,10 +663,25 @@
             });
         }
 
+        // Polling: bình thường 10s, khi chờ VNPay 3s
+        let pollInterval = setInterval(loadOrder, 10000);
+        let fastPollInterval = null;
+
+        function startFastPolling() {
+            if (fastPollInterval) return;
+            clearInterval(pollInterval);
+            fastPollInterval = setInterval(loadOrder, 3000);
+        }
+        function stopFastPolling() {
+            if (fastPollInterval) clearInterval(fastPollInterval);
+            fastPollInterval = null;
+            waitingForPayment = false;
+            pollInterval = setInterval(loadOrder, 10000);
+        }
+
         loadStoreConfig();
         loadTableQr();
         loadOrder();
-        setInterval(loadOrder, 10000); // Polling update
     </script>
 }
 

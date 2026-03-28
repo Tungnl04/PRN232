@@ -131,8 +131,98 @@
     <script>
         
         const apiBaseUrl = "@(ViewData["ApiBaseUrl"])" || (window.location.hostname.includes('localhost') ? "https://localhost:7197/api" : "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api");
+        const tableId = @Model.TableId;
+        const orderId = @Model.OrderId;
+        const qrToken = "@(Model.Token ?? "")";
 
-        // Update Progress Bar based on status
+        function updateUI(status, items) {
+            // Update status badge
+            const statusMap = {
+                'pending': { vn: 'Đã nhận', cls: 'status-pending' },
+                'processing': { vn: 'Đang nấu', cls: 'status-preparing' },
+                'ready': { vn: 'Chờ phục vụ', cls: 'status-ready' },
+                'served': { vn: 'Hoàn tất', cls: 'status-served' },
+                'paid': { vn: 'Đã thanh toán', cls: 'status-served' }
+            };
+            const sts = (status || '').toLowerCase();
+            const info = statusMap[sts] || { vn: status, cls: 'status-pending' };
+            
+            const badge = document.querySelector('.status-badge-lg');
+            if (badge) {
+                badge.textContent = info.vn;
+                badge.className = 'status-badge-lg ' + info.cls;
+            }
+
+            // Update progress bar
+            const bar = document.getElementById('progress-bar');
+            const steps = ['step-pending', 'step-processing', 'step-completed'];
+            const labels = document.querySelectorAll('.step-label');
+            
+            // Reset all
+            steps.forEach(s => { const el = document.getElementById(s); if(el) el.classList.remove('active'); });
+            labels.forEach(l => l.classList.remove('active'));
+
+            if (sts === 'pending') {
+                bar.style.width = '10%';
+                document.getElementById('step-pending')?.classList.add('active');
+                if(labels[0]) labels[0].classList.add('active');
+            } else if (sts === 'processing' || sts === 'preparing') {
+                bar.style.width = '50%';
+                document.getElementById('step-pending')?.classList.add('active');
+                document.getElementById('step-processing')?.classList.add('active');
+                if(labels[0]) labels[0].classList.add('active');
+                if(labels[1]) labels[1].classList.add('active');
+            } else {
+                bar.style.width = '100%';
+                steps.forEach(s => document.getElementById(s)?.classList.add('active'));
+                labels.forEach(l => l.classList.add('active'));
+            }
+
+            // Update items list
+            if (items && items.length > 0) {
+                const itemStatusMap = {
+                    'pending': { vn: 'Chờ nấu', cls: 'pending' },
+                    'preparing': { vn: 'Đang nấu', cls: 'preparing' },
+                    'ready': { vn: 'Xong', cls: 'ready' },
+                    'served': { vn: 'Đã bưng', cls: 'served' },
+                    'cancelled': { vn: 'Đã hủy', cls: 'served' }
+                };
+
+                const listEl = document.getElementById('items-list');
+                listEl.innerHTML = items.map(item => {
+                    const iSts = (item.status || '').toLowerCase();
+                    const iInfo = itemStatusMap[iSts] || { vn: item.status, cls: 'pending' };
+                    const noteHtml = item.note ? `<div style="font-size: 0.75rem; color: #f43f5e; font-weight: 700; margin-top: 5px; background: #fff1f2; padding: 4px 10px; border-radius: 8px; display: inline-block;"><i class="fa-solid fa-comment-dots"></i> ${item.note}</div>` : '';
+                    return `
+                        <div class="item-card-lite" style="transition: all 0.3s;">
+                            <div style="flex-grow: 1;">
+                                <div style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">${item.name}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; margin-top: 2px;">Số lượng: ${item.quantity}</div>
+                                ${noteHtml}
+                            </div>
+                            <div>
+                                <span class="item-status-pill ${iInfo.cls}">${iInfo.vn}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        async function refreshOrder() {
+            try {
+                const tokenParam = qrToken ? `?token=${encodeURIComponent(qrToken)}` : '';
+                const res = await fetch(`${apiBaseUrl}/Orders/active/${tableId}${tokenParam}`);
+                if (!res.ok) return;
+                const order = await res.json();
+                if (order.id !== orderId) return;
+                updateUI(order.status, order.items);
+            } catch (e) {
+                console.warn('Refresh error:', e);
+            }
+        }
+
+        // Initial status rendering
         const status = "@Model.OrderStatus.ToLower()";
         const bar = document.getElementById('progress-bar');
         
@@ -153,6 +243,47 @@
             document.getElementById('step-completed').classList.add('active');
             document.querySelectorAll('.step-label').forEach(el => el.classList.add('active'));
         }
+
+        // SignalR: lắng nghe thay đổi trạng thái từng món + đơn
+        const trackConn = new signalR.HubConnectionBuilder()
+            .withUrl(`${apiBaseUrl.replace('/api','')}/hubs/order`)
+            .withAutomaticReconnect()
+            .build();
+
+        trackConn.on('ItemStatusChanged', (data) => {
+            console.log('📦 Item changed:', data);
+            refreshOrder();
+        });
+
+        trackConn.on('OrderStartedPreparing', (data) => {
+            console.log('👨‍🍳 Order preparing:', data);
+            refreshOrder();
+            Swal.fire({
+                icon: 'info', title: '👨‍🍳 Bếp đang chế biến!',
+                text: 'Đơn hàng của bạn đã được bắt đầu nấu.',
+                timer: 4000, showConfirmButton: false
+            });
+        });
+
+        trackConn.on('OrderReady', (data) => {
+            console.log('🔔 Order ready:', data);
+            refreshOrder();
+            Swal.fire({
+                icon: 'success', title: '🌟 Món đã xong!',
+                text: 'Tất cả món của bạn đã sẵn sàng. Chờ nhân viên phục vụ nhé!',
+                timer: 6000, showConfirmButton: true, confirmButtonText: 'Tuyệt vời'
+            });
+        });
+
+        trackConn.start()
+            .then(() => {
+                console.log('✅ OrderTracking connected to hub');
+                trackConn.invoke('JoinGroup', `table_${tableId}`);
+            })
+            .catch(err => console.error('SignalR Error:', err));
+
+        // Fallback polling mỗi 15s (phòng trường hợp SignalR bị mất kết nối)
+        setInterval(refreshOrder, 15000);
 
         async function callStaff() {
             try {
@@ -179,7 +310,5 @@
                 }
             } catch (e) {}
         }
-
-        // SignalR will handle real-time updates via the Layout hub connection
     </script>
 }

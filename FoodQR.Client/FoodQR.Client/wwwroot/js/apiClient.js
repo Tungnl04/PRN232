@@ -290,8 +290,12 @@ const apiClient = (function() {
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    // Append true frontend URL instead of just relative if working locally or Azure
-                    return data.url; 
+                    const relativeUrl = data.Url || data.url;
+                    if (!relativeUrl) return null;
+                    // Build full absolute URL using the API origin so images load
+                    // correctly from both Admin (Client port) and Customer pages
+                    const apiOrigin = API_BASE_URL.replace('/api', '');
+                    return relativeUrl.startsWith('http') ? relativeUrl : `${apiOrigin}${relativeUrl}`;
                 }
                 return null;
             } catch (e) {
