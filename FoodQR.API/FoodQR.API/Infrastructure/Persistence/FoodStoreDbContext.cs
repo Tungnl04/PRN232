@@ -1,19 +1,60 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
 using FoodQR.API.Core.Entities;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace FoodQR.API.Infrastructure.Persistence;
 
 public partial class FoodStoreDbContext : DbContext
 {
+    private readonly IHttpContextAccessor? _httpContextAccessor;
+
     public FoodStoreDbContext()
     {
     }
 
-    public FoodStoreDbContext(DbContextOptions<FoodStoreDbContext> options)
+    public FoodStoreDbContext(DbContextOptions<FoodStoreDbContext> options, IHttpContextAccessor? httpContextAccessor = null)
         : base(options)
     {
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        int? userId = null;
+        if (_httpContextAccessor?.HttpContext?.User?.Identity?.IsAuthenticated == true)
+        {
+            var claim = _httpContextAccessor.HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            if (claim != null && int.TryParse(claim.Value, out int uid))
+            {
+                userId = uid;
+            }
+        }
+
+        foreach (var entry in ChangeTracker.Entries())
+        {
+            if (entry.Entity is ActivityLog activityLog && entry.State == EntityState.Added)
+            {
+                if (activityLog.UserId == null) 
+                {
+                    activityLog.UserId = userId;
+                }
+            }
+            else if (entry.Entity is OrderStatusHistory history && entry.State == EntityState.Added)
+            {
+                if (history.ChangedBy == null)
+                {
+                    history.ChangedBy = userId;
+                }
+            }
+        }
+
+        return await base.SaveChangesAsync(cancellationToken);
     }
 
     public virtual DbSet<ActivityLog> ActivityLogs { get; set; }
@@ -39,6 +80,10 @@ public partial class FoodStoreDbContext : DbContext
     public virtual DbSet<Product> Products { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
+
+    public virtual DbSet<StoreConfiguration> StoreConfigurations { get; set; }
+
+    public virtual DbSet<Coupon> Coupons { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -81,6 +126,9 @@ public partial class FoodStoreDbContext : DbContext
             entity.Property(e => e.Name)
                 .HasMaxLength(100)
                 .HasColumnName("name");
+            entity.Property(e => e.IsAvailable)
+                .HasDefaultValue(true)
+                .HasColumnName("is_available");
         });
 
         modelBuilder.Entity<Combo>(entity =>
@@ -210,6 +258,12 @@ public partial class FoodStoreDbContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("datetime")
                 .HasColumnName("updated_at");
+            
+            // New columns for Coupon System
+            entity.Property(e => e.CouponId).HasColumnName("coupon_id");
+            entity.Property(e => e.DiscountAmount)
+                .HasColumnType("decimal(18, 2)")
+                .HasColumnName("discount_amount");
 
             entity.HasOne(d => d.Customer).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.CustomerId)
@@ -218,6 +272,10 @@ public partial class FoodStoreDbContext : DbContext
             entity.HasOne(d => d.Table).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.TableId)
                 .HasConstraintName("fk_order_table");
+                
+            entity.HasOne(d => d.Coupon).WithMany(p => p.Orders)
+                .HasForeignKey(d => d.CouponId)
+                .HasConstraintName("fk_order_coupon");
         });
 
         modelBuilder.Entity<OrderItem>(entity =>
@@ -375,6 +433,70 @@ public partial class FoodStoreDbContext : DbContext
             entity.Property(e => e.Username)
                 .HasMaxLength(50)
                 .HasColumnName("username");
+
+            entity.Property(e => e.MustChangePassword)
+                .HasDefaultValue(true)
+                .HasColumnName("must_change_password");
+        });
+
+        modelBuilder.Entity<StoreConfiguration>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.ToTable("store_configuration");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.StoreName)
+                .HasMaxLength(200)
+                .HasColumnName("store_name");
+            entity.Property(e => e.TaxRate)
+                .HasColumnType("decimal(5, 4)")
+                .HasDefaultValue(0.08m)
+                .HasColumnName("tax_rate");
+            entity.Property(e => e.IsTaxIncludedInPrice)
+                .HasDefaultValue(false)
+                .HasColumnName("is_tax_included_in_price");
+            entity.Property(e => e.Currency)
+                .HasMaxLength(10)
+                .HasDefaultValue("VND")
+                .HasColumnName("currency");
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<Coupon>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.ToTable("coupon");
+
+            entity.HasIndex(e => e.Code).IsUnique();
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Code)
+                .HasMaxLength(20)
+                .HasColumnName("code");
+            entity.Property(e => e.DiscountType)
+                .HasMaxLength(20)
+                .HasDefaultValue("percent")
+                .HasColumnName("discount_type");
+            entity.Property(e => e.DiscountValue)
+                .HasColumnType("decimal(18, 2)")
+                .HasColumnName("discount_value");
+            entity.Property(e => e.MinOrderAmount)
+                .HasColumnType("decimal(18, 2)")
+                .HasColumnName("min_order_amount");
+            entity.Property(e => e.MaxUsage)
+                .HasColumnName("max_usage");
+            entity.Property(e => e.UsedCount)
+                .HasDefaultValue(0)
+                .HasColumnName("used_count");
+            entity.Property(e => e.ExpiryDate)
+                .HasColumnType("datetime2")
+                .HasColumnName("expiry_date");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasColumnName("is_active");
         });
 
         OnModelCreatingPartial(modelBuilder);
@@ -382,3 +504,4 @@ public partial class FoodStoreDbContext : DbContext
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
+

@@ -23,6 +23,7 @@ namespace FoodQR.API.Application.Middleware
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An unhandled exception has occurred while executing the request.");
+                try { File.WriteAllText("api_error_dump.txt", ex.ToString()); } catch {}
                 await HandleExceptionAsync(context, ex);
             }
         }

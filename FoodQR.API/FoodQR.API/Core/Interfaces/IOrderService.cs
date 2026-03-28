@@ -12,5 +12,9 @@ namespace FoodQR.API.Core.Interfaces
         Task<bool> CancelOrderAsync(int orderId, string? reason);
         Task<bool> CancelOrderItemAsync(int orderItemId, string? reason);
         Task<bool> SwitchTableAsync(int orderId, int newTableId);
+        Task<bool> MergeOrderAsync(int targetOrderId, int sourceOrderId);
+        Task<List<Order>> GetOrdersAsync(int limit = 10);
+        Task<object> GetTopProductsReportAsync(DateTime? start, DateTime? end);
+        Task<object> GetCategorySalesReportAsync(DateTime? start, DateTime? end);
     }
 }

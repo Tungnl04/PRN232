@@ -1,0 +1,281 @@
+@page
+@model FoodQR.Client.Pages.Admin.CombosModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Manage Combos";
+}
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h3 style="font-weight: 800; margin: 0;">Combo List</h3>
+        <button onclick="openCreateModal()" class="btn btn-primary" style="background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer;">
+            <i class="fa-solid fa-plus"></i> Add Combo
+        </button>
+    </div>
+
+    <table class="mgmt-table">
+        <thead>
+            <tr>
+                <th>Image</th>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Items Included</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="combo-table-body">
+            <!-- Rendered via JS -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal for Combo Create/Edit -->
+<div id="combo-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background: rgba(15,23,42,0.65); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background: #fff; padding: 32px 36px; border-radius: 20px; width: 620px; max-width: 95%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.18);">
+        <h3 id="modal-title" style="margin: 0 0 24px 0; font-weight: 800; color: #1e293b; font-size: 1.5rem;">Add Combo</h3>
+        
+        <input type="hidden" id="combo-id" />
+        
+        <label style="display:block; font-size:0.8rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Name</label>
+        <input type="text" id="combo-name" style="width:100%; box-sizing:border-box; padding:12px 16px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:0.95rem; font-family:inherit; margin-bottom:18px; outline:none;" />
+        
+        <label style="display:block; font-size:0.8rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Description</label>
+        <textarea id="combo-desc" rows="3" style="width:100%; box-sizing:border-box; padding:12px 16px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:0.95rem; font-family:inherit; margin-bottom:18px; outline:none; resize:vertical;"></textarea>
+        
+        <label style="display:block; font-size:0.8rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Price (VND)</label>
+        <input type="number" id="combo-price" style="width:100%; box-sizing:border-box; padding:12px 16px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:0.95rem; font-family:inherit; margin-bottom:18px; outline:none;" />
+        
+        <label style="display:block; font-size:0.8rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Upload Image</label>
+        <input type="file" id="combo-image-file" accept="image/*" style="width:100%; box-sizing:border-box; padding:10px 14px; border:1.5px dashed #cbd5e1; border-radius:12px; font-size:0.9rem; margin-bottom:18px; cursor:pointer; background:#f8fafc;" />
+        
+        <label style="display:block; font-size:0.8rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Or Existing Image URL</label>
+        <input type="text" id="combo-image" placeholder="https://..." style="width:100%; box-sizing:border-box; padding:12px 16px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:0.95rem; font-family:inherit; margin-bottom:18px; outline:none;" />
+        
+        <div style="display:flex; align-items:center; gap:12px; padding:14px 18px; background:#f8fafc; border-radius:12px; border:1.5px solid #e2e8f0; margin-bottom:8px;">
+            <input type="checkbox" id="combo-available" checked style="width:18px; height:18px; accent-color:#ef4444; cursor:pointer; margin:0;" />
+            <label for="combo-available" style="margin:0; font-weight:700; color:#1e293b; cursor:pointer; font-size:0.9rem;">Is Available</label>
+        </div>
+        
+        <hr style="margin: 22px 0; border: none; border-top: 2px dashed #e2e8f0;" />
+        <h4 style="font-weight:800; color:#1e293b; font-size:1.0rem; text-transform:uppercase; letter-spacing:0.5px; margin: 0 0 14px 0;">Select Products</h4>
+        <div id="product-selection-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+        
+        <div style="margin-top:28px; display:flex; gap:12px; justify-content:flex-end;">
+            <button onclick="closeModal()" style="padding:12px 24px; background:#f1f5f9; color:#475569; border:none; border-radius:12px; cursor:pointer; font-weight:700; font-size:0.95rem;">Cancel</button>
+            <button onclick="saveCombo()" style="padding:12px 28px; background:#ef4444; color:white; border:none; border-radius:12px; cursor:pointer; font-weight:800; font-size:0.95rem; box-shadow:0 4px 15px rgba(239,68,68,0.35);">Save Combo</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const apiBaseUrl = "@(ViewData["ApiBaseUrl"])" || (window.location.hostname.includes('localhost') ? "https://localhost:7197/api" : "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api");
+        const baseUrl = apiBaseUrl.replace('/api', '');
+        let combos = [];
+        let allProducts = [];
+
+        function getImageUrl(url) {
+            if (!url) return 'https://placehold.co/100x100?text=Combo';
+            if (url.startsWith('http')) return url;
+            return baseUrl + url;
+        }
+
+        async function init() {
+            allProducts = await apiClient.getProducts();
+            await loadCombos();
+        }
+
+        async function getCombos() {
+            const token = localStorage.getItem('auth_token');
+            const res = await fetch(`${apiBaseUrl}/Combos`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return res.ok ? res.json() : [];
+        }
+
+        async function loadCombos() {
+            combos = await getCombos();
+            const body = document.getElementById('combo-table-body');
+            body.innerHTML = combos.map(c => `
+                <tr>
+                    <td><img src="${getImageUrl(c.imageUrl)}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;"></td>
+                    <td class="font-bold">${c.name}</td>
+                    <td class="currency-amount">${apiClient.formatVnd(c.price || 0)}</td>
+                    <td style="font-size: 0.8rem; color:#666;">
+                        ${c.comboItems.map(i => `<div>- ${i.product ? i.product.name : 'Unknown'} (x${i.quantity})</div>`).join('')}
+                    </td>
+                    <td>
+                        <span class="status-badge" style="padding: 4px 10px; border-radius: 12px; font-size: 0.7rem; background:${c.isAvailable ? '#e8f5e9' : '#ffebee'}; color:${c.isAvailable ? '#4caf50' : '#f44336'};">
+                            ${c.isAvailable ? 'Available' : 'Hidden'}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-icon" onclick="openEditModal(${c.id})" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button class="btn-icon danger" onclick="deleteCombo(${c.id})" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderProductSelection(selectedItems = []) {
+            const list = document.getElementById('product-selection-list');
+            list.innerHTML = allProducts.map(p => {
+                const existing = selectedItems.find(x => x.productId === p.id);
+                const isChecked = !!existing;
+                const qty = existing ? existing.quantity : 1;
+                
+                return `
+                <div style="display:flex; justify-content:space-between; align-items:center; background:#f9f9f9; padding:8px; border-radius:8px;">
+                    <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" class="prod-cb" value="${p.id}" ${isChecked ? 'checked' : ''} />
+                        ${p.name}
+                    </label>
+                    <input type="number" class="prod-qty" data-id="${p.id}" value="${qty}" min="1" style="width:60px; padding:4px; border: 1px solid #ddd; border-radius: 4px;" ${isChecked ? '' : 'disabled'} />
+                </div>
+                `;
+            }).join('');
+            
+            document.querySelectorAll('.prod-cb').forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    const id = e.target.value;
+                    const input = document.querySelector(`.prod-qty[data-id="${id}"]`);
+                    input.disabled = !e.target.checked;
+                    if(e.target.checked && input.value < 1) input.value = 1;
+                });
+            });
+        }
+
+        function openCreateModal() {
+            document.getElementById('modal-title').innerText = 'Add New Combo';
+            document.getElementById('combo-id').value = '';
+            document.getElementById('combo-name').value = '';
+            document.getElementById('combo-desc').value = '';
+            document.getElementById('combo-price').value = 0;
+            document.getElementById('combo-image-file').value = '';
+            document.getElementById('combo-image').value = '';
+            document.getElementById('combo-available').checked = true;
+            
+            renderProductSelection([]);
+            document.getElementById('combo-modal').style.display = 'flex';
+        }
+
+        function openEditModal(id) {
+            const c = combos.find(x => x.id === id);
+            document.getElementById('modal-title').innerText = 'Edit Combo';
+            document.getElementById('combo-id').value = c.id;
+            document.getElementById('combo-name').value = c.name;
+            document.getElementById('combo-desc').value = c.description || '';
+            document.getElementById('combo-price').value = c.price;
+            document.getElementById('combo-image-file').value = '';
+            document.getElementById('combo-image').value = c.imageUrl || '';
+            document.getElementById('combo-available').checked = c.isAvailable;
+            
+            renderProductSelection(c.comboItems);
+            document.getElementById('combo-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('combo-modal').style.display = 'none';
+        }
+
+        async function saveCombo() {
+            const id = document.getElementById('combo-id').value;
+            
+            const items = [];
+            document.querySelectorAll('.prod-cb:checked').forEach(cb => {
+                const pid = parseInt(cb.value);
+                const qty = parseInt(document.querySelector(`.prod-qty[data-id="${pid}"]`).value) || 1;
+                items.push({ productId: pid, quantity: qty });
+            });
+            
+            if(items.length === 0) {
+                Swal.fire('Warning', 'A combo must have at least 1 product!', 'warning');
+                return;
+            }
+
+            Swal.showLoading();
+            let finalImageUrl = document.getElementById('combo-image').value;
+            const fileInput = document.getElementById('combo-image-file');
+            if (fileInput.files.length > 0) {
+                const uploadedUrl = await apiClient.uploadImage(fileInput.files[0]);
+                if (uploadedUrl) {
+                    finalImageUrl = uploadedUrl;
+                } else {
+                    Swal.fire('Error', 'Failed to upload image.', 'error');
+                    return;
+                }
+            }
+
+            const payload = {
+                name: document.getElementById('combo-name').value,
+                description: document.getElementById('combo-desc').value,
+                price: parseFloat(document.getElementById('combo-price').value) || 0,
+                imageUrl: finalImageUrl,
+                available: document.getElementById('combo-available').checked,
+                items: items
+            };
+
+            const token = localStorage.getItem('auth_token');
+            const url = id ? `${apiBaseUrl}/Combos/${id}` : `${apiBaseUrl}/Combos`;
+            const method = id ? 'PUT' : 'POST';
+
+            Swal.showLoading();
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    Swal.fire('Success', 'Combo saved.', 'success');
+                    closeModal();
+                    loadCombos();
+                } else {
+                    const err = await res.json();
+                    Swal.fire('Error', err.title || 'Error saving combo', 'error');
+                }
+            } catch(e) {
+                Swal.fire('Error', 'Connection failed.', 'error');
+            }
+        }
+
+        async function deleteCombo(id) {
+            const { isConfirmed } = await Swal.fire({
+                title: 'Ngừng bán Combo?', text: "Combo sẽ được đưa vào kho lưu trữ (Xóa mềm).", icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#ff4d4d', confirmButtonText: 'Có, ngừng bán!'
+            });
+
+            if (isConfirmed) {
+                const token = localStorage.getItem('auth_token');
+                const res = await fetch(`${apiBaseUrl}/Combos/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    Swal.fire('Deleted!', 'Combo removed.', 'success');
+                    loadCombos();
+                } else {
+                    Swal.fire('Error', 'Could not delete combo.', 'error');
+                }
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+
+}
+
+<style>
+    .swal2-input, .swal2-textarea, .swal2-select, .swal2-file {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        margin: 5px 0 15px 0 !important;
+        font-size: 0.9rem !important;
+    }
+    .swal2-popup { width: 500px !important; }
+    .swal2-html-container { text-align: left; }
+</style>

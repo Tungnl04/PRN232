@@ -1,28 +1,38 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.OData;
 using FoodQR.API.Application.Services;
 using FoodQR.API.Core.Interfaces;
 using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using FoodQR.API.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-    });
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    })
+    .AddOData(opt => opt.Select().Filter().OrderBy().Count().SetMaxTop(100));
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowClient", policy =>
     {
-        policy.WithOrigins("http://localhost:5181", "https://localhost:7209")
+        policy.WithOrigins(
+                  "https://localhost:7209",
+                  "http://localhost:5209",
+                  "https://foodqr-client-g7ceckene4ftataj.southeastasia-01.azurewebsites.net"
+              )
               .AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowCredentials(); // needed for SignalR later
+              .AllowCredentials(); // needed for SignalR
     });
 });
 
@@ -77,18 +87,20 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
 app.UseMiddleware<FoodQR.API.Application.Middleware.ExceptionHandlingMiddleware>();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
     app.UseSwagger();
     app.UseSwaggerUI();
-}
+
 
 app.UseCors("AllowClient");
+
+app.UseStaticFiles();
 
 app.UseHttpsRedirection();
 
@@ -96,5 +108,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<OrderHub>("/hubs/order");
 
 app.Run();

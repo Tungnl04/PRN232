@@ -12,17 +12,27 @@ namespace FoodQR.Client.Pages
         public OrderSuccessModel(IHttpClientFactory httpClientFactory, IConfiguration config)
         {
             _httpClientFactory = httpClientFactory;
-            _apiBaseUrl = config["ApiSettings:BaseUrl"] ?? "https://localhost:7197/api";
+            var baseUrl = config["ApiSettings:BaseUrl"];
+            if (string.IsNullOrEmpty(baseUrl) || baseUrl.Contains("YOUR_API_DOMAIN"))
+            {
+                _apiBaseUrl = "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api";
+            }
+            else
+            {
+                _apiBaseUrl = baseUrl;
+            }
         }
 
         public string OrderCode { get; set; } = "";
         public int OrderId { get; set; }
         public int TableId { get; set; }
+        public string? Token { get; set; }
 
-        public async Task OnGetAsync(int orderId, int tableId, string? orderCode)
+        public async Task OnGetAsync(int orderId, int tableId, string? orderCode, string? token)
         {
             OrderId = orderId;
             TableId = tableId;
+            Token = token;
 
             // Nếu đã có orderCode từ query string (truyền từ Cart page)
             if (!string.IsNullOrEmpty(orderCode))

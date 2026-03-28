@@ -1,0 +1,293 @@
+@page
+@model FoodQR.Client.Pages.Admin.CouponsModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Quản lý Mã Giảm Giá";
+}
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h3 style="font-weight: 800; margin: 0;">Danh sách Mã</h3>
+        <button onclick="openCreateModal()" class="btn btn-primary" style="background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer;">
+            <i class="fa-solid fa-plus"></i> Tạo mã
+        </button>
+    </div>
+
+    <table class="mgmt-table">
+        <thead>
+            <tr>
+                <th>Mã (Code)</th>
+                <th>Mức giảm</th>
+                <th>Tối thiểu</th>
+                <th>Giới hạn lượt</th>
+                <th>Đã dùng</th>
+                <th>Hết hạn</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody id="coupon-table-body">
+            <!-- Rendered via JS -->
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        let coupons = [];
+        const isPercentType = (type) => String(type || '').trim().toLowerCase() === 'percent';
+        const isFixedType = (type) => String(type || '').trim().toLowerCase() === 'fixed';
+
+        async function init() {
+            await loadCoupons();
+        }
+
+        async function loadCoupons() {
+            try {
+                coupons = await apiClient.getCoupons();
+                const body = document.getElementById('coupon-table-body');
+                if (!coupons || coupons.length === 0) {
+                    body.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px; color:#888;">Chưa có mã giảm giá nào</td></tr>';
+                    return;
+                }
+                body.innerHTML = coupons.map(c => {
+                    let discountText = isPercentType(c.discountType) ? `${c.discountValue}%` : apiClient.formatVnd(c.discountValue);
+                    let statusHtml = '';
+                    if (!c.isActive) statusHtml = '<span class="status-badge" style="background:#ffebee; color:#f44336; padding:4px 10px; border-radius:12px; font-size:0.7rem;">Ngừng hoạt động</span>';
+                    else if (c.expiryDate && new Date(c.expiryDate) < new Date()) statusHtml = '<span class="status-badge" style="background:#fff3e0; color:#ef6c00; padding:4px 10px; border-radius:12px; font-size:0.7rem;">Đã hết hạn</span>';
+                    else if (c.maxUsage && c.usedCount >= c.maxUsage) statusHtml = '<span class="status-badge" style="background:#e0e0e0; color:#616161; padding:4px 10px; border-radius:12px; font-size:0.7rem;">Hết lượt</span>';
+                    else statusHtml = '<span class="status-badge" style="background:#e8f5e9; color:#4caf50; padding:4px 10px; border-radius:12px; font-size:0.7rem;">Hoạt động</span>';
+
+                    return `
+                    <tr>
+                        <td class="font-bold" style="color:var(--primary)">${c.code}</td>
+                        <td class="font-bold">${discountText}</td>
+                        <td class="currency-amount">${apiClient.formatVnd(c.minOrderAmount)}</td>
+                        <td>${c.maxUsage ? c.maxUsage : 'Không giới hạn'}</td>
+                        <td>${c.usedCount}</td>
+                        <td>${c.expiryDate ? new Date(c.expiryDate).toLocaleDateString() : 'Không'}</td>
+                        <td>${statusHtml}</td>
+                        <td>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn-icon" onclick="openEditModal(${c.id})" title="Sửa"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button class="btn-icon danger" onclick="deleteCoupon(${c.id})" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `}).join('');
+            } catch (error) {
+                console.error("Load coupons error", error);
+            }
+        }
+
+        async function openCreateModal() {
+            const { value: formValues } = await Swal.fire({
+                title: 'Tạo mã giảm giá',
+                html: `
+                    <div style="text-align: left;">
+                        <label class="swal-label">Mã Coupon (Code)</label>
+                        <input id="swal-code" class="swal2-input" style="text-transform:uppercase" placeholder="VD: TET50K">
+                        
+                        <div style="display: flex; gap: 15px;">
+                            <div style="flex: 1;">
+                                <label class="swal-label">Loại giảm giá</label>
+                                <select id="swal-type" class="swal2-select">
+                                    <option value="Percent">Phần trăm (%)</option>
+                                    <option value="Fixed">Số tiền cứng (VNĐ)</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1;">
+                                <label class="swal-label">Giá trị giảm</label>
+                                <input id="swal-value" type="number" class="swal2-input" placeholder="VD: 50 hoặc 50000">
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 15px;">
+                            <div style="flex: 1;">
+                                <label class="swal-label">Đơn tối thiểu bắt buộc</label>
+                                <input id="swal-min" type="number" class="swal2-input" value="0">
+                            </div>
+                            <div style="flex: 1;">
+                                <label class="swal-label">Giới hạn số lần dùng</label>
+                                <input id="swal-max" type="number" class="swal2-input" placeholder="Trống = vô hạn">
+                            </div>
+                        </div>
+                        
+                        <label class="swal-label">Ngày hết hạn (Không bắt buộc)</label>
+                        <input id="swal-expiry" type="date" class="swal2-input">
+                        
+                        <div class="swal2-checkbox-container">
+                            <input type="checkbox" id="swal-active" checked>
+                            <label for="swal-active">Trạng thái (Kích hoạt)</label>
+                        </div>
+                    </div>
+                `,
+                focusConfirm: false,
+                preConfirm: () => {
+                    return {
+                        code: document.getElementById('swal-code').value,
+                        discountType: document.getElementById('swal-type').value,
+                        discountValue: parseFloat(document.getElementById('swal-value').value) || 0,
+                        minOrderAmount: parseFloat(document.getElementById('swal-min').value) || 0,
+                        maxUsage: document.getElementById('swal-max').value ? parseInt(document.getElementById('swal-max').value) : null,
+                        expiryDate: document.getElementById('swal-expiry').value ? new Date(document.getElementById('swal-expiry').value).toISOString() : null,
+                        isActive: document.getElementById('swal-active').checked
+                    }
+                }
+            });
+
+            if (formValues && formValues.code) {
+                const res = await apiClient.createCoupon(formValues);
+                if (res && res.ok) {
+                    Swal.fire('Thành công', 'Đã tạo mã.', 'success');
+                    loadCoupons();
+                } else {
+                    const err = await res.json();
+                    Swal.fire('Lỗi', err.title || 'Lỗi tạo mã', 'error');
+                }
+            }
+        }
+
+        async function openEditModal(id) {
+            const p = coupons.find(x => x.id === id);
+            
+            const { value: formValues } = await Swal.fire({
+                title: 'Sửa mã giảm giá',
+                html: `
+                    <div style="text-align: left;">
+                        <label class="swal-label">Mã Coupon</label>
+                        <input id="swal-code" class="swal2-input" style="text-transform:uppercase" value="${p.code}">
+                        
+                        <div style="display: flex; gap: 15px;">
+                            <div style="flex: 1;">
+                                <label class="swal-label">Loại giảm giá</label>
+                                <select id="swal-type" class="swal2-select">
+                                    <option value="Percent" ${isPercentType(p.discountType)?'selected':''}>Phần trăm (%)</option>
+                                    <option value="Fixed" ${isFixedType(p.discountType)?'selected':''}>Số tiền cứng</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1;">
+                                <label class="swal-label">Giá trị giảm</label>
+                                <input id="swal-value" type="number" class="swal2-input" value="${p.discountValue}">
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 15px;">
+                            <div style="flex: 1;">
+                                <label class="swal-label">Đơn tối thiểu bắt buộc</label>
+                                <input id="swal-min" type="number" class="swal2-input" value="${p.minOrderAmount}">
+                            </div>
+                            <div style="flex: 1;">
+                                <label class="swal-label">Giới hạn số lần dùng</label>
+                                <input id="swal-max" type="number" class="swal2-input" value="${p.maxUsage || ''}">
+                            </div>
+                        </div>
+                        
+                        <label class="swal-label">Ngày hết hạn</label>
+                        <input id="swal-expiry" type="date" class="swal2-input" value="${p.expiryDate ? p.expiryDate.split('T')[0] : ''}">
+                        
+                        <div class="swal2-checkbox-container">
+                            <input type="checkbox" id="swal-active" ${p.isActive ? 'checked':''}>
+                            <label for="swal-active">Trạng thái (Kích hoạt)</label>
+                        </div>
+                    </div>
+                `,
+                focusConfirm: false,
+                preConfirm: () => {
+                    return {
+                        id: p.id,
+                        code: document.getElementById('swal-code').value,
+                        discountType: document.getElementById('swal-type').value,
+                        discountValue: parseFloat(document.getElementById('swal-value').value) || 0,
+                        minOrderAmount: parseFloat(document.getElementById('swal-min').value) || 0,
+                        maxUsage: document.getElementById('swal-max').value ? parseInt(document.getElementById('swal-max').value) : null,
+                        expiryDate: document.getElementById('swal-expiry').value ? new Date(document.getElementById('swal-expiry').value).toISOString() : null,
+                        isActive: document.getElementById('swal-active').checked
+                    }
+                }
+            });
+
+            if (formValues && formValues.code) {
+                const res = await apiClient.updateCoupon(id, formValues);
+                if (res && res.ok) {
+                    Swal.fire('Thành công!', 'Đã lưu thay đổi.', 'success');
+                    loadCoupons();
+                } else {
+                    Swal.fire('Lỗi', 'Lỗi lưu mã', 'error');
+                }
+            }
+        }
+
+        async function deleteCoupon(id) {
+            const result = await Swal.fire({
+                title: 'Hủy mã giảm giá?',
+                text: "Mã sẽ bị vô hiệu hóa!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff4d4d',
+                confirmButtonText: 'Có, hủy mã!'
+            });
+
+            if (result.isConfirmed) {
+                const res = await apiClient.deleteCoupon(id);
+                if (res && res.ok) {
+                    Swal.fire('Đã hủy!', 'Mã bị ngừng hoạt động.', 'success');
+                    loadCoupons();
+                }
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+}
+
+<style>
+    /* Modern SweetAlert Customization */
+    .swal2-popup { width: 550px !important; border-radius: 20px !important; padding: 24px 30px !important; box-shadow: 0 10px 40px rgba(0,0,0,0.1) !important; }
+    .swal2-title { font-weight: 800 !important; color: #1e293b !important; font-size: 1.5rem !important; margin-bottom: 5px !important; }
+    .swal2-html-container { text-align: left; margin: 15px 0 0 0 !important; }
+    
+    .swal2-input, .swal2-textarea, .swal2-select, .swal2-file {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        margin: 0 0 18px 0 !important;
+        font-size: 0.95rem !important;
+        padding: 12px 16px !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 12px !important;
+        transition: all 0.2s !important;
+        box-shadow: none !important;
+        font-family: inherit !important;
+    }
+    .swal2-input:focus, .swal2-textarea:focus, .swal2-select:focus {
+        border-color: var(--primary) !important;
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.08) !important;
+    }
+    .swal-label {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #64748b;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .swal2-checkbox-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 5px;
+        padding: 14px 18px;
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 1.5px solid #e2e8f0;
+        transition: border-color 0.2s;
+    }
+    .swal2-checkbox-container:hover { border-color: #cbd5e1; }
+    .swal2-checkbox-container input[type="checkbox"] {
+        width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;
+    }
+    .swal2-checkbox-container label {
+        margin: 0; font-weight: 700; color: #1e293b; cursor: pointer; font-size: 0.9rem;
+    }
+</style>

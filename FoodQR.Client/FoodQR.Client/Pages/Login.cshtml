@@ -1,16 +1,16 @@
 @page
 @model FoodQR.Client.Pages.LoginModel
 @{
-    ViewData["Title"] = "Staff Login";
+    ViewData["Title"] = "Đăng nhập Hệ thống";
     Layout = null;
 }
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login - FoodStore QR</title>
+    <title>Đăng nhập - FoodStore QR</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="~/css/auth.css" asp-append-version="true" />
@@ -23,35 +23,49 @@
     <div class="login-card">
         <div class="logo-icon"><i class="fa-solid fa-utensils"></i></div>
         <h2>FoodStore QR</h2>
-        <p class="auth-subtitle">Management Portal Access</p>
+        <p class="auth-subtitle">Cổng truy cập Quản lý vận hành</p>
 
         <form id="login-form">
             <div class="input-group">
                 <i class="fa-solid fa-user"></i>
-                <input type="text" id="username" class="auth-input" placeholder="Username" required autocomplete="username">
+                <input type="text" id="username" class="auth-input" placeholder="Tên đăng nhập" required autocomplete="username">
             </div>
             <div class="input-group">
                 <i class="fa-solid fa-lock"></i>
-                <input type="password" id="password" class="auth-input" placeholder="Password" required autocomplete="current-password">
+                <input type="password" id="password" class="auth-input" placeholder="Mật khẩu" required autocomplete="current-password">
             </div>
             <button type="submit" id="btn-login" class="auth-btn">
-                <span id="btn-text">Log In</span>
+                <span id="btn-text">Đăng nhập</span>
             </button>
         </form>
 
         <div class="footer-text">
-            © 2026 FoodStore System • Secure Access • v1.0
+            © 2026 FoodStore System • Truy cập bảo mật • v1.0
         </div>
     </div>
 
     <script src="~/js/apiClient.js" asp-append-version="true"></script>
     <script>
+        // Auto-redirect if already logged in
+        if (apiClient.isAuthenticated()) {
+            const user = apiClient.getUser();
+            if (user.mustChangePassword) {
+                window.location.href = '/ChangePassword';
+            } else if (user.role === 'admin') {
+                window.location.href = '/Admin/Index';
+            } else if (user.role === 'staff') {
+                window.location.href = '/Staff/Dashboard';
+            } else if (user.role === 'kitchen') {
+                window.location.href = '/Kitchen/Board';
+            }
+        }
+
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-login');
             const btnText = document.getElementById('btn-text');
             
-            btnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Authenticating...';
+            btnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xác thực...';
             btn.disabled = true;
 
             const username = document.getElementById('username').value;
@@ -63,33 +77,42 @@
                 if (response.ok) {
                     const data = await response.json();
                     
-                    // Save to localStorage
                     localStorage.setItem('auth_token', data.token);
+                    localStorage.setItem('user_id', data.user.id);
                     localStorage.setItem('user_role', data.user.role.toLowerCase());
                     localStorage.setItem('user_name', data.user.name);
+                    localStorage.setItem('must_change_password', data.user.mustChangePassword);
 
                     const role = data.user.role.toLowerCase();
+                    const mustChange = data.user.mustChangePassword;
 
                     Swal.fire({
                         icon: 'success',
-                        title: 'Success!',
-                        text: `Welcome back, ${data.user.name}`,
+                        title: 'Thành công!',
+                        text: `Chào mừng trở lại, ${data.user.name}`,
                         timer: 1500,
-                        showConfirmButton: false
+                        showConfirmButton: false,
+                        background: '#fff'
                     }).then(() => {
-                        if (role === 'admin') window.location.href = '/Admin/Index';
-                        else if (role === 'staff') window.location.href = '/Staff/Dashboard';
-                        else if (role === 'kitchen') window.location.href = '/Kitchen/Board';
-                        else window.location.href = '/';
+                        if (mustChange) {
+                            window.location.href = '/ChangePassword';
+                        } else {
+                            if (role === 'admin') window.location.href = '/Admin/Index';
+                            else if (role === 'staff') window.location.href = '/Staff/Dashboard';
+                            else if (role === 'kitchen') window.location.href = '/Kitchen/Board';
+                            else window.location.href = '/';
+                        }
                     });
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Login Failed', text: 'Invalid username or password' });
-                    btnText.innerText = "Log In";
+                    const err = await response.json().catch(() => ({}));
+                    const message = err.error || err.Error || 'Tên đăng nhập hoặc mật khẩu không chính xác';
+                    Swal.fire({ icon: 'error', title: 'Đăng nhập thất bại', text: message });
+                    btnText.innerText = "Đăng nhập";
                     btn.disabled = false;
                 }
             } catch (err) {
-                Swal.fire({ icon: 'error', title: 'System Error', text: 'Cannot connect to API.' });
-                btnText.innerText = "Log In";
+                Swal.fire({ icon: 'error', title: 'Lỗi hệ thống', text: 'Không thể kết nối với máy chủ.' });
+                btnText.innerText = "Đăng nhập";
                 btn.disabled = false;
             }
         });

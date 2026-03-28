@@ -1,0 +1,54 @@
+.table-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; }
+
+.card-mgmt {
+    background: white;
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.status-badge { 
+    font-size: 0.75rem; 
+    font-weight: 800; 
+    text-transform: uppercase; 
+    padding: 5px 12px; 
+    border-radius: 50px; 
+    display: inline-block; 
+    margin-bottom: 20px;
+}
+
+.status-available { background: #e6fffa; color: #047481; } /* Trống */
+.status-taken { background: #fff1f2; color: #be123c; } /* Có khách */
+.status-cleaning { background: #fef9c3; color: #854d0e; } /* Chờ dọn */
+
+.table-number { font-size: 2rem; font-weight: 900; color: var(--text-main); margin-bottom: 5px; }
+.table-info { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 25px; font-weight: 600; }
+
+.btn-group { display: flex; gap: 10px; }
+.btn { 
+    flex-grow: 1; 
+    border: none; 
+    padding: 12px; 
+    border-radius: 12px; 
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-weight: 700; 
+    font-size: 0.85rem; 
+    cursor: pointer; 
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    -webkit-font-smoothing: antialiased;
+}
+
+.btn-primary { background: var(--primary); color: white; }
+.btn-outline { background: #f4f7fe; color: #2b3674; border: 1px solid #e2e8f0; }
+.btn-success { background: #10b981; color: white; }
+.btn-warning { background: #f59e0b; color: white; }
+
+.card-mgmt.status-taken-border { border-color: #fca5a5; }

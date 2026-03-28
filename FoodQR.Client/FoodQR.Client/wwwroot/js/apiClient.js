@@ -1,5 +1,8 @@
 const apiClient = (function() {
-    const API_BASE_URL = "https://localhost:7197/api"; // Centralized API port
+    // Auto-detect: nếu chạy trên Azure thì dùng Azure API, nếu localhost thì dùng localhost
+    const API_BASE_URL = window.location.hostname.includes('localhost')
+        ? "https://localhost:7197/api"
+        : "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api";
 
     // Private helper for fetch with auth
     async function authorizedFetch(endpoint, options = {}) {
@@ -51,6 +54,17 @@ const apiClient = (function() {
             localStorage.clear();
             window.location.href = '/Login';
         },
+        async changePassword(oldPassword, newPassword) {
+            return await authorizedFetch('/Auth/change-password', {
+                method: 'POST',
+                body: JSON.stringify({ oldPassword, newPassword })
+            });
+        },
+        async resetPassword(userId) {
+            return await authorizedFetch(`/Auth/reset-password/${userId}`, {
+                method: 'POST'
+            });
+        },
 
         // TABLES
         async getTables() {
@@ -97,10 +111,63 @@ const apiClient = (function() {
             return res && res.ok ? res.json() : null;
         },
         // ORDERS
-        async getActiveOrder(tableId) {
-            const res = await authorizedFetch(`/Orders/active/${tableId}`);
+        async switchTable(orderId, newTableId) {
+            return await authorizedFetch(`/Orders/${orderId}/table/${newTableId}`, {
+                method: 'PATCH'
+            });
+        },
+        async cancelOrder(orderId, reason) {
+            return await authorizedFetch(`/Orders/${orderId}?reason=${encodeURIComponent(reason)}`, {
+                method: 'DELETE'
+            });
+        },
+        async cancelOrderItem(itemId, reason) {
+            return await authorizedFetch(`/Orders/items/${itemId}?reason=${encodeURIComponent(reason)}`, {
+                method: 'DELETE'
+            });
+        },
+        async getActiveOrder(tableId, token) {
+            const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+            const res = await authorizedFetch(`/Orders/active/${tableId}${tokenParam}`);
             if (res && res.ok) return res.json();
             return null;
+        },
+
+        // PAYMENTS
+        async checkoutCash(orderId) {
+            return await authorizedFetch(`/Payments/${orderId}/process?method=cash&simulateSuccess=true`, {
+                method: 'POST'
+            });
+        },
+
+        async createVnPayUrl(orderId) {
+            return await authorizedFetch(`/Payments/${orderId}/vnpay-url`, {
+                method: 'POST'
+            });
+        },
+
+        // STORE CONFIG
+        async getStoreConfig() {
+            const res = await fetch(`${API_BASE_URL}/StoreConfig`);
+            return res.ok ? res.json() : null;
+        },
+
+        async updateStoreConfig(data) {
+            return await authorizedFetch('/StoreConfig', {
+                method: 'PUT',
+                body: JSON.stringify(data)
+            });
+        },
+
+        async getOrders(limit = 10) {
+            const res = await authorizedFetch(`/Orders?limit=${limit}`);
+            return res ? res.json() : [];
+        },
+
+        async mergeOrder(targetId, sourceId) {
+            return await authorizedFetch(`/Orders/${targetId}/merge-from/${sourceId}`, {
+                method: 'POST'
+            });
         },
 
         // KITCHEN
@@ -140,6 +207,12 @@ const apiClient = (function() {
             return await authorizedFetch(`/Categories/${id}`, {
                 method: 'DELETE'
             });
+        },
+
+        // COMBOS
+        async getCombos(includeHidden = false) {
+            const res = await fetch(`${API_BASE_URL}/Combos?includeHidden=${includeHidden}`);
+            return res.ok ? res.json() : [];
         },
 
         // PRODUCTS
@@ -196,20 +269,109 @@ const apiClient = (function() {
 
         // STATS
         async getDashboardStats() {
-            // Placeholder: This can be a new endpoint or calculated from current data
-            const res = await authorizedFetch('/Orders/stats/overview');
-            return res ? res.json() : { totalOrders: 0, totalRevenue: 0, activeTables: 0 };
+            const res = await authorizedFetch('/Dashboard/stats');
+            return res ? res.json() : {};
+        },
+
+        // UPLOAD
+        async uploadImage(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const token = localStorage.getItem('auth_token');
+            const headers = {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/Uploads`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const relativeUrl = data.Url || data.url;
+                    if (!relativeUrl) return null;
+                    // Build full absolute URL using the API origin so images load
+                    // correctly from both Admin (Client port) and Customer pages
+                    const apiOrigin = API_BASE_URL.replace('/api', '');
+                    return relativeUrl.startsWith('http') ? relativeUrl : `${apiOrigin}${relativeUrl}`;
+                }
+                return null;
+            } catch (e) {
+                console.error('Upload failed', e);
+                return null;
+            }
+        },
+
+        // COUPONS
+        async getCoupons() {
+            const res = await authorizedFetch('/Coupons');
+            return res ? res.json() : [];
+        },
+
+        async createCoupon(coupon) {
+            return await authorizedFetch('/Coupons', {
+                method: 'POST',
+                body: JSON.stringify(coupon)
+            });
+        },
+
+        async updateCoupon(id, coupon) {
+            return await authorizedFetch(`/Coupons/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(coupon)
+            });
+        },
+
+        async deleteCoupon(id) {
+            return await authorizedFetch(`/Coupons/${id}`, {
+                method: 'DELETE'
+            });
+        },
+
+        async validateCoupon(code, orderTotal) {
+            const res = await fetch(`${API_BASE_URL}/Coupons/validate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code, orderTotal })
+            });
+            if (res.ok) return res.json();
+            throw await res.json();
+        },
+
+        // ACTIVITY LOGS
+        async getActivityLogs() {
+            const res = await authorizedFetch('/ActivityLogs');
+            return res ? res.json() : [];
         },
 
         // UTILS
+        /** Định dạng tiền VND (số + ký hiệu ₫) — dùng Intl, tránh lỗi font/encoding với ký tự đ */
+        formatVnd(amount) {
+            const n = Number(amount);
+            if (Number.isNaN(n)) return '0\u00a0₫';
+            try {
+                return new Intl.NumberFormat('vi-VN', {
+                    style: 'currency',
+                    currency: 'VND',
+                    maximumFractionDigits: 0
+                }).format(n);
+            } catch {
+                return Math.round(n).toLocaleString('vi-VN') + '\u00a0\u20AB';
+            }
+        },
+
         isAuthenticated() {
             return !!localStorage.getItem('auth_token');
         },
 
         getUser() {
             return {
+                id: localStorage.getItem('user_id') || "0",
                 role: (localStorage.getItem('user_role') || "").toLowerCase(),
-                name: localStorage.getItem('user_name') || ""
+                name: localStorage.getItem('user_name') || "",
+                mustChangePassword: localStorage.getItem('must_change_password') === 'true'
             };
         }
     };

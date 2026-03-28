@@ -2,18 +2,31 @@
 @using System.Text.Json
 @model IndexModel
 @{
-    ViewData["Title"] = "Menu";
+    ViewData["Title"] = "Thực đơn Gọi món";
 }
 
 <div class="container animate-in">
-    <div id="welcome-section" style="margin-bottom: 24px;">
-        <h2 class="font-bold">Welcome! 👋</h2>
-        <p style="color: var(--text-muted); font-size: 0.9rem;">What would you like to eat today?</p>
+    <div id="welcome-section" style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end;">
+        <div>
+            <h2 class="font-bold" style="font-size: 1.8rem; margin: 0;">Chào mừng! 👋</h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 4px;">Hôm nay bạn muốn dùng gì nào?</p>
+        </div>
+        <div style="text-align: right;">
+            <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Bàn số</div>
+            <div id="dash-table-number" style="font-size: 1.5rem; font-weight: 900; color: var(--primary);">--</div>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-box" style="margin-bottom: 25px; position: relative;">
+        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+        <input type="text" id="menu-search" placeholder="Tìm kiếm món ăn..." 
+               style="width: 100%; padding: 15px 15px 15px 45px; border-radius: 15px; border: 1px solid #eee; background: white; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
     </div>
 
     <!-- Category Slider -->
-    <div class="category-slider">
-        <div class="cat-item active" onclick="filterCategory(0, this)">All</div>
+    <div class="category-slider" style="margin-bottom: 30px;">
+        <div class="cat-item active" onclick="filterCategory(0, this)">Tất cả</div>
         @foreach (var cat in Model.Categories)
         {
             <div class="cat-item" onclick="filterCategory(@cat.Id, this)">@cat.Name</div>
@@ -23,21 +36,23 @@
     <!-- Special Combos -->
     @if (Model.Combos.Any())
     {
-        <div class="mt-4">
-            <h3 class="font-bold" style="font-size: 1.1rem; margin-bottom: 12px; color: var(--primary);">🔥 Special Combos</h3>
-            <div style="display: flex; gap: 16px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none;">
+        <div class="mt-4" style="margin-bottom: 35px;">
+            <h3 class="font-bold" style="font-size: 1.25rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-fire" style="color: #ff4d4d;"></i> Combo Đặc sắc
+            </h3>
+            <div class="combo-scroll" style="display: flex; gap: 18px; overflow-x: auto; padding: 5px 5px 15px 5px; scrollbar-width: none; -ms-overflow-style: none;">
                 @foreach (var combo in Model.Combos)
                 {
-                    <div class="card" style="min-width: 250px; flex-shrink: 0; background: linear-gradient(135deg, #fff, #fff5f0);">
-                        <div style="display: flex; gap: 12px;">
-                            <img src="@combo.ImageUrl" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;" alt="@combo.Name" onerror="this.onerror=null;this.src='https://placehold.co/100x100?text=Combo';" />
-                            <div style="flex-grow: 1;">
-                                <h4 style="font-size: 0.9rem; font-weight: 700;">@combo.Name</h4>
-                                <p style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">@combo.Description</p>
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                                    <span style="font-weight: 800; color: var(--primary); font-size: 0.85rem;">@combo.Price.ToString("N0")đ</span>
-                                    <button onclick='addToCart(@JsonSerializer.Serialize(combo), true)' style="background: var(--primary); color: white; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-size: 0.75rem; font-weight: bold;">
-                                        Add
+                    <div class="card combo-card" style="min-width: 280px; flex-shrink: 0; background: white; padding: 15px; border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.05);">
+                        <div style="display: flex; gap: 15px;">
+                            <img src="@combo.ImageUrl" style="width: 100px; height: 100px; object-fit: cover; border-radius: 15px;" alt="@combo.Name" onerror="this.onerror=null;this.src='https://placehold.co/200x200?text=Food';" />
+                            <div style="flex-grow: 1; display: flex; flex-direction: column;">
+                                <h4 style="font-size: 1rem; font-weight: 800; margin: 0 0 5px; color: var(--text-main);">@combo.Name</h4>
+                                <p style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; flex-grow: 1;">@combo.Description</p>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                                    <span class="currency-amount" style="font-weight: 900; color: var(--primary); font-size: 1rem;">@combo.Price.ToString("N0")&nbsp;₫</span>
+                                    <button onclick='addToCart(@JsonSerializer.Serialize(combo), true)' style="background: var(--primary); color: white; border: none; padding: 6px 15px; border-radius: 12px; cursor: pointer; font-size: 0.8rem; font-weight: 800;">
+                                        Thêm
                                     </button>
                                 </div>
                             </div>
@@ -49,22 +64,29 @@
     }
 
     <!-- Product Grid -->
-    <div id="product-list" class="mt-4">
-        <h3 class="font-bold" style="font-size: 1.1rem; margin-bottom: 12px;">Menu</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div id="product-list-container">
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="alert alert-danger" style="background:#fff3f3; color:#d32f2f; padding:20px; border-radius:15px; border-left: 5px solid #d32f2f; margin-bottom: 20px;">
+                <h4 style="margin-top:0"><i class="fa-solid fa-triangle-exclamation"></i> Lỗi Hệ Thống</h4>
+                <p style="margin-bottom:0">@Model.ErrorMessage</p>
+            </div>
+        }
+        <h3 class="font-bold" style="font-size: 1.25rem; margin-bottom: 20px;">Thực đơn món lẻ</h3>
+        <div id="product-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
             @foreach (var prod in Model.Products)
             {
-                <div class="card product-card" data-category="@prod.CategoryId" style="display: flex; flex-direction: column; height: 100%;">
-                    <div style="background: #eee; height: 130px; border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 12px; position: relative;">
-                        <img src="@prod.ImageUrl" style="width: 100%; height: 100%; object-fit: cover;" alt="@prod.Name" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300?text=Food';" />
+                <div class="card product-card" data-category="@prod.CategoryId" data-name="@prod.Name.ToLower()" style="display: flex; flex-direction: column; background: white; border-radius: 20px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                    <div style="height: 140px; border-radius: 15px; overflow: hidden; margin-bottom: 12px;">
+                        <img src="@prod.ImageUrl" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;" alt="@prod.Name" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300?text=Món+ăn';" />
                     </div>
-                    <div style="flex-grow: 1;">
-                        <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">@prod.Name</h4>
-                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">@prod.Description</p>
+                    <div style="flex-grow: 1; padding: 0 5px;">
+                        <h4 class="prod-title" style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); line-height: 1.3; margin-bottom: 5px;">@prod.Name</h4>
+                        <p style="font-size: 0.7rem; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 2rem;">@prod.Description</p>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto;">
-                        <span style="font-weight: 800; color: var(--primary); font-size: 0.9rem;">@prod.Price.ToString("N0")đ</span>
-                        <button onclick='addToCart(@JsonSerializer.Serialize(prod))' style="background: var(--primary); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 0 5px 5px;">
+                        <span class="currency-amount" style="font-weight: 900; color: var(--primary); font-size: 1rem;">@prod.Price.ToString("N0")&nbsp;₫</span>
+                        <button onclick='addToCart(@JsonSerializer.Serialize(prod))' style="background: var(--primary); color: white; border: none; width: 35px; height: 35px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(255, 77, 77, 0.2);">
                             <i class="fa-solid fa-plus"></i>
                         </button>
                     </div>
@@ -74,12 +96,51 @@
     </div>
 </div>
 
+<!-- Floating Cart Button -->
+<div id="floating-cart" onclick="openCart()" style="position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: calc(100% - 30px); max-width: 450px; background: #1a1a2e; color: white; padding: 12px 20px; border-radius: 20px; display: none; justify-content: space-between; align-items: center; box-shadow: 0 15px 35px rgba(0,0,0,0.3); z-index: 1000; animation: slideUp 0.4s ease-out; border: 1px solid rgba(255,255,255,0.1);">
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <div style="position: relative; background: rgba(255,255,255,0.1); width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <i class="fa-solid fa-cart-shopping" style="font-size: 1.2rem; color: var(--primary);"></i>
+            <span id="cart-count-float" style="position: absolute; top: -8px; right: -8px; background: var(--primary); color: white; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 900; border: 2px solid #1a1a2e;">0</span>
+        </div>
+        <div>
+            <div style="font-size: 0.7rem; font-weight: 700; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.5px;">Giỏ hàng của bạn</div>
+            <div id="cart-total-float" class="currency-amount" style="font-size: 1.1rem; font-weight: 900; color: white;">0&nbsp;₫</div>
+        </div>
+    </div>
+    <div style="background: var(--primary); color: white; padding: 10px 18px; border-radius: 12px; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(255, 77, 77, 0.3);">
+        XEM GIỎ <i class="fa-solid fa-chevron-right" style="font-size: 0.7rem;"></i>
+    </div>
+</div>
+
+<style>
+    .cat-item {
+        white-space: nowrap;
+        padding: 10px 20px;
+        background: white;
+        border-radius: 50px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        cursor: pointer;
+        border: 1px solid #eee;
+        transition: all 0.3s;
+    }
+    .cat-item.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 12px rgba(255, 77, 77, 0.3); }
+
+    .combo-scroll::-webkit-scrollbar { display: none; }
+    
+    @@keyframes slideUp {
+        from { transform: translate(-50%, 100px); opacity: 0; }
+        to { transform: translate(-50%, 0); opacity: 1; }
+    }
+</style>
+
 @section Scripts {
     <script>
-        const apiBaseUrl = "@(ViewData["ApiBaseUrl"] ?? "https://localhost:7197/api")";
-
+        const apiBaseUrl = "@(ViewData["ApiBaseUrl"])" || (window.location.hostname.includes('localhost') ? "https://localhost:7197/api" : "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api");
         let tableId = @Model.TableId; 
         let currentToken = null;  
+        let cart = JSON.parse(localStorage.getItem('food_cart')) || [];
 
         async function resolveTable() {
             const params = new URLSearchParams(window.location.search);
@@ -91,18 +152,32 @@
                     const res = await fetch(`${apiBaseUrl}/Tables/by-token/${encodeURIComponent(token)}`);
                     if (!res.ok) throw new Error('invalid');
                     const data = await res.json();
+                    
+                    if (typeof updateTableUI === 'function') {
+                        updateTableUI(data.id, data.tableNumber);
+                    }
                     tableId = data.id;
                 } catch {
                     tableId = 0;
                     currentToken = null;
                 }
-            }
-
-            const tableDisplay = document.getElementById('current-table');
-            if (tableDisplay) {
-                tableDisplay.innerText = tableId > 0 ? tableId : '??';
+            } else if (tableId > 0) {
+                if (typeof updateTableUI === 'function') {
+                    updateTableUI(tableId, tableId);
+                }
             }
         }
+
+        // Search logic
+        document.getElementById('menu-search').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const cards = document.querySelectorAll('.product-card');
+            cards.forEach(card => {
+                const name = card.getAttribute('data-name');
+                if (name.includes(query)) card.style.display = 'flex';
+                else card.style.display = 'none';
+            });
+        });
 
         function filterCategory(catId, element) {
             document.querySelectorAll('.cat-item').forEach(el => el.classList.remove('active'));
@@ -121,6 +196,15 @@
         function addToCart(item, isCombo = false) {
             const itemId = isCombo ? `combo_${item.Id}` : item.Id;
             const existing = cart.find(i => i.cartId === itemId);
+            const newQty = existing ? existing.quantity + 1 : 1;
+            
+            const maxInv = item.Inventory !== undefined ? item.Inventory : item.inventory;
+            if (maxInv !== undefined && maxInv !== null) {
+                if (newQty > maxInv) {
+                    Swal.fire({ icon: 'warning', title: 'Hết hàng', text: `Chỉ còn ${maxInv} phần trong kho.` });
+                    return;
+                }
+            }
 
             if (existing) {
                 existing.quantity += 1;
@@ -132,24 +216,38 @@
                     name:     item.Name,
                     price:    item.Price,
                     imageUrl: item.ImageUrl,
+                    inventory: maxInv,
                     quantity: 1
                 });
             }
             saveCart();
-            updateCartCount();
+            updateCartUI();
 
             Swal.fire({
                 toast: true, position: 'top-end', icon: 'success',
-                title: 'Added!', showConfirmButton: false, timer: 1000
+                title: 'Đã thêm vào giỏ!', showConfirmButton: false, timer: 1000
             });
         }
 
-        function saveCart() {
-            localStorage.setItem('food_cart', JSON.stringify(cart));
-        }
+        function saveCart() { localStorage.setItem('food_cart', JSON.stringify(cart)); }
 
-        function updateCartCount() {
+        function updateCartUI() {
             const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            
+            const floatingCart = document.getElementById('floating-cart');
+            const floatCount = document.getElementById('cart-count-float');
+            const floatTotal = document.getElementById('cart-total-float');
+
+            if (count > 0) {
+                floatingCart.style.display = 'flex';
+                floatCount.innerText = count;
+                floatTotal.innerText = apiClient.formatVnd(total);
+            } else {
+                floatingCart.style.display = 'none';
+            }
+            
+            // Legacy side badge update (if header still uses it)
             const badge = document.getElementById('cart-count');
             if (badge) {
                 badge.innerText = count;
@@ -159,23 +257,15 @@
 
         function openCart() {
             if (cart.length === 0) {
-                Swal.fire({ icon: 'info', text: 'Your cart is empty!' });
+                Swal.fire({ icon: 'info', text: 'Giỏ hàng của bạn đang trống!' });
                 return;
             }
-
-            // Ưu tiên token, fallback tableId
-            if (currentToken) {
-                window.location.href = `/Cart?token=${currentToken}`;
-            } else if (tableId > 0) {
-                window.location.href = `/Cart?tableId=${tableId}`;
-            } else {
-                Swal.fire({ icon: 'warning', text: 'Không xác định được bàn. Vui lòng quét lại QR.' });
-            }
+            if (currentToken) window.location.href = `/Cart?token=${currentToken}`;
+            else if (tableId > 0) window.location.href = `/Cart?tableId=${tableId}`;
+            else Swal.fire({ icon: 'warning', text: 'Vui lòng quét mã QR tại bàn để đặt món.' });
         }
 
-        let cart = JSON.parse(localStorage.getItem('food_cart')) || [];
-        updateCartCount();
-
+        updateCartUI();
         window.addEventListener('DOMContentLoaded', resolveTable);
     </script>
 }

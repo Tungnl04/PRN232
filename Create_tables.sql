@@ -14,7 +14,8 @@ GO
 CREATE TABLE category (
     id INT IDENTITY(1,1) PRIMARY KEY,
     name NVARCHAR(100) NOT NULL,
-    description NVARCHAR(500)
+    description NVARCHAR(500),
+    is_available BIT DEFAULT 1
 );
 
 -- ===== PRODUCT =====
@@ -64,7 +65,8 @@ CREATE TABLE [user] (
     username NVARCHAR(50) UNIQUE NOT NULL,
     password_hash NVARCHAR(255) NOT NULL,
     role NVARCHAR(20) CHECK (role IN ('staff', 'admin', 'kitchen')),
-    active BIT DEFAULT 1
+    active BIT DEFAULT 1,
+    must_change_password BIT DEFAULT 1 NOT NULL
 );
 
 -- ===== ORDER TABLE =====
@@ -155,6 +157,16 @@ CREATE TABLE order_status_history (
     CONSTRAINT fk_history_order FOREIGN KEY (order_id) REFERENCES [order](id)
 );
 
+-- ===== STORE CONFIGURATION =====
+CREATE TABLE store_configuration (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    store_name NVARCHAR(200) NOT NULL DEFAULT N'FoodQR Restaurant',
+    tax_rate DECIMAL(5,4) NOT NULL DEFAULT 0.08,
+    is_tax_included_in_price BIT NOT NULL DEFAULT 0,
+    currency NVARCHAR(10) NOT NULL DEFAULT 'VND',
+    updated_at DATETIME DEFAULT GETDATE()
+);
+
 -- ===== ACTIVITY LOG =====
 CREATE TABLE activity_log (
     id INT IDENTITY(1,1) PRIMARY KEY,
@@ -163,3 +175,21 @@ CREATE TABLE activity_log (
     description NVARCHAR(500),
     created_at DATETIME DEFAULT GETDATE()
 );
+
+-- ===== COUPON =====
+CREATE TABLE coupon (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    code NVARCHAR(20) NOT NULL UNIQUE,
+    discount_type NVARCHAR(20) NOT NULL DEFAULT 'percent',
+    discount_value DECIMAL(18,2) NOT NULL,
+    min_order_amount DECIMAL(18,2) NULL,
+    max_usage INT NOT NULL,
+    used_count INT NOT NULL DEFAULT 0,
+    expiry_date DATETIME2 NOT NULL,
+    is_active BIT NOT NULL DEFAULT 1
+);
+
+ALTER TABLE [order] ADD coupon_id INT NULL;
+ALTER TABLE [order] ADD discount_amount DECIMAL(18,2) NULL;
+
+ALTER TABLE [order] ADD CONSTRAINT fk_order_coupon FOREIGN KEY (coupon_id) REFERENCES coupon(id);

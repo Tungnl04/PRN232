@@ -1,0 +1,119 @@
+@page
+@model FoodQR.Client.Pages.Staff.KitchenBoardModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Điều phối Bếp (Chế độ xem)";
+}
+
+<link rel="stylesheet" href="~/css/kitchen/board.css" asp-append-version="true" />
+<style>
+    /* Staff: read-only — hide all action buttons */
+    .btn-action, .btn-batch, .btn-item { display: none !important; }
+    .kitchen-card { cursor: default; }
+</style>
+
+<div class="kanban-container">
+    <div class="kanban-column">
+        <div class="column-header">
+            <div class="column-title"><i class="fa-solid fa-clock"></i> ĐANG CHỜ</div>
+            <div class="column-count" id="count-pending">0</div>
+        </div>
+        <div class="kanban-list" id="list-pending"></div>
+    </div>
+
+    <div class="kanban-column">
+        <div class="column-header">
+            <div class="column-title"><i class="fa-solid fa-fire"></i> ĐANG LÀM</div>
+            <div class="column-count" id="count-preparing">0</div>
+        </div>
+        <div class="kanban-list" id="list-preparing"></div>
+    </div>
+
+    <div class="kanban-column">
+        <div class="column-header">
+            <div class="column-title"><i class="fa-solid fa-circle-check"></i> HOÀN TẤT</div>
+            <div class="column-count" id="count-ready">0</div>
+        </div>
+        <div class="kanban-list" id="list-ready"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function loadKitchenItems() {
+            try {
+                const items = await apiClient.getKitchenItems();
+                renderItems(items);
+            } catch (err) { console.error(err); }
+        }
+
+        function groupByTable(items) {
+            const groups = {};
+            items.forEach(item => {
+                const key = item.orderCode;
+                if (!groups[key]) {
+                    groups[key] = { orderCode: item.orderCode, tableNumber: item.tableNumber, items: [] };
+                }
+                groups[key].items.push(item);
+            });
+            return Object.values(groups);
+        }
+
+        function renderItems(items) {
+            const columns = {
+                'pending': document.getElementById('list-pending'),
+                'preparing': document.getElementById('list-preparing'),
+                'ready': document.getElementById('list-ready')
+            };
+            Object.values(columns).forEach(el => el.innerHTML = '');
+            const stats = { 'pending': 0, 'preparing': 0, 'ready': 0 };
+
+            items.forEach(item => {
+                const s = (item.status || 'pending').toLowerCase();
+                if (stats[s] !== undefined) stats[s]++;
+            });
+
+            ['pending', 'preparing', 'ready'].forEach(status => {
+                const statusItems = items.filter(i => (i.status || 'pending').toLowerCase() === status);
+                const groups = groupByTable(statusItems);
+
+                groups.forEach(group => {
+                    const card = document.createElement('div');
+                    card.className = 'kitchen-card';
+                    card.innerHTML = `
+                        <div class="table-group-header">
+                            <div class="table-group-info">
+                                <span class="table-badge">BÀN ${group.tableNumber || '?'}</span>
+                                <span class="order-code">${group.orderCode.substring(0,8)}</span>
+                                <span class="item-count-badge">${group.items.length} món</span>
+                            </div>
+                        </div>
+                        <div class="table-group-items">
+                            ${group.items.map(item => `
+                                <div class="table-group-item">
+                                    <div class="item-info">
+                                        <span class="dish-name-sm">${item.dishName}</span>
+                                        ${item.note ? `<span class="dish-note-sm"><i class="fa-solid fa-comment-dots"></i> ${item.note}</span>` : ''}
+                                    </div>
+                                    <div class="item-actions">
+                                        <span class="dish-qty-sm">x${item.quantity}</span>
+                                        <span class="status-done"><i class="fa-solid fa-${status === 'ready' ? 'check' : status === 'preparing' ? 'fire' : 'clock'}"></i></span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    columns[status].appendChild(card);
+                });
+            });
+
+            document.getElementById('count-pending').innerText = stats.pending;
+            document.getElementById('count-preparing').innerText = stats.preparing;
+            document.getElementById('count-ready').innerText = stats.ready;
+        }
+
+        window.onNewOrder = () => loadKitchenItems();
+        setInterval(loadKitchenItems, 10000);
+        window.addEventListener('DOMContentLoaded', loadKitchenItems);
+    </script>
+}

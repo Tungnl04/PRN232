@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace FoodQR.API.Core.Entities;
@@ -25,7 +25,13 @@ public partial class Order
 
     public DateTime? UpdatedAt { get; set; }
 
+    public int? CouponId { get; set; }
+
+    public decimal? DiscountAmount { get; set; }
+
     public virtual Customer? Customer { get; set; }
+
+    public virtual Coupon? Coupon { get; set; }
 
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 

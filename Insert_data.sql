@@ -7,6 +7,7 @@ DELETE FROM [order_status_history];
 DELETE FROM [notification];
 DELETE FROM [order_item];
 DELETE FROM [order];
+DELETE FROM [coupon];
 DELETE FROM [combo_item];
 DELETE FROM [combo];
 DELETE FROM [product];
@@ -153,9 +154,24 @@ INSERT INTO combo_item (combo_id, product_id, quantity) VALUES
 
 -- 7. INSERT STAFF USERS
 SET IDENTITY_INSERT [user] ON;
-INSERT INTO [user] (id, name, username, password_hash, role, active) VALUES
-(1, N'Admin User', 'admin', '$2a$11$Y8iC0D.lCaFFEcGstxcJoOGe1z/Pl3fOQQjeZp4mcLBQBvmoK0BbK', 'admin', 1),
-(2, N'Staff User', 'staff', '$2a$11$Y8iC0D.lCaFFEcGstxcJoOGe1z/Pl3fOQQjeZp4mcLBQBvmoK0BbK', 'staff', 1),
-(3, N'Kitchen User', 'kitchen', '$2a$11$Y8iC0D.lCaFFEcGstxcJoOGe1z/Pl3fOQQjeZp4mcLBQBvmoK0BbK', 'kitchen', 1);
+INSERT INTO [user] (id, name, username, password_hash, role, active, must_change_password) VALUES
+(1, N'Admin User', 'admin', '$2a$11$Y8iC0D.lCaFFEcGstxcJoOGe1z/Pl3fOQQjeZp4mcLBQBvmoK0BbK', 'admin', 1, 0),
+(2, N'Staff User', 'staff', '$2a$11$Y8iC0D.lCaFFEcGstxcJoOGe1z/Pl3fOQQjeZp4mcLBQBvmoK0BbK', 'staff', 1, 0),
+(3, N'Kitchen User', 'kitchen', '$2a$11$Y8iC0D.lCaFFEcGstxcJoOGe1z/Pl3fOQQjeZp4mcLBQBvmoK0BbK', 'kitchen', 1, 0);
 SET IDENTITY_INSERT [user] OFF;
+
+-- 8. INSERT COUPONS
+SET IDENTITY_INSERT [coupon] ON;
+INSERT INTO [coupon] (id, code, discount_type, discount_value, min_order_amount, max_usage, used_count, expiry_date, is_active) VALUES 
+(1, 'GIAM20K', 'fixed', 20000, 100000, 100, 0, '2026-12-31 23:59:59', 1),
+(2, 'SALESOC10', 'percent', 10, 50000, 50, 0, '2026-12-31 23:59:59', 1),
+(3, 'VIP50K', 'fixed', 50000, 200000, 10, 0, '2026-05-30 23:59:59', 1);
+SET IDENTITY_INSERT [coupon] OFF;
+GO
+-- 9. INSERT STORE CONFIGURATION (Default: 8% VAT)
+DELETE FROM [store_configuration];
+SET IDENTITY_INSERT [store_configuration] ON;
+INSERT INTO [store_configuration] (id, store_name, tax_rate, is_tax_included_in_price, currency)
+VALUES (1, N'FoodQR Restaurant', 0.08, 0, 'VND');
+SET IDENTITY_INSERT [store_configuration] OFF;
 GO

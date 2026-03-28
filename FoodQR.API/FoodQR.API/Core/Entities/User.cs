@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace FoodQR.API.Core.Entities;
@@ -16,4 +16,5 @@ public partial class User
     public string? Role { get; set; }
 
     public bool? Active { get; set; }
+    public bool MustChangePassword { get; set; }
 }

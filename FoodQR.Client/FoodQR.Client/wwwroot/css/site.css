@@ -25,11 +25,17 @@
 }
 
 body {
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', sans-serif;
     background-color: var(--bg);
     color: var(--text);
     line-height: 1.6;
     overflow-x: hidden;
+}
+
+.currency-amount {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
 }
 
 header {
@@ -212,3 +218,37 @@ header {
 
 .mt-4 { margin-top: 1rem; }
 .font-bold { font-weight: 700; }
+
+/* Responsive Adjustments for Guest Interfaces */
+@media (max-width: 480px) {
+    #product-list {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .combo-card {
+        min-width: 240px !important;
+    }
+
+    .category-slider {
+        padding: 10px 0;
+    }
+
+    .cat-item {
+        padding: 8px 16px;
+        font-size: 0.85rem;
+    }
+
+    .order-tracker-bar {
+        left: 10px;
+        right: 80px;
+        padding: 0 15px;
+        height: 64px;
+    }
+    
+    .cart-floating {
+        width: 56px;
+        height: 56px;
+        bottom: 20px;
+        right: 15px;
+    }
+}

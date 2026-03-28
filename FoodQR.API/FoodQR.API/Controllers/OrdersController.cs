@@ -29,10 +29,21 @@ namespace FoodQR.API.Controllers
             if (orderDto.TableId <= 0) return BadRequest("Table ID is required.");
             if (orderDto.Items == null || !orderDto.Items.Any()) return BadRequest("Order must have at least one item.");
 
-            var order = await _orderService.CreateOrAppendOrderAsync(orderDto);
-            if (order == null) return BadRequest("Could not create order.");
+            try
+            {
+                var order = await _orderService.CreateOrAppendOrderAsync(orderDto);
+                if (order == null) return BadRequest("Could not create order.");
 
-            return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
+                return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Error = ex.Message });
+            }
         }
 
         [Authorize(Roles = "staff,admin")]
@@ -55,11 +66,23 @@ namespace FoodQR.API.Controllers
 
         [AllowAnonymous]
         [HttpGet("active/{tableId}")]
-        public async Task<ActionResult<OrderDetailDto>> GetActiveOrderByTable(int tableId)
+        public async Task<ActionResult<OrderDetailDto>> GetActiveOrderByTable(int tableId, [FromQuery] string? token)
         {
+            // SEC-06: Validate QR token nếu không phải staff/admin
+            if (!User.Identity?.IsAuthenticated ?? true)
+            {
+                if (string.IsNullOrEmpty(token))
+                    return Unauthorized(new { Error = "Cần token QR để xem đơn hàng." });
+
+                var table = await _context.OrderTables.FindAsync(tableId);
+                if (table == null || table.QrCodeToken != token)
+                    return Unauthorized(new { Error = "Token QR không hợp lệ." });
+            }
+
             var order = await _context.Orders
                 .Include(o => o.Customer)
                 .Include(o => o.Table)
+                .Include(o => o.Coupon)
                 .Include(o => o.OrderItems)
                     .ThenInclude(oi => oi.Product)
                 .Include(o => o.OrderItems)
@@ -80,10 +103,13 @@ namespace FoodQR.API.Controllers
                 Status = order.Status,
                 PaymentStatus = order.PaymentStatus,
                 TotalAmount = order.TotalAmount ?? 0,
+                CouponId = order.CouponId,
+                CouponCode = order.Coupon?.Code,
+                DiscountAmount = order.DiscountAmount,
                 Items = order.OrderItems.Select(oi => new OrderItemDetailDto
                 {
                     Id = oi.Id,
-                    Name = oi.Product?.Name ?? oi.Combo?.Name ?? "Unknown",
+                    Name = oi.Product?.Name ?? oi.Combo?.Name ?? "Không xác định",
                     Quantity = oi.Quantity ?? 1,
                     UnitPrice = oi.UnitPrice,
                     Status = oi.Status ?? "pending",
@@ -96,17 +122,35 @@ namespace FoodQR.API.Controllers
         [HttpGet("stats/overview")]
         public async Task<ActionResult<object>> GetDashboardStats()
         {
+            var today = DateTime.Today;
             var totalOrders = await _context.Orders.CountAsync();
-            var totalRevenue = await _context.Orders
-                .Where(o => o.Status.ToLower() == OrderStatus.Paid)
-                .SumAsync(o => o.TotalAmount ?? 0);
-            var activeTables = await _context.OrderTables
-                .CountAsync(t => t.Status.ToLower() == "taken");
+            var totalRevenue = await _context.Orders.Where(o => o.Status.ToLower() == OrderStatus.Paid).SumAsync(o => o.TotalAmount ?? 0);
+            
+            var todayOrders = await _context.Orders.CountAsync(o => o.CreatedAt >= today);
+            var todayRevenue = await _context.Orders.Where(o => o.Status.ToLower() == OrderStatus.Paid && o.CreatedAt >= today).SumAsync(o => o.TotalAmount ?? 0);
 
-            return new { 
-                totalOrders, 
-                totalRevenue, 
-                activeTables 
+            var activeTables = await _context.OrderTables.CountAsync(t => t.Status.ToLower() == "taken");
+            var cleaningTables = await _context.OrderTables.CountAsync(t => t.Status.ToLower() == "cleaning");
+            var availableTables = await _context.OrderTables.CountAsync(t => t.Status.ToLower() == "available");
+
+            // Hourly traffic for today
+            var hourlyTraffic = await _context.Orders
+                .Where(o => o.CreatedAt >= today)
+                .GroupBy(o => o.CreatedAt!.Value.Hour)
+                .Select(g => new { Hour = g.Key, Count = g.Count() })
+                .OrderBy(x => x.Hour)
+                .ToListAsync();
+
+            return new
+            {
+                TotalOrders = totalOrders,
+                TotalRevenue = totalRevenue,
+                TodayOrders = todayOrders,
+                TodayRevenue = todayRevenue,
+                ActiveTables = activeTables,
+                CleaningTables = cleaningTables,
+                AvailableTables = availableTables,
+                HourlyTraffic = hourlyTraffic
             };
         }
 
@@ -129,15 +173,21 @@ namespace FoodQR.API.Controllers
             var totalOrders = await query.CountAsync();
             var totalRevenue = await query.SumAsync(o => o.TotalAmount ?? 0);
 
-            var revenueByDate = await query
+            var rawData = await query
                 .GroupBy(o => o.CreatedAt!.Value.Date)
                 .Select(g => new {
-                    Date = g.Key.ToString("yyyy-MM-dd"),
+                    Date = g.Key,
                     Revenue = g.Sum(o => o.TotalAmount ?? 0),
                     OrderCount = g.Count()
                 })
                 .OrderBy(r => r.Date)
                 .ToListAsync();
+
+            var revenueByDate = rawData.Select(r => new {
+                Date = r.Date.ToString("yyyy-MM-dd"),
+                Revenue = r.Revenue,
+                OrderCount = r.OrderCount
+            }).ToList();
 
             return new { 
                 totalOrders, 
@@ -156,6 +206,31 @@ namespace FoodQR.API.Controllers
         }
 
         [Authorize(Roles = "staff,admin")]
+        [HttpPost("{targetId}/merge-from/{sourceId}")]
+        public async Task<IActionResult> MergeOrders(int targetId, int sourceId)
+        {
+            var orderCoupons = await _context.Orders
+                .Where(o => o.Id == targetId || o.Id == sourceId)
+                .Select(o => new { o.Id, o.CouponId })
+                .ToListAsync();
+
+            var targetCouponId = orderCoupons.FirstOrDefault(x => x.Id == targetId)?.CouponId;
+            var sourceCouponId = orderCoupons.FirstOrDefault(x => x.Id == sourceId)?.CouponId;
+            var couponDroppedOnMerge = targetCouponId.HasValue && sourceCouponId.HasValue;
+
+            var result = await _orderService.MergeOrderAsync(targetId, sourceId);
+            if (!result) return BadRequest(new { Error = "Không thể gộp hóa đơn. Vui lòng kiểm tra lại trạng thái của cả 2 đơn." });
+            return Ok(new
+            {
+                Message = "Gộp hóa đơn thành công.",
+                CouponDroppedOnMerge = couponDroppedOnMerge,
+                Notice = couponDroppedOnMerge
+                    ? "Cả 2 bàn đều có coupon nên sau khi gộp, coupon đã được tự động bỏ."
+                    : null
+            });
+        }
+
+        [Authorize(Roles = "staff,admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> CancelOrder(int id, [FromQuery] string? reason)
         {
@@ -164,13 +239,34 @@ namespace FoodQR.API.Controllers
             return Ok(new { Message = "Đơn hàng đã được hủy." });
         }
 
-        [AllowAnonymous]
+        [Authorize(Roles = "staff,admin")]
         [HttpDelete("items/{itemId}")]
         public async Task<IActionResult> CancelOrderItem(int itemId, [FromQuery] string? reason)
         {
             var result = await _orderService.CancelOrderItemAsync(itemId, reason);
             if (!result) return BadRequest(new { Error = "Không thể hủy món. Chỉ hủy được món đang pending." });
             return Ok(new { Message = "Món đã được hủy." });
+        }
+
+        [Authorize(Roles = "admin,staff")]
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Order>>> GetOrders([FromQuery] int limit = 10)
+        {
+            return await _orderService.GetOrdersAsync(limit);
+        }
+
+        [Authorize(Roles = "admin")]
+        [HttpGet("reports/top-products")]
+        public async Task<ActionResult<object>> GetTopProductsReport([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        {
+            return await _orderService.GetTopProductsReportAsync(startDate, endDate);
+        }
+
+        [Authorize(Roles = "admin")]
+        [HttpGet("reports/category-sales")]
+        public async Task<ActionResult<object>> GetCategorySalesReport([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        {
+            return await _orderService.GetCategorySalesReportAsync(startDate, endDate);
         }
     }
 }

@@ -1,5 +1,6 @@
-﻿using FoodQR.API.Application.DTOs;
+using FoodQR.API.Application.DTOs;
 using FoodQR.API.Core.Entities;
+using FoodQR.API.Core.Enums;
 using FoodQR.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -103,10 +104,21 @@ namespace FoodQR.API.Controllers
         [HttpPatch("{id}/status")]
         public async Task<IActionResult> UpdateTableStatus(int id, [FromBody] string status)
         {
+            // SEC-07: Validate status phải thuộc TableStatus enum
+            var validStatuses = new[] { TableStatus.Available, TableStatus.Taken, TableStatus.Reserved, TableStatus.Cleaning };
+            if (!validStatuses.Contains(status?.ToLower()))
+                return BadRequest(new { Error = $"Status '{status}' không hợp lệ. Chỉ chấp nhận: {string.Join(", ", validStatuses)}" });
+
             var table = await _context.OrderTables.FindAsync(id);
             if (table == null) return NotFound();
 
-            table.Status = status;
+            table.Status = status.ToLower();
+            
+            if (table.Status == TableStatus.Available || table.Status == TableStatus.Cleaning)
+            {
+                table.QrCodeToken = Guid.NewGuid().ToString("N");
+            }
+
             await _context.SaveChangesAsync();
             return NoContent();
         }

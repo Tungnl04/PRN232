@@ -1,105 +1,297 @@
 @page
 @model OrderTrackingModel
 @{
-    ViewData["Title"] = "Track Order";
+    ViewData["Title"] = "Theo dõi Đơn hàng";
 }
 
 <div class="container animate-in">
-    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
-        <a href="/?tableId=@Model.TableId" style="color: var(--text); font-size: 1.2rem;"><i class="fa-solid fa-arrow-left"></i></a>
-        <h2 class="font-bold">Track Your Order</h2>
+    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 30px;">
+        <a href="/?@(Model.Token != null ? "token=" + Model.Token : "tableId=" + Model.TableId)" 
+           style="color: var(--text-main); font-size: 1.4rem; background: #f4f7fe; width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-decoration: none;">
+            <i class="fa-solid fa-chevron-left"></i>
+        </a>
+        <h2 class="font-bold" style="margin: 0; font-size: 1.5rem;">Trạng thái đơn hàng</h2>
     </div>
 
     <!-- Overall Order Status card -->
-    <div class="card" style="margin-bottom: 24px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: bold;">ORDER #@Model.OrderCode</span>
-            <span id="order-status-badge" style="background: #e8f5e9; color: #4caf50; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">@Model.OrderStatus</span>
+    <div class="card" style="margin-bottom: 30px; padding: 25px; background: white; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">MÃ ĐƠN HÀNG</div>
+                <div style="font-size: 1.25rem; font-weight: 900; color: var(--text-main);">#@Model.OrderCode</div>
+            </div>
+            @{
+                var statusVN = Model.OrderStatus;
+                var badgeClass = "status-pending";
+                if (statusVN.ToLower() == "pending") statusVN = "Đã nhận";
+                if (statusVN.ToLower() == "processing") { statusVN = "Đang nấu"; badgeClass = "status-preparing"; }
+                if (statusVN.ToLower() == "ready") { statusVN = "Chờ phục vụ"; badgeClass = "status-ready"; }
+                if (statusVN.ToLower() == "served") { statusVN = "Hoàn tất"; badgeClass = "status-served"; }
+            }
+            <span class="status-badge-lg @badgeClass">@statusVN</span>
         </div>
 
-        <!-- Status Stepper (Simplified) -->
-        <div style="display: flex; justify-content: space-between; position: relative; margin-top: 24px;">
-            <div style="position: absolute; top: 12px; left: 0; right: 0; height: 2px; background: #eee; z-index: 1;">
-                <div id="progress-bar" style="height: 100%; background: var(--primary); width: 0%; transition: width 1s ease;"></div>
+        <!-- Status Stepper -->
+        <div style="display: flex; justify-content: space-between; position: relative; margin: 40px 10px 10px;">
+            <div style="position: absolute; top: 15px; left: 0; right: 0; height: 4px; background: #f1f5f9; z-index: 1; border-radius: 10px;">
+                <div id="progress-bar" style="height: 100%; background: var(--primary); width: 0%; transition: width 1s ease; border-radius: 10px; box-shadow: 0 0 10px rgba(255, 77, 77, 0.3);"></div>
             </div>
             
-            <div style="z-index: 2; text-align: center;">
-                <div class="step-dot" id="step-pending" style="width: 26px; height: 26px; border-radius: 50%; background: #eee; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 0.7rem;">1</div>
-                <span style="font-size: 0.65rem; color: var(--text-muted); margin-top: 8px; display: block;">Pending</span>
+            <div class="step-item" style="z-index: 2; text-align: center;">
+                <div class="step-circle" id="step-pending"><i class="fa-solid fa-receipt"></i></div>
+                <span class="step-label">Đã nhận</span>
             </div>
-            <div style="z-index: 2; text-align: center;">
-                <div class="step-dot" id="step-processing" style="width: 26px; height: 26px; border-radius: 50%; background: #eee; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 0.7rem;">2</div>
-                <span style="font-size: 0.65rem; color: var(--text-muted); margin-top: 8px; display: block;">Kitchen</span>
+            <div class="step-item" style="z-index: 2; text-align: center;">
+                <div class="step-circle" id="step-processing"><i class="fa-solid fa-fire-burner"></i></div>
+                <span class="step-label">Đang nấu</span>
             </div>
-            <div style="z-index: 2; text-align: center;">
-                <div class="step-dot" id="step-completed" style="width: 26px; height: 26px; border-radius: 50%; background: #eee; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 0.7rem;">3</div>
-                <span style="font-size: 0.65rem; color: var(--text-muted); margin-top: 8px; display: block;">Enjoy!</span>
+            <div class="step-item" style="z-index: 2; text-align: center;">
+                <div class="step-circle" id="step-completed"><i class="fa-solid fa-utensils"></i></div>
+                <span class="step-label">Sẵn sàng!</span>
             </div>
         </div>
     </div>
 
     <!-- Items Status List -->
-    <h3 class="font-bold" style="font-size: 1rem; margin-bottom: 16px;">Dish Status</h3>
-    <div id="items-list" style="display: flex; flex-direction: column; gap: 12px;">
+    <h3 class="font-bold" style="font-size: 1.1rem; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-list-ul" style="color: var(--primary);"></i> Chi tiết món ăn
+    </h3>
+    <div id="items-list" style="display: flex; flex-direction: column; gap: 15px;">
         @foreach (var item in Model.Items)
         {
-            <div class="card" style="display: flex; align-items: center; gap: 12px; padding: 12px;">
+            <div class="item-card-lite">
                 <div style="flex-grow: 1;">
-                    <h4 style="font-size: 0.85rem; font-weight: 700;">@item.Name</h4>
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">Qty: @item.Quantity</span>
+                    <div style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">@item.Name</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; margin-top: 2px;">Số lượng: @item.Quantity</div>
+                    @if (!string.IsNullOrEmpty(item.Note))
+                    {
+                        <div style="font-size: 0.75rem; color: #f43f5e; font-weight: 700; margin-top: 5px; background: #fff1f2; padding: 4px 10px; border-radius: 8px; display: inline-block;">
+                            <i class="fa-solid fa-comment-dots"></i> @item.Note
+                        </div>
+                    }
                 </div>
                 <div>
-                    <span class="item-status-pill @item.Status.ToLower()" style="padding: 4px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700;">@item.Status</span>
+                    @{
+                        var itemSts = item.Status.ToLower();
+                        var itemStsVN = item.Status;
+                        if (itemSts == "pending") itemStsVN = "Chờ nấu";
+                        if (itemSts == "preparing") itemStsVN = "Đang nấu";
+                        if (itemSts == "ready") itemStsVN = "Xong";
+                        if (itemSts == "served") itemStsVN = "Đã bưng";
+                    }
+                    <span class="item-status-pill @itemSts">@itemStsVN</span>
                 </div>
             </div>
         }
     </div>
 
-    <button onclick="callStaff()" style="width: 100%; border: 1px solid var(--primary); background: transparent; color: var(--primary); padding: 12px; border-radius: var(--radius-md); font-weight: bold; margin-top: 32px; cursor: pointer;">
-        <i class="fa-solid fa-bell"></i> Call Staff
+    <button onclick="callStaff()" class="btn-call-staff">
+        <i class="fa-solid fa-bell"></i> Gọi nhân viên hỗ trợ
     </button>
 </div>
 
 <style>
-    .item-status-pill.pending { background: #fff3e0; color: #ff9800; }
-    .item-status-pill.preparing { background: #e3f2fd; color: #2196f3; }
-    .item-status-pill.ready { background: #e8f5e9; color: #4caf50; }
-    .item-status-pill.served { background: #f3e5f5; color: #9c27b0; }
-    
-    .step-dot.active { background: var(--primary) !important; color: white !important; }
+    .status-badge-lg { padding: 8px 16px; border-radius: 12px; font-size: 0.85rem; font-weight: 900; text-transform: uppercase; }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-preparing { background: #dbeafe; color: #1e40af; }
+    .status-ready { background: #dcfce7; color: #166534; }
+    .status-served { background: #f1f5f9; color: #64748b; }
+
+    .step-item { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 80px; }
+    .step-circle { 
+        width: 34px; height: 34px; border-radius: 50%; background: #f1f5f9; color: #94a3b8; 
+        display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+        transition: all 0.5s ease;
+    }
+    .step-label { font-size: 0.7rem; font-weight: 800; color: #94a3b8; transition: all 0.5s ease; }
+    .step-circle.active { background: var(--primary); color: white; box-shadow: 0 5px 15px rgba(255, 77, 77, 0.3); }
+    .step-label.active { color: var(--text-main); }
+
+    .item-card-lite {
+        display: flex; align-items: center; gap: 15px; padding: 18px; background: white; 
+        border-radius: 16px; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+    }
+
+    .item-status-pill { padding: 5px 12px; border-radius: 50px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; }
+    .item-status-pill.pending { background: #fef3c7; color: #92400e; }
+    .item-status-pill.preparing { background: #dbeafe; color: #1e40af; }
+    .item-status-pill.ready { background: #dcfce7; color: #166534; }
+    .item-status-pill.served { background: #f1f5f9; color: #64748b; }
+
+    .btn-call-staff {
+        width: 100%; border: 2px solid #e2e8f0; background: white; color: var(--text-main); 
+        padding: 16px; border-radius: 18px; font-weight: 900; margin-top: 40px; cursor: pointer;
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        transition: all 0.2s;
+    }
+    .btn-call-staff:active { transform: scale(0.98); background: #f8fafc; }
 </style>
 
 @section Scripts {
     <script>
-        document.getElementById('current-table').innerText = "@Model.TableId" || "??";
+        
+        const apiBaseUrl = "@(ViewData["ApiBaseUrl"])" || (window.location.hostname.includes('localhost') ? "https://localhost:7197/api" : "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api");
+        const tableId = @Model.TableId;
         const orderId = @Model.OrderId;
-        const apiBaseUrl = "https://localhost:7197/api";
+        const qrToken = "@(Model.Token ?? "")";
 
-        // Update Progress Bar based on status
+        function updateUI(status, items) {
+            // Update status badge
+            const statusMap = {
+                'pending': { vn: 'Đã nhận', cls: 'status-pending' },
+                'processing': { vn: 'Đang nấu', cls: 'status-preparing' },
+                'ready': { vn: 'Chờ phục vụ', cls: 'status-ready' },
+                'served': { vn: 'Hoàn tất', cls: 'status-served' },
+                'paid': { vn: 'Đã thanh toán', cls: 'status-served' }
+            };
+            const sts = (status || '').toLowerCase();
+            const info = statusMap[sts] || { vn: status, cls: 'status-pending' };
+            
+            const badge = document.querySelector('.status-badge-lg');
+            if (badge) {
+                badge.textContent = info.vn;
+                badge.className = 'status-badge-lg ' + info.cls;
+            }
+
+            // Update progress bar
+            const bar = document.getElementById('progress-bar');
+            const steps = ['step-pending', 'step-processing', 'step-completed'];
+            const labels = document.querySelectorAll('.step-label');
+            
+            // Reset all
+            steps.forEach(s => { const el = document.getElementById(s); if(el) el.classList.remove('active'); });
+            labels.forEach(l => l.classList.remove('active'));
+
+            if (sts === 'pending') {
+                bar.style.width = '10%';
+                document.getElementById('step-pending')?.classList.add('active');
+                if(labels[0]) labels[0].classList.add('active');
+            } else if (sts === 'processing' || sts === 'preparing') {
+                bar.style.width = '50%';
+                document.getElementById('step-pending')?.classList.add('active');
+                document.getElementById('step-processing')?.classList.add('active');
+                if(labels[0]) labels[0].classList.add('active');
+                if(labels[1]) labels[1].classList.add('active');
+            } else {
+                bar.style.width = '100%';
+                steps.forEach(s => document.getElementById(s)?.classList.add('active'));
+                labels.forEach(l => l.classList.add('active'));
+            }
+
+            // Update items list
+            if (items && items.length > 0) {
+                const itemStatusMap = {
+                    'pending': { vn: 'Chờ nấu', cls: 'pending' },
+                    'preparing': { vn: 'Đang nấu', cls: 'preparing' },
+                    'ready': { vn: 'Xong', cls: 'ready' },
+                    'served': { vn: 'Đã bưng', cls: 'served' },
+                    'cancelled': { vn: 'Đã hủy', cls: 'served' }
+                };
+
+                const listEl = document.getElementById('items-list');
+                listEl.innerHTML = items.map(item => {
+                    const iSts = (item.status || '').toLowerCase();
+                    const iInfo = itemStatusMap[iSts] || { vn: item.status, cls: 'pending' };
+                    const noteHtml = item.note ? `<div style="font-size: 0.75rem; color: #f43f5e; font-weight: 700; margin-top: 5px; background: #fff1f2; padding: 4px 10px; border-radius: 8px; display: inline-block;"><i class="fa-solid fa-comment-dots"></i> ${item.note}</div>` : '';
+                    return `
+                        <div class="item-card-lite" style="transition: all 0.3s;">
+                            <div style="flex-grow: 1;">
+                                <div style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">${item.name}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; margin-top: 2px;">Số lượng: ${item.quantity}</div>
+                                ${noteHtml}
+                            </div>
+                            <div>
+                                <span class="item-status-pill ${iInfo.cls}">${iInfo.vn}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        async function refreshOrder() {
+            try {
+                const tokenParam = qrToken ? `?token=${encodeURIComponent(qrToken)}` : '';
+                const res = await fetch(`${apiBaseUrl}/Orders/active/${tableId}${tokenParam}`);
+                if (!res.ok) return;
+                const order = await res.json();
+                if (order.id !== orderId) return;
+                updateUI(order.status, order.items);
+            } catch (e) {
+                console.warn('Refresh error:', e);
+            }
+        }
+
+        // Initial status rendering
         const status = "@Model.OrderStatus.ToLower()";
         const bar = document.getElementById('progress-bar');
         
         if (status === 'pending') {
-            bar.style.width = '0%';
+            bar.style.width = '10%';
             document.getElementById('step-pending').classList.add('active');
+            document.querySelectorAll('.step-label')[0].classList.add('active');
         } else if (status === 'processing') {
             bar.style.width = '50%';
             document.getElementById('step-pending').classList.add('active');
             document.getElementById('step-processing').classList.add('active');
-        } else if (status === 'ready' || status === 'served' || status === 'completed') {
+            document.querySelectorAll('.step-label')[0].classList.add('active');
+            document.querySelectorAll('.step-label')[1].classList.add('active');
+        } else {
             bar.style.width = '100%';
             document.getElementById('step-pending').classList.add('active');
             document.getElementById('step-processing').classList.add('active');
             document.getElementById('step-completed').classList.add('active');
+            document.querySelectorAll('.step-label').forEach(el => el.classList.add('active'));
         }
+
+        // SignalR: lắng nghe thay đổi trạng thái từng món + đơn
+        const trackConn = new signalR.HubConnectionBuilder()
+            .withUrl(`${apiBaseUrl.replace('/api','')}/hubs/order`)
+            .withAutomaticReconnect()
+            .build();
+
+        trackConn.on('ItemStatusChanged', (data) => {
+            console.log('📦 Item changed:', data);
+            refreshOrder();
+        });
+
+        trackConn.on('OrderStartedPreparing', (data) => {
+            console.log('👨‍🍳 Order preparing:', data);
+            refreshOrder();
+            Swal.fire({
+                icon: 'info', title: '👨‍🍳 Bếp đang chế biến!',
+                text: 'Đơn hàng của bạn đã được bắt đầu nấu.',
+                timer: 4000, showConfirmButton: false
+            });
+        });
+
+        trackConn.on('OrderReady', (data) => {
+            console.log('🔔 Order ready:', data);
+            refreshOrder();
+            Swal.fire({
+                icon: 'success', title: '🌟 Món đã xong!',
+                text: 'Tất cả món của bạn đã sẵn sàng. Chờ nhân viên phục vụ nhé!',
+                timer: 6000, showConfirmButton: true, confirmButtonText: 'Tuyệt vời'
+            });
+        });
+
+        trackConn.start()
+            .then(() => {
+                console.log('✅ OrderTracking connected to hub');
+                trackConn.invoke('JoinGroup', `table_${tableId}`);
+            })
+            .catch(err => console.error('SignalR Error:', err));
+
+        // Fallback polling mỗi 15s (phòng trường hợp SignalR bị mất kết nối)
+        setInterval(refreshOrder, 15000);
 
         async function callStaff() {
             try {
-                const response = await fetch(`${apiBaseUrl}/Notifications`, {
+                const response = await fetch(`${apiBaseUrl}/Notifications/call-staff`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        message: `Khách hàng tại bàn @Model.TableId yêu cầu hỗ trợ!`,
+                        message: `🔔 Khách hàng tại bàn @Model.TableId cần hỗ trợ gấp!`,
                         type: 'call_staff',
                         targetRole: 'staff'
                     })
@@ -108,18 +300,15 @@
                 if (response.ok) {
                     Swal.fire({
                         icon: 'success',
-                        title: 'Requested!',
-                        text: 'Staff will be arriving soon.',
-                        timer: 2000,
-                        showConfirmButton: false
+                        title: 'Đã gửi yêu cầu',
+                        text: 'Nhân viên sẽ đến hỗ trợ bạn ngay.',
+                        timer: 2500,
+                        showConfirmButton: false,
+                        background: '#fff',
+                        customClass: { title: 'font-bold' }
                     });
                 }
             } catch (e) {}
         }
-
-        // Auto-refresh every 10 seconds
-        setTimeout(() => {
-            window.location.reload();
-        }, 10000);
     </script>
 }

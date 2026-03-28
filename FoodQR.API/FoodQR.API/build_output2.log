@@ -1,0 +1,13 @@
+﻿  Determining projects to restore...
+  All projects are up-to-date for restore.
+D:\FPT Education\SP26\PRN232\PRN232_code\PRN232\FoodQR.API\FoodQR.API\Controllers\ProductsController.cs(21,10): error CS0246: The type or namespace name 'EnableQueryAttribute' could not be found (are you missing a using directive or an assembly reference?) [D:\FPT Education\SP26\PRN232\PRN232_code\PRN232\FoodQR.API\FoodQR.API\FoodQR.API.csproj]
+D:\FPT Education\SP26\PRN232\PRN232_code\PRN232\FoodQR.API\FoodQR.API\Controllers\ProductsController.cs(21,10): error CS0246: The type or namespace name 'EnableQuery' could not be found (are you missing a using directive or an assembly reference?) [D:\FPT Education\SP26\PRN232\PRN232_code\PRN232\FoodQR.API\FoodQR.API\FoodQR.API.csproj]
+
+Build FAILED.
+
+D:\FPT Education\SP26\PRN232\PRN232_code\PRN232\FoodQR.API\FoodQR.API\Controllers\ProductsController.cs(21,10): error CS0246: The type or namespace name 'EnableQueryAttribute' could not be found (are you missing a using directive or an assembly reference?) [D:\FPT Education\SP26\PRN232\PRN232_code\PRN232\FoodQR.API\FoodQR.API\FoodQR.API.csproj]
+D:\FPT Education\SP26\PRN232\PRN232_code\PRN232\FoodQR.API\FoodQR.API\Controllers\ProductsController.cs(21,10): error CS0246: The type or namespace name 'EnableQuery' could not be found (are you missing a using directive or an assembly reference?) [D:\FPT Education\SP26\PRN232\PRN232_code\PRN232\FoodQR.API\FoodQR.API\FoodQR.API.csproj]
+    0 Warning(s)
+    2 Error(s)
+
+Time Elapsed 00:00:01.72

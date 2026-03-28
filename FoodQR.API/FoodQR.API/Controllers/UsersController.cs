@@ -23,7 +23,7 @@ namespace FoodQR.API.Controllers
         public async Task<ActionResult<IEnumerable<UserResponseDto>>> GetUsers()
         {
             var users = await _context.Users.ToListAsync();
-            return users.Select(u => new UserResponseDto { Id = u.Id, Name = u.Name, Username = u.Username, Role = u.Role, Active = u.Active }).ToList();
+            return users.Select(u => new UserResponseDto { Id = u.Id, Name = u.Name, Username = u.Username, Role = u.Role, Active = u.Active, MustChangePassword = u.MustChangePassword }).ToList();
         }
 
         [HttpPost]
@@ -39,9 +39,10 @@ namespace FoodQR.API.Controllers
             }
 
             user.Active = true;
+            user.MustChangePassword = true; // Force change on first login
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetUsers), new { id = user.Id }, new UserResponseDto { Id = user.Id, Name = user.Name, Username = user.Username, Role = user.Role, Active = user.Active });
+            return CreatedAtAction(nameof(GetUsers), new { id = user.Id }, new UserResponseDto { Id = user.Id, Name = user.Name, Username = user.Username, Role = user.Role, Active = user.Active, MustChangePassword = user.MustChangePassword });
         }
 
         [HttpPut("{id}")]

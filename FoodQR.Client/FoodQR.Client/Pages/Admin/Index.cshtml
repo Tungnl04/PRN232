@@ -2,43 +2,185 @@
 @model FoodQR.Client.Pages.Admin.IndexModel
 @{
     Layout = "_Layout";
-    ViewData["Title"] = "Admin Dashboard";
+    ViewData["Title"] = "Tổng quan hệ thống";
 }
 
-<div class="card" style="padding: 40px; border-radius: 24px; background: white; text-align: center;">
-    <div style="font-size: 3rem; color: var(--primary); margin-bottom: 20px;"><i class="fa-solid fa-chart-line"></i></div>
-    <h2 style="font-weight: 800;">Welcome to Admin Portal</h2>
-    <p style="color: #888;">Here you will find system statistics and master data management tools.</p>
-    
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 40px;">
-        <div style="background: #f8f9fa; padding: 24px; border-radius: 16px;">
-            <div id="stat-total-orders" style="font-size: 1.5rem; font-weight: 800;">--</div>
-            <div style="font-size: 0.8rem; color: #888;">TOTAL ORDERS</div>
+<link rel="stylesheet" href="~/css/admin/dashboard.css" asp-append-version="true" />
+
+<div class="stats-container">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: #e9edfe; color: #4318ff;"><i class="fa-solid fa-bolt"></i></div>
+        <div class="stat-info">
+            <div class="value currency-amount" id="stat-today-revenue">0&nbsp;₫</div>
+            <div class="label">Doanh thu hôm nay</div>
         </div>
-        <div style="background: #f8f9fa; padding: 24px; border-radius: 16px;">
-            <div id="stat-revenue" style="font-size: 1.5rem; font-weight: 800;">--</div>
-            <div style="font-size: 0.8rem; color: #888;">REVENUE</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background: #fff0f0; color: #ff4d4d;"><i class="fa-solid fa-receipt"></i></div>
+        <div class="stat-info">
+            <div class="value" id="stat-today-orders">0</div>
+            <div class="label">Đơn hàng hôm nay</div>
         </div>
-        <div style="background: #f8f9fa; padding: 24px; border-radius: 16px;">
-            <div id="stat-active-tables" style="font-size: 1.5rem; font-weight: 800;">--</div>
-            <div style="font-size: 0.8rem; color: #888;">ACTIVE TABLES</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background: #e6fffa; color: #047481;"><i class="fa-solid fa-chair"></i></div>
+        <div class="stat-info">
+            <div class="value" id="stat-available-tables">0</div>
+            <div class="label">Bàn trống hiện có</div>
         </div>
     </div>
 </div>
 
+<div class="charts-grid">
+    <div class="chart-card">
+        <h3>Lưu lượng đơn hàng theo giờ</h3>
+        <div style="height: 300px;">
+            <canvas id="trafficChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-card">
+        <h3>Trạng thái bàn hiện tại</h3>
+        <div style="height: 300px;">
+            <canvas id="tableStatusChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="recent-orders-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="margin:0">Hoạt động gần đây</h3>
+        <a href="/Admin/Reports" style="color: var(--primary); text-decoration: none; font-size: 0.85rem; font-weight: 700;">Xem chi tiết báo cáo <i class="fa-solid fa-arrow-right"></i></a>
+    </div>
+    <table class="table-custom">
+        <thead>
+            <tr>
+                <th>Mã đơn</th>
+                <th>Bàn</th>
+                <th>Khách hàng</th>
+                <th>Số tiền</th>
+                <th>Trạng thái</th>
+                <th>Thời gian</th>
+            </tr>
+        </thead>
+        <tbody id="recent-orders-list">
+            <tr><td colspan="6" style="text-align:center; color:#ccc; padding: 40px;">Fetching latest activity...</td></tr>
+        </tbody>
+    </table>
+</div>
+
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        async function loadStats() {
+        const apiBaseUrlDashboard = "@(ViewData["ApiBaseUrl"])" || (window.location.hostname.includes('localhost') ? "https://localhost:7197/api" : "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api");
+
+        window.onNewOrder = (data) => {
+            console.log('Realtime update: NewOrderReceived via window.onNewOrder', data);
+            loadDashboard(); // Refresh stats and lists
+        };
+        
+        if (typeof connection !== 'undefined') {
+            connection.on('OrderUpdated', (data) => {
+                console.log('Realtime update: OrderUpdated', data);
+                loadDashboard(); // Refresh stats and lists
+            });
+            
+            connection.on('TableStatusChanged', (data) => {
+                console.log('Realtime update: TableStatusChanged');
+                loadDashboard();
+            });
+        }
+
+        async function loadDashboard() {
             try {
+                // 1. Load Summary Stats
                 const stats = await apiClient.getDashboardStats();
-                document.getElementById('stat-total-orders').innerText = stats.totalOrders || 0;
-                document.getElementById('stat-revenue').innerText = (stats.totalRevenue || 0).toLocaleString('vi-VN') + ' đ';
-                document.getElementById('stat-active-tables').innerText = stats.activeTables || 0;
+                document.getElementById('stat-today-revenue').innerText = apiClient.formatVnd(stats.todayRevenue || 0);
+                document.getElementById('stat-today-orders').innerText = stats.todayOrders || 0;
+                document.getElementById('stat-available-tables').innerText = stats.availableTables || 0;
+
+                // 2. Render Real-time Health Charts
+                renderHealthCharts(stats);
+
+                // 3. Recent Orders
+                const recentOrders = await apiClient.getOrders(6);
+                const ordersTbody = document.getElementById('recent-orders-list');
+                if (!recentOrders || recentOrders.length === 0) {
+                    ordersTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color:#888;">No recent activity.</td></tr>';
+                } else {
+                    ordersTbody.innerHTML = recentOrders.map(o => `
+                        <tr>
+                            <td class="font-bold" style="color: var(--text-main)">#${o.orderCode}</td>
+                            <td><span style="background:#f4f7fe; padding:4px 10px; border-radius:8px; font-weight:600;">Table ${o.table?.tableNumber || o.tableId}</span></td>
+                            <td>${o.customer?.name || "Anonymous"}</td>
+                            <td class="font-bold currency-amount">${apiClient.formatVnd(o.totalAmount || 0)}</td>
+                            <td><span class="badge-status badge-${(o.status || 'pending').toLowerCase()}">${o.status || 'Pending'}</span></td>
+                            <td style="color: var(--text-muted); font-size: 0.8rem;">${new Date(o.createdAt).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</td>
+                        </tr>
+                    `).join('');
+                }
+
             } catch (e) {
-                console.error("Failed to load dashboard stats", e);
+                console.error("Dashboard error:", e);
             }
         }
 
-        window.addEventListener('DOMContentLoaded', loadStats);
+        let dashboardCharts = {};
+
+        function renderHealthCharts(stats) {
+            if (dashboardCharts.tableStatus) dashboardCharts.tableStatus.destroy();
+            if (dashboardCharts.traffic) dashboardCharts.traffic.destroy();
+
+            // Table Status Distribution (Doughnut)
+            dashboardCharts.tableStatus = new Chart(document.getElementById('tableStatusChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Bàn trống', 'Có khách', 'Chờ dọn'],
+                    datasets: [{
+                        data: [stats.availableTables || 0, stats.activeTables || 0, stats.cleaningTables || 0],
+                        backgroundColor: ['#e6fffa', '#ff4d4d', '#ebf8ff'],
+                        borderColor: ['#047481', '#ff4d4d', '#2b6cb0'],
+                        borderWidth: 1
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    cutout: '70%',
+                    plugins: { legend: { position: 'bottom' } } 
+                }
+            });
+
+            // Hourly Traffic (Bar)
+            const hours = Array.from({length: 12}, (_, i) => i + 9); // 9 AM to 9 PM
+            const trafficList = stats.hourlyTraffic || [];
+            const trafficData = hours.map(h => {
+                const found = trafficList.find(t => t.hour === h);
+                return found ? found.count : 0;
+            });
+
+            dashboardCharts.traffic = new Chart(document.getElementById('trafficChart'), {
+                type: 'bar',
+                data: {
+                    labels: hours.map(h => h + ':00'),
+                    datasets: [{
+                        label: 'Số đơn hàng',
+                        data: trafficData,
+                        backgroundColor: '#4318ff',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { display: false }, ticks: { stepSize: 1 } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', loadDashboard);
     </script>
 }

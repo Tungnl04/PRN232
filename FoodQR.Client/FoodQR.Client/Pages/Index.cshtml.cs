@@ -13,8 +13,18 @@ namespace FoodQR.Client.Pages
         public IndexModel(IHttpClientFactory httpClientFactory, IConfiguration config, ILogger<IndexModel> logger)
         {
             _httpClientFactory = httpClientFactory;
-            _apiBaseUrl = config["ApiSettings:BaseUrl"] ?? "https://localhost:7197/api";
             _logger = logger;
+            
+            var baseUrl = config["ApiSettings:BaseUrl"];
+            // SEC-FIX: Nếu là placeholder thì dùng link production thật
+            if (string.IsNullOrEmpty(baseUrl) || baseUrl.Contains("YOUR_API_DOMAIN"))
+            {
+                _apiBaseUrl = "https://foodqrrestaurant-cbdwbzfcfxecdfay.southeastasia-01.azurewebsites.net/api";
+            }
+            else
+            {
+                _apiBaseUrl = baseUrl;
+            }
         }
 
         public List<CategoryDto> Categories { get; set; } = new();
@@ -39,12 +49,15 @@ namespace FoodQR.Client.Pages
                     Categories = JsonSerializer.Deserialize<List<CategoryDto>>(catJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
                 }
 
-                // Fetch Products
                 var prodResponse = await client.GetAsync($"{_apiBaseUrl}/Products");
                 if (prodResponse.IsSuccessStatusCode)
                 {
                     var prodJson = await prodResponse.Content.ReadAsStringAsync();
                     Products = JsonSerializer.Deserialize<List<ProductDto>>(prodJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+                }
+                else
+                {
+                    ErrorMessage = $"Lỗi tải Món Ăn: HTTP {(int)prodResponse.StatusCode} ({prodResponse.StatusCode}) - URL: {_apiBaseUrl}/Products";
                 }
 
                 // Fetch Combos
@@ -58,12 +71,12 @@ namespace FoodQR.Client.Pages
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to fetch menu data from API");
-                ErrorMessage = "Không thể tải dữ liệu menu. Vui lòng thử lại sau.";
+                ErrorMessage = $"Lỗi kết nối từ Client Server tới API: {ex.Message} (URL: {_apiBaseUrl}/Products)";
             }
         }
     }
 
     public class CategoryDto { public int Id { get; set; } public string Name { get; set; } = null!; }
-    public class ProductDto { public int Id { get; set; } public string Name { get; set; } = null!; public string? Description { get; set; } public decimal Price { get; set; } public string? ImageUrl { get; set; } public int CategoryId { get; set; } }
+    public class ProductDto { public int Id { get; set; } public string Name { get; set; } = null!; public string? Description { get; set; } public decimal Price { get; set; } public string? ImageUrl { get; set; } public int? Inventory { get; set; } public int CategoryId { get; set; } }
     public class ComboDto { public int Id { get; set; } public string Name { get; set; } = null!; public string? Description { get; set; } public decimal Price { get; set; } public string? ImageUrl { get; set; } public bool IsAvailable { get; set; } }
 }
